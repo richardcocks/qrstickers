@@ -2,6 +2,7 @@ using System.Net.Mime;
 using QRCoder;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSingleton(new QRCodeGenerator());
@@ -33,5 +34,17 @@ app.MapGet("/qrcode", (HttpContext httpContext, string q, QRCodeGenerator qrGene
     httpContext.Response.ContentType = MediaTypeNames.Image.Png;
     return Results.File(qrCodeImage, MediaTypeNames.Image.Png);
 }).RequireRateLimiting("tokenBucket");
+
+app.MapGet("/oauth/redirect", (HttpContext httpContext, [FromQuery] string code) =>
+{
+    string? referer = httpContext.Request.Headers.Referer;
+
+
+
+
+    app.Logger.LogInformation("Redirection incoming from {0}: {1}", referer, code);
+
+    httpContext.Response.Redirect("/");
+});
 
 app.Run();
