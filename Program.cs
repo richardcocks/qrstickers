@@ -52,9 +52,26 @@ app.MapGet("/oauth/redirect", (HttpContext httpContext, [FromQuery] string code)
 
 
 
-    app.Logger.LogInformation("Redirection incoming from {0}: {1}", referer, code);
+    app.Logger.LogInformation("Redirection incoming from {referer}: {code}", referer, code);
 
     httpContext.Response.Redirect("/");
+});
+
+app.MapGet("/", () =>
+{
+    return Results.Content("""
+        <head>
+            <title>QR Stickers Generator</title>
+        </head>
+        <body>
+            <h1>Welcome to QR Stickers</h1>
+            <div>
+                <p>
+                    <a href="/login">Click to connect your Meraki account</a>
+                </p>
+            </div>
+        </body>
+    """, "text/html");
 });
 
 app.Run();
