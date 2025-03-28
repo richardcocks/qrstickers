@@ -57,15 +57,21 @@ app.MapGet("/oauth/redirect", (HttpContext httpContext, [FromQuery] string code)
     httpContext.Response.Redirect("/");
 });
 
-app.MapGet("/", () =>
+app.MapGet("/", (HttpContext httpContext) =>
 {
-    return Results.Content("""
+
+    string claim_name = httpContext.Request.Headers["X-MS-CLIENT-PRINCIPAL-NAME"].SingleOrDefault() ?? "";
+    string claim_id = httpContext.Request.Headers["X-MS-CLIENT-PRINCIPAL-ID"].SingleOrDefault() ?? "";
+
+    return Results.Content($"""
         <head>
             <title>QR Stickers Generator</title>
         </head>
         <body>
             <h1>Welcome to QR Stickers</h1>
             <div>
+                <h2>Hello {claim_name}.
+                </h2>
                 <p>
                     <a href="/login">Click to connect your Meraki account</a>
                 </p>
