@@ -27,7 +27,7 @@ app.MapGet("/login", (HttpContext httpContext) =>
     string client_id = @"jUNbTS9CoxpssAyMY7484yAEJeVda7J0yvWvGMuZfW4";
     string redirect_url = System.Text.Encodings.Web.UrlEncoder.Default.Encode(@"https://qrstickers.lemonmushroom-d2aba5e0.uksouth.azurecontainerapps.io/oauth/redirect");
 
-    string scopes = System.Text.Encodings.Web.UrlEncoder.Default.Encode(@"sdwan:config:read dashboard:general:config:read");
+    string scopes = System.Text.Encodings.Web.UrlEncoder.Default.Encode(@"sdwan:config:read dashboard:general:config:read dashboard:licensing:config:write");
     httpContext.Response.Redirect($"https://as.meraki.com/oauth/authorize?response_type=code&client_id={client_id}&redirect_uri={redirect_url}&scope={scopes}&state=test");
 
 });
