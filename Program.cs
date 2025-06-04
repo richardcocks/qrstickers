@@ -24,7 +24,7 @@ app.UseRateLimiter();
 
 app.MapGet("/login", (HttpContext httpContext) =>
 {
-    string client_id = @"jUNbTS9CoxpssAyMY7484yAEJeVda7J0yvWvGMuZfW4";
+    string client_id = builder.Configuration.GetValue<string>("meraki_client_id") ?? "";
     string redirect_url = System.Text.Encodings.Web.UrlEncoder.Default.Encode(@"https://qrstickers.lemonmushroom-d2aba5e0.uksouth.azurecontainerapps.io/oauth/redirect");
 
     string scopes = System.Text.Encodings.Web.UrlEncoder.Default.Encode(@"sdwan:config:read dashboard:general:config:read");
