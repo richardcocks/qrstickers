@@ -1,0 +1,124 @@
+﻿using System.Text.Json.Serialization;
+
+namespace QRStickers;
+
+/// <summary>
+/// Helper class for Meraki OAuth and API operations
+/// </summary>
+public class MerakiApiClient
+{
+    private readonly HttpClient _httpClient;
+    private readonly IConfiguration _config;
+    private const string TokenEndpoint = "https://as.meraki.com/oauth/token";
+    private const string ApiBaseUrl = "https://api.meraki.com/api/v1";
+
+    public MerakiApiClient(HttpClient httpClient, IConfiguration config)
+    {
+        _httpClient = httpClient;
+        _config = config;
+    }
+
+    /// <summary>
+    /// Exchange authorization code for access token
+    /// </summary>
+    public async Task<(string AccessToken, string RefreshToken, int ExpiresIn)?> ExchangeCodeForTokenAsync(string code, string redirectUri)
+    {
+        var clientId = _config.GetValue<string>("meraki_client_id") ?? "";
+        var clientSecret = _config.GetValue<string>("meraki_client_secret") ?? "";
+
+        var request = new HttpRequestMessage(HttpMethod.Post, TokenEndpoint)
+        {
+            Content = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                { "grant_type", "authorization_code" },
+                { "client_id", clientId },
+                { "client_secret", clientSecret },
+                { "code", code },
+                { "redirect_uri", redirectUri }
+            })
+        };
+
+        try
+        {
+            var response = await _httpClient.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+
+            var json = await response.Content.ReadFromJsonAsync<TokenResponse>();
+            return (json.access_token, json.refresh_token, json.expires_in);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error exchanging code: {ex.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Refresh an expired access token
+    /// </summary>
+    public async Task<(string AccessToken, string RefreshToken, int ExpiresIn)?> RefreshAccessTokenAsync(string refreshToken)
+    {
+        var clientId = _config.GetValue<string>("meraki_client_id") ?? "";
+        var clientSecret = _config.GetValue<string>("meraki_client_secret") ?? "";
+
+        var request = new HttpRequestMessage(HttpMethod.Post, TokenEndpoint)
+        {
+            Content = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                { "grant_type", "refresh_token" },
+                { "client_id", clientId },
+                { "client_secret", clientSecret },
+                { "refresh_token", refreshToken }
+            })
+        };
+
+        try
+        {
+            var response = await _httpClient.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+
+            var json = await response.Content.ReadFromJsonAsync<TokenResponse>();
+            return (json.access_token, json.refresh_token, json.expires_in);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error refreshing token: {ex.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Get organizations for the authenticated user
+    /// </summary>
+    public async Task<List<Organization>?> GetOrganizationsAsync(string accessToken)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/organizations");
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+
+        try
+        {
+            var response = await _httpClient.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+
+            var organizations = await response.Content.ReadFromJsonAsync<List<Organization>>();
+            return organizations;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error getting organizations: {ex.Message}");
+            return null;
+        }
+    }
+
+    private class TokenResponse
+    {
+        [JsonPropertyName("access_token")]
+        public string access_token { get; set; } = null!;
+
+        [JsonPropertyName("refresh_token")]
+        public string? refresh_token { get; set; }
+
+        [JsonPropertyName("expires_in")]
+        public int expires_in { get; set; }
+    }
+}
