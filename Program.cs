@@ -25,7 +25,7 @@ app.UseRateLimiter();
 app.MapGet("/login", (HttpContext httpContext) =>
 {
     string client_id = builder.Configuration.GetValue<string>("meraki_client_id") ?? "";
-    string redirect_url = System.Text.Encodings.Web.UrlEncoder.Default.Encode(@"https://qrstickers.lemonmushroom-d2aba5e0.uksouth.azurecontainerapps.io/oauth/redirect");
+    string redirect_url = System.Text.Encodings.Web.UrlEncoder.Default.Encode(@"https://qrstickers-htbteydbgjh0b9c4.uksouth-01.azurewebsites.net/oauth/redirect");
 
     string scopes = System.Text.Encodings.Web.UrlEncoder.Default.Encode(@"sdwan:config:read dashboard:general:config:read");
     httpContext.Response.Redirect($"https://as.meraki.com/oauth/authorize?response_type=code&client_id={client_id}&redirect_uri={redirect_url}&scope={scopes}&state=test");
