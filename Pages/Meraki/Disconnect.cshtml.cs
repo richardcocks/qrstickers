@@ -36,14 +36,41 @@ public class DisconnectModel : PageModel
 
             if (token != null)
             {
-                // Remove token from database
+                // Delete all cached Meraki data (in order of foreign key dependencies)
+
+                // 1. Delete cached devices
+                var devicesDeleted = await _db.CachedDevices
+                    .Where(d => d.UserId == userId)
+                    .ExecuteDeleteAsync();
+
+                // 2. Delete cached networks
+                var networksDeleted = await _db.CachedNetworks
+                    .Where(n => n.UserId == userId)
+                    .ExecuteDeleteAsync();
+
+                // 3. Delete cached organizations
+                var orgsDeleted = await _db.CachedOrganizations
+                    .Where(o => o.UserId == userId)
+                    .ExecuteDeleteAsync();
+
+                // 4. Delete sync status
+                var syncStatus = await _db.SyncStatuses.FindAsync(userId);
+                if (syncStatus != null)
+                {
+                    _db.SyncStatuses.Remove(syncStatus);
+                    await _db.SaveChangesAsync();
+                }
+
+                // 5. Remove OAuth token from database
                 _db.OAuthTokens.Remove(token);
                 await _db.SaveChangesAsync();
 
-                // Clear cached access token
+                // 6. Clear cached access token
                 _tokenCache.RemoveToken(userId);
 
-                _logger.LogInformation("OAuth refresh token and cached access token removed for user {userId}", userId);
+                _logger.LogInformation(
+                    "Meraki account disconnected for user {userId}. Deleted: {orgs} organizations, {networks} networks, {devices} devices, sync status, OAuth token",
+                    userId, orgsDeleted, networksDeleted, devicesDeleted);
                 Success = true;
             }
             else
