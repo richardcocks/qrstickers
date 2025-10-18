@@ -65,6 +65,9 @@ builder.Services.AddRazorPages();
 builder.Services.AddSingleton(new QRCodeGenerator());
 builder.Services.AddHttpClient<MerakiApiClient>();
 
+// Register AccessTokenCache as singleton (shared across all requests)
+builder.Services.AddSingleton<AccessTokenCache>();
+
 // Register MerakiServiceFactory as scoped (per request)
 builder.Services.AddScoped<MerakiServiceFactory>();
 

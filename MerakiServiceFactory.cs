@@ -7,15 +7,18 @@ public class MerakiServiceFactory
 {
     private readonly MerakiApiClient _apiClient;
     private readonly QRStickersDbContext _db;
+    private readonly AccessTokenCache _tokenCache;
     private readonly ILogger<MerakiService> _logger;
 
     public MerakiServiceFactory(
         MerakiApiClient apiClient,
         QRStickersDbContext db,
+        AccessTokenCache tokenCache,
         ILogger<MerakiService> logger)
     {
         _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
         _db = db ?? throw new ArgumentNullException(nameof(db));
+        _tokenCache = tokenCache ?? throw new ArgumentNullException(nameof(tokenCache));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -24,6 +27,6 @@ public class MerakiServiceFactory
     /// </summary>
     public MerakiService CreateForUser(string userId)
     {
-        return new MerakiService(userId, _apiClient, _db, _logger);
+        return new MerakiService(userId, _apiClient, _db, _tokenCache, _logger);
     }
 }

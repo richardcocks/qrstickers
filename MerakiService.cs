@@ -11,19 +11,20 @@ public class MerakiService
     private readonly string _userId;
     private readonly MerakiApiClient _apiClient;
     private readonly QRStickersDbContext _db;
+    private readonly AccessTokenCache _tokenCache;
     private readonly ILogger<MerakiService> _logger;
-    private string? _cachedAccessToken;
-    private DateTime _tokenExpiresAt = DateTime.MinValue;
 
     public MerakiService(
         string userId,
         MerakiApiClient apiClient,
         QRStickersDbContext db,
+        AccessTokenCache tokenCache,
         ILogger<MerakiService> logger)
     {
         _userId = userId ?? throw new ArgumentNullException(nameof(userId));
         _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
         _db = db ?? throw new ArgumentNullException(nameof(db));
+        _tokenCache = tokenCache ?? throw new ArgumentNullException(nameof(tokenCache));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -32,11 +33,10 @@ public class MerakiService
     /// </summary>
     private async Task<string> GetAccessTokenAsync()
     {
-        // Check if we have a cached token that's still valid (with 5 min buffer)
-        if (_cachedAccessToken != null && _tokenExpiresAt > DateTime.UtcNow.AddMinutes(5))
+        // Check singleton cache first (persists across requests)
+        if (_tokenCache.TryGetToken(_userId, out var cachedToken, out var expiresAt))
         {
-            _logger.LogDebug("Using cached access token for user {UserId}", _userId);
-            return _cachedAccessToken;
+            return cachedToken!;
         }
 
         // Need to get a fresh access token from refresh token
@@ -74,11 +74,11 @@ public class MerakiService
             await _db.SaveChangesAsync();
         }
 
-        // Cache the new access token
-        _cachedAccessToken = newAccessToken;
-        _tokenExpiresAt = DateTime.UtcNow.AddSeconds(expiresIn);
+        // Cache the new access token in singleton cache (persists across requests)
+        var tokenExpiresAt = DateTime.UtcNow.AddSeconds(expiresIn);
+        _tokenCache.CacheToken(_userId, newAccessToken, tokenExpiresAt);
 
-        _logger.LogInformation("Access token refreshed for user {UserId}, expires at {ExpiresAt}", _userId, _tokenExpiresAt);
+        _logger.LogInformation("Access token refreshed for user {UserId}, expires at {ExpiresAt}", _userId, tokenExpiresAt);
 
         return newAccessToken;
     }

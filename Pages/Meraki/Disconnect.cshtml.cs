@@ -9,11 +9,13 @@ namespace QRStickers.Pages.Meraki;
 public class DisconnectModel : PageModel
 {
     private readonly QRStickersDbContext _db;
+    private readonly AccessTokenCache _tokenCache;
     private readonly ILogger<DisconnectModel> _logger;
 
-    public DisconnectModel(QRStickersDbContext db, ILogger<DisconnectModel> logger)
+    public DisconnectModel(QRStickersDbContext db, AccessTokenCache tokenCache, ILogger<DisconnectModel> logger)
     {
         _db = db;
+        _tokenCache = tokenCache;
         _logger = logger;
     }
 
@@ -38,7 +40,10 @@ public class DisconnectModel : PageModel
                 _db.OAuthTokens.Remove(token);
                 await _db.SaveChangesAsync();
 
-                _logger.LogInformation("OAuth refresh token removed for user {userId}", userId);
+                // Clear cached access token
+                _tokenCache.RemoveToken(userId);
+
+                _logger.LogInformation("OAuth refresh token and cached access token removed for user {userId}", userId);
                 Success = true;
             }
             else
