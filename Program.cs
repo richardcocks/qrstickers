@@ -37,6 +37,12 @@ builder.Services.AddRateLimiter(rateLimiterOptions => rateLimiterOptions
         options.QueueLimit = 10;
     }));
 
+builder.Services.AddLogging(loggingBuilder =>
+    {
+        loggingBuilder.AddConsole();
+        loggingBuilder.AddAzureWebAppDiagnostics();
+    }
+);
 
 var app = builder.Build();
 
