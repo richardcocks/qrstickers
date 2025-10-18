@@ -134,6 +134,52 @@ public class MerakiApiClient
         }
     }
 
+    /// <summary>
+    /// Get networks for a specific organization
+    /// </summary>
+    public async Task<List<Network>?> GetNetworksAsync(string accessToken, string organizationId)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/organizations/{organizationId}/networks");
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+
+        try
+        {
+            var response = await _httpClient.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+
+            var networks = await response.Content.ReadFromJsonAsync<List<Network>>();
+            return networks;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Exception while retrieving Meraki networks for organization {OrganizationId}", organizationId);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Get all devices for a specific organization
+    /// </summary>
+    public async Task<List<Device>?> GetOrganizationDevicesAsync(string accessToken, string organizationId)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/organizations/{organizationId}/devices");
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+
+        try
+        {
+            var response = await _httpClient.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+
+            var devices = await response.Content.ReadFromJsonAsync<List<Device>>();
+            return devices;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Exception while retrieving Meraki devices for organization {OrganizationId}", organizationId);
+            return null;
+        }
+    }
+
     private class TokenResponse
     {
         [JsonPropertyName("access_token")]
