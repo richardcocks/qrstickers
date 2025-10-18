@@ -46,25 +46,9 @@ public class OrganizationsModel : PageModel
 
             HasToken = true;
 
-            // Check if token is expired and refresh if needed
-            if (DateTime.UtcNow > token.ExpiresAt && token.RefreshToken != null)
-            {
-                var refreshResult = await _merakiClient.RefreshAccessTokenAsync(token.RefreshToken);
-                if (refreshResult != null)
-                {
-                    var (newAccessToken, newRefreshToken, newExpiresIn) = refreshResult.Value;
-                    token.AccessToken = newAccessToken;
-                    token.RefreshToken = newRefreshToken;
-                    token.ExpiresAt = DateTime.UtcNow.AddSeconds(newExpiresIn);
-                    token.UpdatedAt = DateTime.UtcNow;
-                    _db.OAuthTokens.Update(token);
-                    await _db.SaveChangesAsync();
-                    _logger.LogInformation("Token refreshed for user {userId}", userId);
-                }
-            }
-
             // Get organizations using pooled client
-            var client = _clientPool.GetClient(token.AccessToken);
+            // The pool automatically handles access token refresh
+            var client = await _clientPool.GetClientForUserAsync(userId);
             Organizations = await client.Organizations.GetOrganizationsAsync();
         }
         catch (Exception ex)

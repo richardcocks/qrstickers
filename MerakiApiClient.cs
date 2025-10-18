@@ -56,7 +56,23 @@ public class MerakiApiClient
                 return null;
             }
 
-            var json = await response.Content.ReadFromJsonAsync<TokenResponse>();
+            // Read raw JSON for debugging
+            var rawJson = await response.Content.ReadAsStringAsync();
+            _logger.LogInformation("OAuth token exchange response: {RawJson}", rawJson);
+
+            var json = System.Text.Json.JsonSerializer.Deserialize<TokenResponse>(rawJson);
+
+            if (json == null)
+            {
+                _logger.LogError("Failed to deserialize token response");
+                return null;
+            }
+
+            _logger.LogInformation("Parsed token: access_token length={AccessTokenLength}, refresh_token length={RefreshTokenLength}, expires_in={ExpiresIn}",
+                json.access_token?.Length ?? 0,
+                json.refresh_token?.Length ?? 0,
+                json.expires_in);
+
             return (json.access_token, json.refresh_token, json.expires_in);
         }
         catch (Exception ex)
@@ -99,8 +115,24 @@ public class MerakiApiClient
                 _logger.LogError("OAuth token refresh failed. Status: {StatusCode}, Response: {ErrorResponse}", response.StatusCode, errorContent);
                 return null;
             }
-            
-            var json = await response.Content.ReadFromJsonAsync<TokenResponse>();
+
+            // Read raw JSON for debugging
+            var rawJson = await response.Content.ReadAsStringAsync();
+            _logger.LogInformation("OAuth token refresh response: {RawJson}", rawJson);
+
+            var json = System.Text.Json.JsonSerializer.Deserialize<TokenResponse>(rawJson);
+
+            if (json == null)
+            {
+                _logger.LogError("Failed to deserialize refresh token response");
+                return null;
+            }
+
+            _logger.LogInformation("Parsed refreshed token: access_token length={AccessTokenLength}, refresh_token length={RefreshTokenLength}, expires_in={ExpiresIn}",
+                json.access_token?.Length ?? 0,
+                json.refresh_token?.Length ?? 0,
+                json.expires_in);
+
             return (json.access_token, json.refresh_token, json.expires_in);
         }
         catch (Exception ex)

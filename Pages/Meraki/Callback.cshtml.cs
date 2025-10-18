@@ -51,6 +51,9 @@ public class CallbackModel : PageModel
 
             var (accessToken, refreshToken, expiresIn) = tokenResult.Value;
 
+            _logger.LogInformation("Token exchange successful. Access token length: {Length}, Expires in: {ExpiresIn} seconds",
+                accessToken?.Length ?? 0, expiresIn);
+
             // Get user identifier from authenticated Identity user
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -62,33 +65,44 @@ public class CallbackModel : PageModel
                 return Page();
             }
 
-            // Store or update token in database
+            if (string.IsNullOrEmpty(refreshToken))
+            {
+                _logger.LogError("No refresh token received from OAuth provider");
+                Success = false;
+                ErrorMessage = "Failed to obtain refresh token";
+                return Page();
+            }
+
+            // Store or update ONLY refresh token in database
+            // Access tokens are ephemeral and managed in-memory by MerakiClientPool
             var existingToken = await _db.OAuthTokens.FirstOrDefaultAsync(t => t.UserId == userId);
 
             if (existingToken != null)
             {
-                existingToken.AccessToken = accessToken;
                 existingToken.RefreshToken = refreshToken;
-                existingToken.ExpiresAt = DateTime.UtcNow.AddSeconds(expiresIn);
+                existingToken.RefreshTokenExpiresAt = DateTime.UtcNow.AddDays(90); // Meraki refresh tokens last 90 days
                 existingToken.UpdatedAt = DateTime.UtcNow;
                 _db.OAuthTokens.Update(existingToken);
+                _logger.LogInformation("Updated refresh token for user {userId}, expires at {ExpiresAt}",
+                    userId, existingToken.RefreshTokenExpiresAt);
             }
             else
             {
                 var newToken = new OAuthToken
                 {
                     UserId = userId,
-                    AccessToken = accessToken,
                     RefreshToken = refreshToken,
-                    ExpiresAt = DateTime.UtcNow.AddSeconds(expiresIn),
+                    RefreshTokenExpiresAt = DateTime.UtcNow.AddDays(90),
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };
                 _db.OAuthTokens.Add(newToken);
+                _logger.LogInformation("Created new refresh token for user {userId}, expires at {ExpiresAt}",
+                    userId, newToken.RefreshTokenExpiresAt);
             }
 
             await _db.SaveChangesAsync();
-            _logger.LogInformation("OAuth token stored successfully for user {userId}", userId);
+            _logger.LogInformation("OAuth refresh token stored successfully for user {userId}", userId);
 
             Success = true;
             return Page();

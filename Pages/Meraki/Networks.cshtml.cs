@@ -56,25 +56,8 @@ public class NetworksModel : PageModel
 
             HasToken = true;
 
-            // Check if token is expired and refresh if needed
-            if (DateTime.UtcNow > token.ExpiresAt && token.RefreshToken != null)
-            {
-                var refreshResult = await _merakiClient.RefreshAccessTokenAsync(token.RefreshToken);
-                if (refreshResult != null)
-                {
-                    var (newAccessToken, newRefreshToken, newExpiresIn) = refreshResult.Value;
-                    token.AccessToken = newAccessToken;
-                    token.RefreshToken = newRefreshToken;
-                    token.ExpiresAt = DateTime.UtcNow.AddSeconds(newExpiresIn);
-                    token.UpdatedAt = DateTime.UtcNow;
-                    _db.OAuthTokens.Update(token);
-                    await _db.SaveChangesAsync();
-                    _logger.LogInformation("Token refreshed for user {userId}", userId);
-                }
-            }
-
-            // Get pooled client
-            var client = _clientPool.GetClient(token.AccessToken);
+            // Get pooled client - pool automatically handles access token refresh
+            var client = await _clientPool.GetClientForUserAsync(userId);
 
             // Get networks for this organization
             Networks = await client.Organizations.Networks.GetOrganizationNetworksAsync(orgId);

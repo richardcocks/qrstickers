@@ -1,7 +1,7 @@
 ﻿namespace QRStickers;
 
 /// <summary>
-/// Represents an OAuth token stored for a user
+/// Represents an OAuth refresh token stored for a user
 /// </summary>
 public class OAuthToken
 {
@@ -17,9 +17,17 @@ public class OAuthToken
     /// </summary>
     public ApplicationUser User { get; set; } = null!;
 
-    public string AccessToken { get; set; } = null!;
-    public string? RefreshToken { get; set; }
-    public DateTime ExpiresAt { get; set; }
+    /// <summary>
+    /// OAuth refresh token (long-lived, 90 days)
+    /// Access tokens are ephemeral and not stored
+    /// </summary>
+    public string RefreshToken { get; set; } = null!;
+
+    /// <summary>
+    /// When the refresh token expires (typically CreatedAt + 90 days for Meraki)
+    /// </summary>
+    public DateTime RefreshTokenExpiresAt { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

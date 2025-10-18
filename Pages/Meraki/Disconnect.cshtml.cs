@@ -9,11 +9,13 @@ namespace QRStickers.Pages.Meraki;
 public class DisconnectModel : PageModel
 {
     private readonly QRStickersDbContext _db;
+    private readonly MerakiClientPool _clientPool;
     private readonly ILogger<DisconnectModel> _logger;
 
-    public DisconnectModel(QRStickersDbContext db, ILogger<DisconnectModel> logger)
+    public DisconnectModel(QRStickersDbContext db, MerakiClientPool clientPool, ILogger<DisconnectModel> logger)
     {
         _db = db;
+        _clientPool = clientPool;
         _logger = logger;
     }
 
@@ -34,9 +36,14 @@ public class DisconnectModel : PageModel
 
             if (token != null)
             {
+                // Remove token from database
                 _db.OAuthTokens.Remove(token);
                 await _db.SaveChangesAsync();
-                _logger.LogInformation("OAuth token removed for user {userId}", userId);
+
+                // Remove client from pool
+                _clientPool.RemoveClientForUser(userId);
+
+                _logger.LogInformation("OAuth token and pooled client removed for user {userId}", userId);
                 Success = true;
             }
             else

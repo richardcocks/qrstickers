@@ -14,7 +14,7 @@ public class IndexModel : PageModel
     }
 
     public bool HasMerakiToken { get; set; }
-    public DateTime? TokenExpiresAt { get; set; }
+    public DateTime? RefreshTokenExpiresAt { get; set; }
 
     public async Task OnGetAsync()
     {
@@ -25,7 +25,7 @@ public class IndexModel : PageModel
             {
                 var token = await _db.OAuthTokens.FirstOrDefaultAsync(t => t.UserId == userId);
                 HasMerakiToken = token != null;
-                TokenExpiresAt = token?.ExpiresAt;
+                RefreshTokenExpiresAt = token?.RefreshTokenExpiresAt;
             }
         }
     }
