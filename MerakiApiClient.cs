@@ -1,4 +1,5 @@
 ﻿using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging;
 
 namespace QRStickers;
 
@@ -9,13 +10,15 @@ public class MerakiApiClient
 {
     private readonly HttpClient _httpClient;
     private readonly IConfiguration _config;
+    private readonly ILogger<MerakiApiClient> _logger;
     private const string TokenEndpoint = "https://as.meraki.com/oauth/token";
     private const string ApiBaseUrl = "https://api.meraki.com/api/v1";
 
-    public MerakiApiClient(HttpClient httpClient, IConfiguration config)
+    public MerakiApiClient(HttpClient httpClient, IConfiguration config, ILogger<MerakiApiClient> logger)
     {
         _httpClient = httpClient;
         _config = config;
+        _logger = logger;
     }
 
     /// <summary>
@@ -50,7 +53,7 @@ public class MerakiApiClient
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"Error exchanging code. Status: {response.StatusCode}, Response: {errorContent}");
+                _logger.LogError("OAuth token exchange failed. Status: {StatusCode}, Response: {ErrorResponse}", response.StatusCode, errorContent);
                 return null;
             }
 
@@ -59,7 +62,7 @@ public class MerakiApiClient
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error exchanging code: {ex.Message}");
+            _logger.LogError(ex, "Exception during OAuth token exchange");
             return null;
         }
     }
@@ -94,7 +97,7 @@ public class MerakiApiClient
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"Error refreshing token. Status: {response.StatusCode}, Response: {errorContent}");
+                _logger.LogError("OAuth token refresh failed. Status: {StatusCode}, Response: {ErrorResponse}", response.StatusCode, errorContent);
                 return null;
             }
 
@@ -103,7 +106,7 @@ public class MerakiApiClient
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error refreshing token: {ex.Message}");
+            _logger.LogError(ex, "Exception during OAuth token refresh");
             return null;
         }
     }
@@ -126,7 +129,7 @@ public class MerakiApiClient
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error getting organizations: {ex.Message}");
+            _logger.LogError(ex, "Exception while retrieving Meraki organizations");
             return null;
         }
     }
