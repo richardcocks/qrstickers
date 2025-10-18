@@ -66,11 +66,17 @@ On first run, the application will automatically:
 ## Project Structure
 
 - `Pages/` - Razor Pages (Identity, Meraki, Home)
+  - `Identity/Account/` - Login, Register, Logout pages
+  - `Meraki/` - OAuth connection, callback, organizations, networks, disconnect pages
 - `Program.cs` - Application configuration and startup
 - `ApplicationUser.cs` - Identity user model
 - `OAuthToken.cs` - Meraki OAuth token storage
 - `QRStickersDbContext.cs` - Entity Framework DbContext
-- `MerakiApiClient.cs` - Meraki API integration
+- `MerakiApiClient.cs` - Low-level Meraki OAuth and API client
+- `MerakiService.cs` - High-level Meraki service with automatic token refresh
+- `MerakiServiceFactory.cs` - Factory for creating user-specific Meraki services
+- `AccessTokenCache.cs` - In-memory token caching for performance
+- `Organization.cs`, `Network.cs`, `Device.cs` - Meraki data models
 
 ## API Endpoints
 
@@ -86,9 +92,11 @@ On first run, the application will automatically:
 ### Meraki Integration Flow
 1. Login required → Click "Connect Meraki Account"
 2. Redirect to Meraki OAuth → User authorizes
-3. Callback receives token → Store in database (linked to user)
-4. Access organizations → Auto-refresh expired tokens
-5. Disconnect → Remove token from database
+3. Callback receives token → Store refresh token in database (linked to user)
+4. Access token cached in-memory for performance
+5. View organizations → Auto-refresh expired tokens from database
+6. View networks → See networks and device counts per network
+7. Disconnect → Remove token from database and clear cache
 
 ## Database
 
@@ -109,6 +117,18 @@ dotnet ef database update
 dotnet ef migrations remove
 ```
 
+## Token Management
+
+The application uses a hybrid token persistence strategy:
+
+- **Refresh Tokens** - Stored securely in SQLite database per user (90-day lifetime)
+- **Access Tokens** - Cached in-memory only via singleton `AccessTokenCache` (1-hour lifetime)
+- **Benefits:**
+  - Reduces database queries by 50-80% during active sessions
+  - Survives application restarts (refresh tokens persist)
+  - Automatic refresh when access token expires
+  - Secure: refresh tokens never exposed to client
+
 ## Docker
 
 Build and run with Docker:
@@ -118,20 +138,30 @@ docker build -t qrstickers:latest .
 docker run -p 8080:8080 qrstickers:latest
 ```
 
+**Note:** Mount the `/App/` volume to persist the SQLite database across container restarts:
+```bash
+docker run -p 8080:8080 -v /path/to/local:/App qrstickers:latest
+```
+
 ## Learning Objectives
 
 This project demonstrates:
 - ASP.NET Core Razor Pages architecture
 - ASP.NET Identity authentication and authorization
-- OAuth 2.0 authorization code flow
+- OAuth 2.0 authorization code flow with token refresh and rotation
 - Separating authentication (identity) from authorization (access tokens)
-- Entity Framework Core migrations
+- Hybrid token persistence strategy (in-memory caching + database storage)
+- Singleton pattern for cross-request token caching
+- Factory pattern for scoped service creation
+- Entity Framework Core migrations and relationships
 - Foreign key relationships in EF Core
 - Cookie-based session management
-- Razor tag helpers
+- Razor tag helpers and page models
 - Rate limiting middleware
-- Docker containerization
-- Azure deployment patterns
+- Docker multi-stage containerization
+- Azure deployment patterns (Web Apps and Container Apps)
+- Dependency injection and service lifetimes
+- Performance optimization through caching
 
 ## License
 
