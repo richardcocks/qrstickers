@@ -10,6 +10,12 @@ using QRStickers;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configure logging explicitly for Azure
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
+builder.Logging.AddEventSourceLogger();
+
 // Configure SQLite database
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? "Data Source=qrstickers.db";
