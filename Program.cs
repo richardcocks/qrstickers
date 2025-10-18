@@ -65,8 +65,8 @@ builder.Services.AddRazorPages();
 builder.Services.AddSingleton(new QRCodeGenerator());
 builder.Services.AddHttpClient<MerakiApiClient>();
 
-// Register MerakiClientPool as singleton
-builder.Services.AddSingleton<MerakiClientPool>();
+// Register MerakiServiceFactory as scoped (per request)
+builder.Services.AddScoped<MerakiServiceFactory>();
 
 builder.Services.AddRateLimiter(rateLimiterOptions => rateLimiterOptions
     .AddTokenBucketLimiter(policyName: "tokenBucket", options =>
