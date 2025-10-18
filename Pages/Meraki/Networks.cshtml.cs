@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using Meraki.Api.Data;
 
 namespace QRStickers.Pages.Meraki;
 
@@ -10,12 +11,14 @@ namespace QRStickers.Pages.Meraki;
 public class NetworksModel : PageModel
 {
     private readonly MerakiApiClient _merakiClient;
+    private readonly MerakiClientPool _clientPool;
     private readonly QRStickersDbContext _db;
     private readonly ILogger<NetworksModel> _logger;
 
-    public NetworksModel(MerakiApiClient merakiClient, QRStickersDbContext db, ILogger<NetworksModel> logger)
+    public NetworksModel(MerakiApiClient merakiClient, MerakiClientPool clientPool, QRStickersDbContext db, ILogger<NetworksModel> logger)
     {
         _merakiClient = merakiClient;
+        _clientPool = clientPool;
         _db = db;
         _logger = logger;
     }
@@ -70,11 +73,14 @@ public class NetworksModel : PageModel
                 }
             }
 
+            // Get pooled client
+            var client = _clientPool.GetClient(token.AccessToken);
+
             // Get networks for this organization
-            Networks = await _merakiClient.GetNetworksAsync(token.AccessToken, orgId);
+            Networks = await client.Organizations.Networks.GetOrganizationNetworksAsync(orgId);
 
             // Get devices for this organization to calculate counts per network
-            var devices = await _merakiClient.GetOrganizationDevicesAsync(token.AccessToken, orgId);
+            var devices = await client.Organizations.Devices.GetOrganizationDevicesAsync(orgId);
             if (devices != null)
             {
                 DeviceCounts = devices

@@ -12,7 +12,6 @@ public class MerakiApiClient
     private readonly IConfiguration _config;
     private readonly ILogger<MerakiApiClient> _logger;
     private const string TokenEndpoint = "https://as.meraki.com/oauth/token";
-    private const string ApiBaseUrl = "https://api.meraki.com/api/v1";
 
     public MerakiApiClient(HttpClient httpClient, IConfiguration config, ILogger<MerakiApiClient> logger)
     {
@@ -111,74 +110,6 @@ public class MerakiApiClient
         }
     }
 
-    /// <summary>
-    /// Get organizations for the authenticated user
-    /// </summary>
-    public async Task<List<Organization>?> GetOrganizationsAsync(string accessToken)
-    {
-        var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/organizations");
-        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
-
-        try
-        {
-            var response = await _httpClient.SendAsync(request);
-            response.EnsureSuccessStatusCode();
-
-            var organizations = await response.Content.ReadFromJsonAsync<List<Organization>>();
-            return organizations;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Exception while retrieving Meraki organizations");
-            return null;
-        }
-    }
-
-    /// <summary>
-    /// Get networks for a specific organization
-    /// </summary>
-    public async Task<List<Network>?> GetNetworksAsync(string accessToken, string organizationId)
-    {
-        var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/organizations/{organizationId}/networks");
-        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
-
-        try
-        {
-            var response = await _httpClient.SendAsync(request);
-            response.EnsureSuccessStatusCode();
-
-            var networks = await response.Content.ReadFromJsonAsync<List<Network>>();
-            return networks;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Exception while retrieving Meraki networks for organization {OrganizationId}", organizationId);
-            return null;
-        }
-    }
-
-    /// <summary>
-    /// Get all devices for a specific organization
-    /// </summary>
-    public async Task<List<Device>?> GetOrganizationDevicesAsync(string accessToken, string organizationId)
-    {
-        var request = new HttpRequestMessage(HttpMethod.Get, $"{ApiBaseUrl}/organizations/{organizationId}/devices");
-        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
-
-        try
-        {
-            var response = await _httpClient.SendAsync(request);
-            response.EnsureSuccessStatusCode();
-
-            var devices = await response.Content.ReadFromJsonAsync<List<Device>>();
-            return devices;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Exception while retrieving Meraki devices for organization {OrganizationId}", organizationId);
-            return null;
-        }
-    }
 
     private class TokenResponse
     {

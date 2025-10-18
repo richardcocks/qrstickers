@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using Meraki.Api.Data;
 
 namespace QRStickers.Pages.Meraki;
 
@@ -9,12 +10,14 @@ namespace QRStickers.Pages.Meraki;
 public class OrganizationsModel : PageModel
 {
     private readonly MerakiApiClient _merakiClient;
+    private readonly MerakiClientPool _clientPool;
     private readonly QRStickersDbContext _db;
     private readonly ILogger<OrganizationsModel> _logger;
 
-    public OrganizationsModel(MerakiApiClient merakiClient, QRStickersDbContext db, ILogger<OrganizationsModel> logger)
+    public OrganizationsModel(MerakiApiClient merakiClient, MerakiClientPool clientPool, QRStickersDbContext db, ILogger<OrganizationsModel> logger)
     {
         _merakiClient = merakiClient;
+        _clientPool = clientPool;
         _db = db;
         _logger = logger;
     }
@@ -60,8 +63,9 @@ public class OrganizationsModel : PageModel
                 }
             }
 
-            // Get organizations
-            Organizations = await _merakiClient.GetOrganizationsAsync(token.AccessToken);
+            // Get organizations using pooled client
+            var client = _clientPool.GetClient(token.AccessToken);
+            Organizations = await client.Organizations.GetOrganizationsAsync();
         }
         catch (Exception ex)
         {
