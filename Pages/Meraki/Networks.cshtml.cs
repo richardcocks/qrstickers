@@ -22,8 +22,9 @@ public class NetworksModel : PageModel
 
     public bool HasToken { get; set; }
     public string? OrganizationId { get; set; }
-    public List<Network>? Networks { get; set; }
+    public List<CachedNetwork>? Networks { get; set; }
     public Dictionary<string, int> DeviceCounts { get; set; } = new();
+    public DateTime? LastSyncedAt { get; set; }
 
     public async Task<IActionResult> OnGetAsync(string? orgId)
     {
@@ -53,25 +54,30 @@ public class NetworksModel : PageModel
 
             HasToken = true;
 
-            // Get Meraki service - automatically handles access token refresh
-            var merakiService = _merakiFactory.CreateForUser(userId);
+            // Load networks from cache (fast!)
+            Networks = await _db.CachedNetworks
+                .Where(n => n.UserId == userId && n.OrganizationId == orgId && !n.IsDeleted)
+                .OrderBy(n => n.Name)
+                .ToListAsync();
 
-            // Get networks for this organization
-            Networks = await merakiService.GetNetworksAsync(orgId);
+            // Get device counts from cache
+            var deviceCounts = await _db.CachedDevices
+                .Where(d => d.UserId == userId && !d.IsDeleted && d.NetworkId != null)
+                .GroupBy(d => d.NetworkId!)
+                .Select(g => new { NetworkId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.NetworkId, x => x.Count);
 
-            // Get devices for this organization to calculate counts per network
-            var devices = await merakiService.GetOrganizationDevicesAsync(orgId);
-            if (devices != null)
-            {
-                DeviceCounts = devices
-                    .Where(d => d.NetworkId != null)
-                    .GroupBy(d => d.NetworkId!)
-                    .ToDictionary(g => g.Key, g => g.Count());
-            }
+            DeviceCounts = deviceCounts;
+
+            // Get last sync time
+            var syncStatus = await _db.SyncStatuses.FindAsync(userId);
+            LastSyncedAt = syncStatus?.LastSyncCompletedAt;
+
+            _logger.LogInformation("Loaded {Count} networks from cache for organization {OrgId}", Networks.Count, orgId);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving networks for organization {OrganizationId}", orgId);
+            _logger.LogError(ex, "Error retrieving networks from cache for organization {OrganizationId}", orgId);
             Networks = null;
         }
 

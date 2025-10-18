@@ -71,6 +71,10 @@ builder.Services.AddSingleton<AccessTokenCache>();
 // Register MerakiServiceFactory as scoped (per request)
 builder.Services.AddScoped<MerakiServiceFactory>();
 
+// Register Meraki sync services
+builder.Services.AddScoped<MerakiSyncOrchestrator>();
+builder.Services.AddHostedService<MerakiBackgroundSyncService>();
+
 builder.Services.AddRateLimiter(rateLimiterOptions => rateLimiterOptions
     .AddTokenBucketLimiter(policyName: "tokenBucket", options =>
     {

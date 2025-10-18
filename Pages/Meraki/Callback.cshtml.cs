@@ -11,12 +11,14 @@ public class CallbackModel : PageModel
 {
     private readonly MerakiApiClient _merakiClient;
     private readonly QRStickersDbContext _db;
+    private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<CallbackModel> _logger;
 
-    public CallbackModel(MerakiApiClient merakiClient, QRStickersDbContext db, ILogger<CallbackModel> logger)
+    public CallbackModel(MerakiApiClient merakiClient, QRStickersDbContext db, IServiceProvider serviceProvider, ILogger<CallbackModel> logger)
     {
         _merakiClient = merakiClient;
         _db = db;
+        _serviceProvider = serviceProvider;
         _logger = logger;
     }
 
@@ -104,8 +106,25 @@ public class CallbackModel : PageModel
             await _db.SaveChangesAsync();
             _logger.LogInformation("OAuth refresh token stored successfully for user {userId}", userId);
 
+            // Trigger background sync (fire and forget)
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    using var scope = _serviceProvider.CreateScope();
+                    var syncOrchestrator = scope.ServiceProvider.GetRequiredService<MerakiSyncOrchestrator>();
+                    await syncOrchestrator.SyncUserDataAsync(userId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error in background sync for user {UserId}", userId);
+                }
+            });
+
             Success = true;
-            return Page();
+
+            // Redirect to sync status page
+            return RedirectToPage("/Meraki/SyncStatus");
         }
         catch (Exception ex)
         {

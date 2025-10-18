@@ -1,0 +1,322 @@
+using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
+
+namespace QRStickers;
+
+/// <summary>
+/// Orchestrates syncing Meraki data (organizations, networks, devices) from API to local cache
+/// </summary>
+public class MerakiSyncOrchestrator
+{
+    private readonly MerakiServiceFactory _merakiFactory;
+    private readonly QRStickersDbContext _db;
+    private readonly ILogger<MerakiSyncOrchestrator> _logger;
+
+    public MerakiSyncOrchestrator(
+        MerakiServiceFactory merakiFactory,
+        QRStickersDbContext db,
+        ILogger<MerakiSyncOrchestrator> logger)
+    {
+        _merakiFactory = merakiFactory ?? throw new ArgumentNullException(nameof(merakiFactory));
+        _db = db ?? throw new ArgumentNullException(nameof(db));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    }
+
+    /// <summary>
+    /// Syncs all Meraki data for a user (organizations, networks, devices)
+    /// </summary>
+    public async Task SyncUserDataAsync(string userId)
+    {
+        _logger.LogInformation("Starting Meraki data sync for user {UserId}", userId);
+
+        try
+        {
+            // Initialize or update sync status
+            var syncStatus = await _db.SyncStatuses.FindAsync(userId);
+            if (syncStatus == null)
+            {
+                syncStatus = new SyncStatus { UserId = userId };
+                _db.SyncStatuses.Add(syncStatus);
+            }
+
+            syncStatus.LastSyncStartedAt = DateTime.UtcNow;
+            syncStatus.Status = SyncState.InProgress;
+            syncStatus.CurrentStepNumber = 0;
+            syncStatus.TotalSteps = 3;
+            syncStatus.ErrorMessage = null;
+            await _db.SaveChangesAsync();
+
+            // Get Meraki service for this user
+            var merakiService = _merakiFactory.CreateForUser(userId);
+
+            // Step 1: Sync organizations
+            syncStatus.CurrentStep = "Syncing organizations";
+            syncStatus.CurrentStepNumber = 1;
+            await _db.SaveChangesAsync();
+            await SyncOrganizationsAsync(userId, merakiService);
+
+            // Step 2: Sync networks for all organizations
+            syncStatus.CurrentStep = "Syncing networks";
+            syncStatus.CurrentStepNumber = 2;
+            await _db.SaveChangesAsync();
+            await SyncNetworksAsync(userId, merakiService);
+
+            // Step 3: Sync devices for all organizations
+            syncStatus.CurrentStep = "Syncing devices";
+            syncStatus.CurrentStepNumber = 3;
+            await _db.SaveChangesAsync();
+            await SyncDevicesAsync(userId, merakiService);
+
+            // Mark sync as completed
+            syncStatus.Status = SyncState.Completed;
+            syncStatus.LastSyncCompletedAt = DateTime.UtcNow;
+            syncStatus.CurrentStep = "Completed";
+            await _db.SaveChangesAsync();
+
+            _logger.LogInformation("Successfully completed Meraki data sync for user {UserId}", userId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error syncing Meraki data for user {UserId}", userId);
+
+            // Update sync status to failed
+            var syncStatus = await _db.SyncStatuses.FindAsync(userId);
+            if (syncStatus != null)
+            {
+                syncStatus.Status = SyncState.Failed;
+                syncStatus.LastSyncCompletedAt = DateTime.UtcNow;
+                syncStatus.ErrorMessage = ex.Message;
+                await _db.SaveChangesAsync();
+            }
+
+            throw; // Re-throw to let caller handle
+        }
+    }
+
+    private async Task SyncOrganizationsAsync(string userId, MerakiService merakiService)
+    {
+        _logger.LogInformation("Syncing organizations for user {UserId}", userId);
+
+        // Fetch organizations from API
+        var apiOrgs = await merakiService.GetOrganizationsAsync();
+        if (apiOrgs == null)
+        {
+            _logger.LogWarning("No organizations returned from API for user {UserId}", userId);
+            return;
+        }
+
+        // Get existing cached organizations for this user
+        var cachedOrgs = await _db.CachedOrganizations
+            .Where(o => o.UserId == userId)
+            .ToListAsync();
+
+        var now = DateTime.UtcNow;
+        var apiOrgIds = apiOrgs.Select(o => o.Id).ToHashSet();
+
+        // Smart merge: Insert new, update existing, mark missing as deleted
+        foreach (var apiOrg in apiOrgs)
+        {
+            var existing = cachedOrgs.FirstOrDefault(c => c.OrganizationId == apiOrg.Id);
+            if (existing != null)
+            {
+                // Update existing
+                existing.Name = apiOrg.Name;
+                existing.Url = apiOrg.Url;
+                existing.IsDeleted = false;
+                existing.LastSyncedAt = now;
+                _db.CachedOrganizations.Update(existing);
+            }
+            else
+            {
+                // Insert new
+                _db.CachedOrganizations.Add(new CachedOrganization
+                {
+                    UserId = userId,
+                    OrganizationId = apiOrg.Id,
+                    Name = apiOrg.Name,
+                    Url = apiOrg.Url,
+                    IsDeleted = false,
+                    LastSyncedAt = now,
+                    CreatedAt = now
+                });
+            }
+        }
+
+        // Mark organizations not in API response as deleted
+        foreach (var cached in cachedOrgs.Where(c => !apiOrgIds.Contains(c.OrganizationId) && !c.IsDeleted))
+        {
+            cached.IsDeleted = true;
+            cached.LastSyncedAt = now;
+            _db.CachedOrganizations.Update(cached);
+        }
+
+        await _db.SaveChangesAsync();
+        _logger.LogInformation("Synced {Count} organizations for user {UserId}", apiOrgs.Count, userId);
+    }
+
+    private async Task SyncNetworksAsync(string userId, MerakiService merakiService)
+    {
+        _logger.LogInformation("Syncing networks for user {UserId}", userId);
+
+        // Get all active organizations for this user
+        var orgs = await _db.CachedOrganizations
+            .Where(o => o.UserId == userId && !o.IsDeleted)
+            .ToListAsync();
+
+        var allApiNetworks = new List<Network>();
+
+        // Fetch networks for each organization
+        foreach (var org in orgs)
+        {
+            try
+            {
+                var networks = await merakiService.GetNetworksAsync(org.OrganizationId);
+                if (networks != null)
+                {
+                    allApiNetworks.AddRange(networks);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching networks for organization {OrgId}", org.OrganizationId);
+                // Continue with other organizations
+            }
+        }
+
+        // Get existing cached networks for this user
+        var cachedNetworks = await _db.CachedNetworks
+            .Where(n => n.UserId == userId)
+            .ToListAsync();
+
+        var now = DateTime.UtcNow;
+        var apiNetworkIds = allApiNetworks.Select(n => n.Id).ToHashSet();
+
+        // Smart merge: Insert new, update existing, mark missing as deleted
+        foreach (var apiNetwork in allApiNetworks)
+        {
+            var existing = cachedNetworks.FirstOrDefault(c => c.NetworkId == apiNetwork.Id);
+            if (existing != null)
+            {
+                // Update existing
+                existing.Name = apiNetwork.Name;
+                existing.Url = apiNetwork.Url;
+                existing.OrganizationId = apiNetwork.OrganizationId;
+                existing.ProductTypesJson = apiNetwork.ProductTypes != null ? JsonSerializer.Serialize(apiNetwork.ProductTypes) : null;
+                existing.TagsJson = apiNetwork.Tags != null ? JsonSerializer.Serialize(apiNetwork.Tags) : null;
+                existing.TimeZone = apiNetwork.TimeZone;
+                existing.IsDeleted = false;
+                existing.LastSyncedAt = now;
+                _db.CachedNetworks.Update(existing);
+            }
+            else
+            {
+                // Insert new
+                _db.CachedNetworks.Add(new CachedNetwork
+                {
+                    UserId = userId,
+                    OrganizationId = apiNetwork.OrganizationId,
+                    NetworkId = apiNetwork.Id,
+                    Name = apiNetwork.Name,
+                    Url = apiNetwork.Url,
+                    ProductTypesJson = apiNetwork.ProductTypes != null ? JsonSerializer.Serialize(apiNetwork.ProductTypes) : null,
+                    TagsJson = apiNetwork.Tags != null ? JsonSerializer.Serialize(apiNetwork.Tags) : null,
+                    TimeZone = apiNetwork.TimeZone,
+                    IsDeleted = false,
+                    LastSyncedAt = now,
+                    CreatedAt = now
+                });
+            }
+        }
+
+        // Mark networks not in API response as deleted
+        foreach (var cached in cachedNetworks.Where(c => !apiNetworkIds.Contains(c.NetworkId) && !c.IsDeleted))
+        {
+            cached.IsDeleted = true;
+            cached.LastSyncedAt = now;
+            _db.CachedNetworks.Update(cached);
+        }
+
+        await _db.SaveChangesAsync();
+        _logger.LogInformation("Synced {Count} networks for user {UserId}", allApiNetworks.Count, userId);
+    }
+
+    private async Task SyncDevicesAsync(string userId, MerakiService merakiService)
+    {
+        _logger.LogInformation("Syncing devices for user {UserId}", userId);
+
+        // Get all active organizations for this user
+        var orgs = await _db.CachedOrganizations
+            .Where(o => o.UserId == userId && !o.IsDeleted)
+            .ToListAsync();
+
+        var allApiDevices = new List<Device>();
+
+        // Fetch devices for each organization
+        foreach (var org in orgs)
+        {
+            try
+            {
+                var devices = await merakiService.GetOrganizationDevicesAsync(org.OrganizationId);
+                if (devices != null)
+                {
+                    allApiDevices.AddRange(devices);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching devices for organization {OrgId}", org.OrganizationId);
+                // Continue with other organizations
+            }
+        }
+
+        // Get existing cached devices for this user
+        var cachedDevices = await _db.CachedDevices
+            .Where(d => d.UserId == userId)
+            .ToListAsync();
+
+        var now = DateTime.UtcNow;
+        var apiDeviceSerials = allApiDevices.Where(d => d.Serial != null).Select(d => d.Serial!).ToHashSet();
+
+        // Smart merge: Insert new, update existing, mark missing as deleted
+        foreach (var apiDevice in allApiDevices.Where(d => d.Serial != null))
+        {
+            var existing = cachedDevices.FirstOrDefault(c => c.Serial == apiDevice.Serial);
+            if (existing != null)
+            {
+                // Update existing
+                existing.Name = apiDevice.Name;
+                existing.Model = apiDevice.Model;
+                existing.NetworkId = apiDevice.NetworkId;
+                existing.IsDeleted = false;
+                existing.LastSyncedAt = now;
+                _db.CachedDevices.Update(existing);
+            }
+            else
+            {
+                // Insert new
+                _db.CachedDevices.Add(new CachedDevice
+                {
+                    UserId = userId,
+                    Serial = apiDevice.Serial!,
+                    Name = apiDevice.Name,
+                    Model = apiDevice.Model,
+                    NetworkId = apiDevice.NetworkId,
+                    IsDeleted = false,
+                    LastSyncedAt = now,
+                    CreatedAt = now
+                });
+            }
+        }
+
+        // Mark devices not in API response as deleted
+        foreach (var cached in cachedDevices.Where(c => !apiDeviceSerials.Contains(c.Serial) && !c.IsDeleted))
+        {
+            cached.IsDeleted = true;
+            cached.LastSyncedAt = now;
+            _db.CachedDevices.Update(cached);
+        }
+
+        await _db.SaveChangesAsync();
+        _logger.LogInformation("Synced {Count} devices for user {UserId}", allApiDevices.Count, userId);
+    }
+}

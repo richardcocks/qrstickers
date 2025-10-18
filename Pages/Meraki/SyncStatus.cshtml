@@ -1,0 +1,56 @@
+@page
+@model QRStickers.Pages.Meraki.SyncStatusModel
+@{
+    ViewData["Title"] = "Syncing Meraki Data";
+}
+
+<h1>Syncing Meraki Data</h1>
+
+<div id="sync-status">
+    @if (Model.Status == QRStickers.SyncState.Failed)
+    {
+        <div class="alert alert-danger">
+            <h2>Sync Failed</h2>
+            <p>There was an error syncing your Meraki data:</p>
+            <p><strong>@Model.ErrorMessage</strong></p>
+            <p><a href="/Meraki/Organizations" class="btn">Go to Organizations</a></p>
+        </div>
+    }
+    else if (Model.Status == QRStickers.SyncState.Completed)
+    {
+        <div class="alert alert-success">
+            <h2>Sync Complete!</h2>
+            <p>Your Meraki data has been successfully synced.</p>
+            <p>Redirecting to Organizations page...</p>
+        </div>
+        <script>
+            setTimeout(function() {
+                window.location.href = '/Meraki/Organizations';
+            }, 2000);
+        </script>
+    }
+    else
+    {
+        <div class="alert alert-info">
+            <h2>Syncing Your Meraki Data</h2>
+            <p><strong>@Model.CurrentStep</strong></p>
+            <p>Step @Model.CurrentStepNumber of @Model.TotalSteps</p>
+
+            <div style="width: 100%; background-color: #f0f0f0; border-radius: 4px; margin: 20px 0; height: 30px;">
+                <div style="width: @(Model.TotalSteps > 0 ? (Model.CurrentStepNumber * 100.0 / Model.TotalSteps) : 0)%; background-color: #4CAF50; height: 100%; border-radius: 4px; transition: width 0.5s;"></div>
+            </div>
+
+            <p style="color: #666; font-size: 0.9em;">This may take a few moments. Please don't close this page.</p>
+        </div>
+
+        <script>
+            // Poll for status updates every 2 seconds
+            setTimeout(function() {
+                window.location.reload();
+            }, 2000);
+        </script>
+    }
+</div>
+
+<hr />
+<p><a href="/Meraki/Organizations">Back to Organizations (skip sync status)</a></p>

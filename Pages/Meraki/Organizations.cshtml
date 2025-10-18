@@ -6,6 +6,14 @@
 
 <h1>Your Meraki Organizations</h1>
 
+@if (Model.HasToken && Model.LastSyncedAt.HasValue)
+{
+    <p style="color: #666; font-size: 0.9em;">
+        Last synced: @Model.LastSyncedAt.Value.ToLocalTime().ToString("g")
+        <a href="/Meraki/SyncStatus?trigger=true" style="margin-left: 10px;">Sync Now</a>
+    </p>
+}
+
 @if (!Model.HasToken)
 {
     <div class="alert alert-warning">
@@ -44,16 +52,16 @@ else
                             <span style="color: #999; font-size: 0.9em;">N/A</span>
                         }
                     </td>
-                    <td style="padding: 10px; font-family: monospace; font-size: 0.9em;">@org.Id</td>
+                    <td style="padding: 10px; font-family: monospace; font-size: 0.9em;">@org.OrganizationId</td>
                     <td style="padding: 10px;">
-                        <a href="/Meraki/Networks?orgId=@org.Id" style="text-decoration: none; color: inherit;">
+                        <a href="/Meraki/Networks?orgId=@org.OrganizationId" style="text-decoration: none; color: inherit;">
                             <strong>@org.Name</strong>
                         </a>
                     </td>
                     <td style="padding: 10px; text-align: right;">
-                        @if (Model.NetworkCounts.ContainsKey(org.Id))
+                        @if (Model.NetworkCounts.ContainsKey(org.OrganizationId))
                         {
-                            @Model.NetworkCounts[org.Id]
+                            @Model.NetworkCounts[org.OrganizationId]
                         }
                         else
                         {
