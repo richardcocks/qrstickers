@@ -14,7 +14,7 @@
     {
         <div class="alert alert-success">
             <h3>✓ Meraki Account Connected</h3>
-            <p>Token expires: @Model.TokenExpiresAt?.ToString("g")</p>
+            <p>Token expires: @Model.TokenExpiresAt?.ToLocalTime().ToString("o") (local time)</p>
             <p><a href="/Meraki/Organizations">View your organizations</a></p>
             <p><a href="/Meraki/Disconnect">Disconnect Meraki account</a></p>
         </div>

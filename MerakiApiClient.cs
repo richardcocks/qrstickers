@@ -99,7 +99,7 @@ public class MerakiApiClient
                 _logger.LogError("OAuth token refresh failed. Status: {StatusCode}, Response: {ErrorResponse}", response.StatusCode, errorContent);
                 return null;
             }
-
+            
             var json = await response.Content.ReadFromJsonAsync<TokenResponse>();
             return (json.access_token, json.refresh_token, json.expires_in);
         }
