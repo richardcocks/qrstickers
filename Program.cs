@@ -77,7 +77,7 @@ app.MapGet("/oauth/redirect", async (HttpContext httpContext, [FromQuery] string
         }
 
         // Build the redirect URI (should match what's configured in Meraki OAuth)
-        var redirectUri = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}/oauth/redirect";
+        var redirectUri = $"https://qrstickers-htbteydbgjh0b9c4.uksouth-01.azurewebsites.net/oauth/redirect";
 
         // Exchange code for token
         var tokenResult = await merakiClient.ExchangeCodeForTokenAsync(code, redirectUri);
