@@ -21,6 +21,7 @@ public class OrganizationsModel : PageModel
 
     public bool HasToken { get; set; }
     public List<Organization>? Organizations { get; set; }
+    public Dictionary<string, int> NetworkCounts { get; set; } = new();
 
     public async Task OnGetAsync()
     {
@@ -47,6 +48,25 @@ public class OrganizationsModel : PageModel
             // The service automatically handles access token refresh
             var merakiService = _merakiFactory.CreateForUser(userId);
             Organizations = await merakiService.GetOrganizationsAsync();
+
+            // Get network counts for each organization
+            // This pre-warms the cache for faster network page loads
+            if (Organizations != null && Organizations.Any())
+            {
+                foreach (var org in Organizations)
+                {
+                    try
+                    {
+                        var networks = await merakiService.GetNetworksAsync(org.Id);
+                        NetworkCounts[org.Id] = networks?.Count ?? 0;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error retrieving network count for organization {OrganizationId}", org.Id);
+                        NetworkCounts[org.Id] = 0; // Default to 0 on error
+                    }
+                }
+            }
         }
         catch (Exception ex)
         {

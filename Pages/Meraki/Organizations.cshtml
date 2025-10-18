@@ -19,16 +19,51 @@ else if (Model.Organizations == null || !Model.Organizations.Any())
 }
 else
 {
-    <ul>
-        @foreach (var org in Model.Organizations)
-        {
-            <li>
-                <strong>@org.Name</strong> (ID: @org.Id)
-                <br />
-                <a href="/Meraki/Networks?orgId=@org.Id" class="btn" style="margin-top: 5px;">View Networks</a>
-            </li>
-        }
-    </ul>
+    <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+            <tr style="background-color: #f5f5f5; border-bottom: 2px solid #ddd;">
+                <th style="padding: 10px; text-align: center;">Dashboard</th>
+                <th style="padding: 10px; text-align: left;">Organization ID</th>
+                <th style="padding: 10px; text-align: left;">Organization Name</th>
+                <th style="padding: 10px; text-align: right;">Network Count</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var org in Model.Organizations)
+            {
+                <tr style="border-bottom: 1px solid #ddd;">
+                    <td style="padding: 10px; text-align: center; vertical-align: middle;">
+                        @if (!string.IsNullOrEmpty(org.Url))
+                        {
+                            <a href="@org.Url" target="_blank" rel="noopener noreferrer" style="text-decoration: none;">
+                                <img src="/qrcode?q=@Uri.EscapeDataString(org.Url)" alt="QR Code for @org.Name - Dashboard Link" style="width: 100px; height: 100px; border: 1px solid #ddd; border-radius: 4px; padding: 4px; background-color: #fff;" />
+                            </a>
+                        }
+                        else
+                        {
+                            <span style="color: #999; font-size: 0.9em;">N/A</span>
+                        }
+                    </td>
+                    <td style="padding: 10px; font-family: monospace; font-size: 0.9em;">@org.Id</td>
+                    <td style="padding: 10px;">
+                        <a href="/Meraki/Networks?orgId=@org.Id" style="text-decoration: none; color: inherit;">
+                            <strong>@org.Name</strong>
+                        </a>
+                    </td>
+                    <td style="padding: 10px; text-align: right;">
+                        @if (Model.NetworkCounts.ContainsKey(org.Id))
+                        {
+                            @Model.NetworkCounts[org.Id]
+                        }
+                        else
+                        {
+                            <span>0</span>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
 }
 
 <hr />
