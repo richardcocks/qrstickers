@@ -112,8 +112,7 @@
                 <li><a href="/">Home</a></li>
                 <li><a href="/Meraki/Organizations">Meraki</a></li>
                 <li>
-                    <form method="post" action="/Identity/Account/Logout" style="display: inline;">
-                        <input type="hidden" name="returnUrl" value="/" />
+                    <form asp-page="/Identity/Account/Logout" method="post" style="display: inline;">
                         <button type="submit" style="background: none; border: none; color: white; cursor: pointer; padding: 8px 12px;">
                             Logout (@User.Identity.Name)
                         </button>

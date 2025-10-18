@@ -441,3 +441,5 @@ FodyWeavers.xsd
 *.sln.iml
 /.claude/CLAUDE.md
 qrstickers.db
+/qrstickers.db-shm
+/qrstickers.db-wal
