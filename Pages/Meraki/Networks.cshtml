@@ -6,14 +6,6 @@
 
 <h1>Networks for Organization: @Model.OrganizationId</h1>
 
-@if (Model.HasToken && Model.LastSyncedAt.HasValue)
-{
-    <p style="color: #666; font-size: 0.9em;">
-        Last synced: @Model.LastSyncedAt.Value.ToLocalTime().ToString("g")
-        <a href="/Meraki/SyncStatus?trigger=true" style="margin-left: 10px;">Sync Now</a>
-    </p>
-}
-
 @if (!Model.HasToken)
 {
     <div class="alert alert-warning">

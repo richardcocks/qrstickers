@@ -74,7 +74,7 @@ public class MerakiApiClient
                 json.refresh_token?.Length ?? 0,
                 json.expires_in);
 
-            return (json.access_token, json.refresh_token, json.expires_in);
+            return (json.access_token, json.refresh_token, json.expires_in)!;
         }
         catch (Exception ex)
         {
@@ -134,7 +134,7 @@ public class MerakiApiClient
                 json.refresh_token?.Length ?? 0,
                 json.expires_in);
 
-            return (json.access_token, json.refresh_token, json.expires_in);
+            return (json.access_token, json.refresh_token, json.expires_in)!;
         }
         catch (Exception ex)
         {

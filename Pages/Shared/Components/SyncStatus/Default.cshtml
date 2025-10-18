@@ -1,0 +1,18 @@
+@model QRStickers.ViewComponents.SyncStatusViewModel
+
+@if (Model.IsVisible)
+{
+    <div class="sync-status-container">
+        <div class="sync-status-indicator @Model.ColorClass" title="@Model.StatusText@(Model.TimeAgo != null ? " - " + Model.TimeAgo : "")">
+            <span class="sync-status-dot"></span>
+            @if (Model.TimeAgo != null)
+            {
+                <span class="sync-status-text">@Model.TimeAgo</span>
+            }
+            else
+            {
+                <span class="sync-status-text">@Model.StatusText</span>
+            }
+        </div>
+    </div>
+}
