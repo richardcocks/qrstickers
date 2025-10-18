@@ -35,7 +35,8 @@ public class MerakiApiClient
             {
                 { "grant_type", "authorization_code" },
                 { "code", code },
-                { "redirect_uri", redirectUri }
+                { "redirect_uri", redirectUri },
+                { "scope", "dashboard:general:config:read" }
             })
         };
 
