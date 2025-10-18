@@ -1,0 +1,22 @@
+@page
+@model QRStickers.Pages.Meraki.CallbackModel
+@{
+    ViewData["Title"] = "Meraki OAuth Callback";
+}
+
+@if (Model.Success)
+{
+    <div class="alert alert-success">
+        <h3>Success!</h3>
+        <p>Your Meraki account has been connected successfully.</p>
+        <p><a href="/">Return to home</a></p>
+    </div>
+}
+else
+{
+    <div class="alert alert-danger">
+        <h3>Error</h3>
+        <p>@Model.ErrorMessage</p>
+        <p><a href="/">Return to home</a></p>
+    </div>
+}

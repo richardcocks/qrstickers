@@ -1,0 +1,22 @@
+@page
+@model QRStickers.Pages.Meraki.DisconnectModel
+@{
+    ViewData["Title"] = "Disconnect Meraki Account";
+}
+
+<h1>@ViewData["Title"]</h1>
+
+@if (Model.Success)
+{
+    <div class="alert alert-success">
+        <p>Your Meraki account has been disconnected successfully.</p>
+    </div>
+}
+else
+{
+    <div class="alert alert-warning">
+        <p>No Meraki account was connected.</p>
+    </div>
+}
+
+<p><a href="/">Return to home</a></p>

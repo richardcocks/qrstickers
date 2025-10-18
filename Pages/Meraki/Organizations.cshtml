@@ -1,0 +1,33 @@
+@page
+@model QRStickers.Pages.Meraki.OrganizationsModel
+@{
+    ViewData["Title"] = "Meraki Organizations";
+}
+
+<h1>Your Meraki Organizations</h1>
+
+@if (!Model.HasToken)
+{
+    <div class="alert alert-warning">
+        <p>You haven't connected your Meraki account yet.</p>
+        <p><a href="/Meraki/Connect" class="btn">Connect Meraki Account</a></p>
+    </div>
+}
+else if (Model.Organizations == null || !Model.Organizations.Any())
+{
+    <p>No organizations found.</p>
+}
+else
+{
+    <ul>
+        @foreach (var org in Model.Organizations)
+        {
+            <li>
+                <strong>@org.Name</strong> (ID: @org.Id)
+            </li>
+        }
+    </ul>
+}
+
+<hr />
+<p><a href="/">Back to home</a></p>

@@ -1,5 +1,7 @@
 ﻿using System.Text.Json.Serialization;
 
+namespace QRStickers;
+
 public class Organization
 {
     [JsonPropertyName("id")]

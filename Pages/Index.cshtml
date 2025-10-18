@@ -1,0 +1,38 @@
+@page
+@model QRStickers.Pages.IndexModel
+@{
+    ViewData["Title"] = "Home";
+}
+
+<h1>Welcome to QR Stickers</h1>
+
+@if (User.Identity?.IsAuthenticated == true)
+{
+    <h2>Hello @User.Identity.Name!</h2>
+
+    @if (Model.HasMerakiToken)
+    {
+        <div class="alert alert-success">
+            <h3>✓ Meraki Account Connected</h3>
+            <p>Token expires: @Model.TokenExpiresAt?.ToString("g")</p>
+            <p><a href="/Meraki/Organizations">View your organizations</a></p>
+            <p><a href="/Meraki/Disconnect">Disconnect Meraki account</a></p>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-warning">
+            <p><a href="/Meraki/Connect">Click to connect your Meraki account</a></p>
+        </div>
+    }
+}
+else
+{
+    <p>Please <a href="/Identity/Account/Login">login</a> or <a href="/Identity/Account/Register">register</a> to get started.</p>
+}
+
+<hr>
+
+<h3>QR Code Generator</h3>
+<p>Use the /qrcode endpoint to generate QR codes</p>
+<p>Example: <a href="/qrcode?q=https://example.com">/qrcode?q=https://example.com</a></p>
