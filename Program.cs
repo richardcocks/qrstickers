@@ -55,6 +55,32 @@ using (var scope = app.Services.CreateScope())
 
 app.UseRateLimiter();
 
+// Helper method to get or create unique anonymous user ID
+string GetOrCreateAnonymousUserId(HttpContext httpContext)
+{
+    const string cookieName = "AnonymousUserId";
+
+    // Check if cookie already exists
+    if (httpContext.Request.Cookies.TryGetValue(cookieName, out var existingId) && !string.IsNullOrEmpty(existingId))
+    {
+        return existingId;
+    }
+
+    // Generate new unique ID
+    var newId = Guid.NewGuid().ToString();
+
+    // Set cookie with security options
+    httpContext.Response.Cookies.Append(cookieName, newId, new CookieOptions
+    {
+        HttpOnly = true,
+        Secure = true,
+        SameSite = SameSiteMode.Strict,
+        Expires = DateTimeOffset.UtcNow.AddYears(1)
+    });
+
+    return newId;
+}
+
 app.MapGet("/login", (HttpContext httpContext) =>
 {
     string client_id = builder.Configuration.GetValue<string>("meraki_client_id") ?? "";
@@ -102,8 +128,8 @@ app.MapGet("/oauth/redirect", async (HttpContext httpContext, [FromQuery] string
 
         var (accessToken, refreshToken, expiresIn) = tokenResult.Value;
 
-        // Get user identifier from Azure headers or use a default
-        var userId = httpContext.Request.Headers["X-MS-CLIENT-PRINCIPAL-NAME"].SingleOrDefault() ?? "anonymous";
+        // Get user identifier from Azure headers or generate unique anonymous ID
+        var userId = httpContext.Request.Headers["X-MS-CLIENT-PRINCIPAL-NAME"].SingleOrDefault() ?? GetOrCreateAnonymousUserId(httpContext);
 
         // Store or update token in database
         var existingToken = await db.OAuthTokens.FirstOrDefaultAsync(t => t.UserId == userId);
@@ -146,12 +172,12 @@ app.MapGet("/", async (HttpContext httpContext, QRStickersDbContext db) =>
 {
     string claim_name = httpContext.Request.Headers["X-MS-CLIENT-PRINCIPAL-NAME"].SingleOrDefault() ?? "";
     string claim_id = httpContext.Request.Headers["X-MS-CLIENT-PRINCIPAL-ID"].SingleOrDefault() ?? "";
-    string userId = claim_name != "" ? claim_name : "anonymous";
+    string userId = claim_name != "" ? claim_name : GetOrCreateAnonymousUserId(httpContext);
 
     // Check if user has an OAuth token
     var token = await db.OAuthTokens.FirstOrDefaultAsync(t => t.UserId == userId);
     var isAuthenticated = token != null;
-
+    var displayName = claim_name != "" ? claim_name : "Anonymous User";
     string authSection = isAuthenticated
         ? $"""
             <div style="background: #e8f5e9; padding: 10px; border-radius: 5px; margin: 10px 0;">
@@ -178,7 +204,7 @@ app.MapGet("/", async (HttpContext httpContext, QRStickersDbContext db) =>
         </head>
         <body>
             <h1>Welcome to QR Stickers</h1>
-            <h2>Hello {{{claim_name}}}.</h2>
+            <h2>Hello {{{displayName}}}.</h2>
             {{{authSection}}}
             <hr>
             <h3>QR Code Generator</h3>
@@ -192,7 +218,7 @@ app.MapGet("/meraki/organizations", async (HttpContext httpContext, MerakiApiCli
 {
     try
     {
-        var userId = httpContext.Request.Headers["X-MS-CLIENT-PRINCIPAL-NAME"].SingleOrDefault() ?? "anonymous";
+        var userId = httpContext.Request.Headers["X-MS-CLIENT-PRINCIPAL-NAME"].SingleOrDefault() ?? GetOrCreateAnonymousUserId(httpContext);
         var token = await db.OAuthTokens.FirstOrDefaultAsync(t => t.UserId == userId);
 
         if (token == null)
@@ -267,7 +293,7 @@ app.MapGet("/oauth/logout", async (HttpContext httpContext, QRStickersDbContext 
 {
     try
     {
-        var userId = httpContext.Request.Headers["X-MS-CLIENT-PRINCIPAL-NAME"].SingleOrDefault() ?? "anonymous";
+        var userId = httpContext.Request.Headers["X-MS-CLIENT-PRINCIPAL-NAME"].SingleOrDefault() ?? GetOrCreateAnonymousUserId(httpContext);
         var token = await db.OAuthTokens.FirstOrDefaultAsync(t => t.UserId == userId);
 
         if (token != null)
