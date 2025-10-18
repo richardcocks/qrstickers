@@ -26,22 +26,32 @@ public class MerakiApiClient
         var clientId = _config.GetValue<string>("meraki_client_id") ?? "";
         var clientSecret = _config.GetValue<string>("meraki_client_secret") ?? "";
 
+        // Create Basic Authentication header
+        var credentials = Convert.ToBase64String(System.Text.Encoding.ASCII.GetBytes($"{clientId}:{clientSecret}"));
+
         var request = new HttpRequestMessage(HttpMethod.Post, TokenEndpoint)
         {
             Content = new FormUrlEncodedContent(new Dictionary<string, string>
             {
                 { "grant_type", "authorization_code" },
-                { "client_id", clientId },
-                { "client_secret", clientSecret },
                 { "code", code },
                 { "redirect_uri", redirectUri }
             })
         };
 
+        // Set Basic Authentication header (required by Meraki OAuth)
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", credentials);
+
         try
         {
             var response = await _httpClient.SendAsync(request);
-            response.EnsureSuccessStatusCode();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Error exchanging code. Status: {response.StatusCode}, Response: {errorContent}");
+                return null;
+            }
 
             var json = await response.Content.ReadFromJsonAsync<TokenResponse>();
             return (json.access_token, json.refresh_token, json.expires_in);
@@ -61,21 +71,31 @@ public class MerakiApiClient
         var clientId = _config.GetValue<string>("meraki_client_id") ?? "";
         var clientSecret = _config.GetValue<string>("meraki_client_secret") ?? "";
 
+        // Create Basic Authentication header
+        var credentials = Convert.ToBase64String(System.Text.Encoding.ASCII.GetBytes($"{clientId}:{clientSecret}"));
+
         var request = new HttpRequestMessage(HttpMethod.Post, TokenEndpoint)
         {
             Content = new FormUrlEncodedContent(new Dictionary<string, string>
             {
                 { "grant_type", "refresh_token" },
-                { "client_id", clientId },
-                { "client_secret", clientSecret },
                 { "refresh_token", refreshToken }
             })
         };
 
+        // Set Basic Authentication header (required by Meraki OAuth)
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", credentials);
+
         try
         {
             var response = await _httpClient.SendAsync(request);
-            response.EnsureSuccessStatusCode();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Error refreshing token. Status: {response.StatusCode}, Response: {errorContent}");
+                return null;
+            }
 
             var json = await response.Content.ReadFromJsonAsync<TokenResponse>();
             return (json.access_token, json.refresh_token, json.expires_in);
