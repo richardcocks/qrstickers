@@ -117,7 +117,7 @@ public class MerakiSyncOrchestrator
         // Smart merge: Insert new, update existing, mark missing as deleted
         foreach (var apiOrg in apiOrgs)
         {
-            var existing = cachedOrgs.FirstOrDefault(c => c.OrganizationId == apiOrg.Id);
+            var existing = cachedOrgs.FirstOrDefault(c => c.ConnectionId == connectionId && c.OrganizationId == apiOrg.Id);
             if (existing != null)
             {
                 // Update existing
@@ -195,7 +195,7 @@ public class MerakiSyncOrchestrator
         // Smart merge: Insert new, update existing, mark missing as deleted
         foreach (var apiNetwork in allApiNetworks)
         {
-            var existing = cachedNetworks.FirstOrDefault(c => c.NetworkId == apiNetwork.Id);
+            var existing = cachedNetworks.FirstOrDefault(c => c.ConnectionId == connectionId && c.NetworkId == apiNetwork.Id);
             if (existing != null)
             {
                 // Update existing
@@ -281,7 +281,7 @@ public class MerakiSyncOrchestrator
         // Smart merge: Insert new, update existing, mark missing as deleted
         foreach (var apiDevice in allApiDevices.Where(d => d.Serial != null))
         {
-            var existing = cachedDevices.FirstOrDefault(c => c.Serial == apiDevice.Serial);
+            var existing = cachedDevices.FirstOrDefault(c => c.ConnectionId == connectionId && c.Serial == apiDevice.Serial);
             if (existing != null)
             {
                 // Update existing

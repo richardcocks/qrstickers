@@ -61,6 +61,10 @@ public class QRStickersDbContext : IdentityDbContext<ApplicationUser>
             .HasIndex(o => new { o.ConnectionId, o.OrganizationId })
             .IsUnique();
 
+        // Composite alternate key for navigation from CachedNetwork
+        modelBuilder.Entity<CachedOrganization>()
+            .HasAlternateKey(o => new { o.ConnectionId, o.OrganizationId });
+
         // Configure CachedNetwork relationships
         modelBuilder.Entity<CachedNetwork>()
             .HasOne(n => n.Connection)
@@ -71,8 +75,8 @@ public class QRStickersDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<CachedNetwork>()
             .HasOne(n => n.Organization)
             .WithMany(o => o.Networks)
-            .HasForeignKey(n => n.OrganizationId)
-            .HasPrincipalKey(o => o.OrganizationId)
+            .HasForeignKey(n => new { n.ConnectionId, n.OrganizationId })
+            .HasPrincipalKey(o => new { o.ConnectionId, o.OrganizationId })
             .OnDelete(DeleteBehavior.Restrict); // Don't cascade delete networks when org is deleted
 
         modelBuilder.Entity<CachedNetwork>()
@@ -81,6 +85,10 @@ public class QRStickersDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<CachedNetwork>()
             .HasIndex(n => new { n.ConnectionId, n.NetworkId })
             .IsUnique();
+
+        // Composite alternate key for navigation from CachedDevice
+        modelBuilder.Entity<CachedNetwork>()
+            .HasAlternateKey(n => new { n.ConnectionId, n.NetworkId });
 
         // Configure CachedDevice relationships
         modelBuilder.Entity<CachedDevice>()
@@ -92,8 +100,8 @@ public class QRStickersDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<CachedDevice>()
             .HasOne(d => d.Network)
             .WithMany(n => n.Devices)
-            .HasForeignKey(d => d.NetworkId)
-            .HasPrincipalKey(n => n.NetworkId)
+            .HasForeignKey(d => new { d.ConnectionId, d.NetworkId })
+            .HasPrincipalKey(n => new { n.ConnectionId, n.NetworkId })
             .OnDelete(DeleteBehavior.Restrict); // Don't cascade delete devices when network is deleted
 
         modelBuilder.Entity<CachedDevice>()

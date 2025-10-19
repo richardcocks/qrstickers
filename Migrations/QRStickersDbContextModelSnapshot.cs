@@ -209,7 +209,47 @@ namespace QRStickers.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
-            modelBuilder.Entity("QRStickers.CachedDevice", b =>
+            modelBuilder.Entity("QRStickers.Connection", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ConnectionType")
+                        .IsRequired()
+                        .HasMaxLength(13)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Connections");
+
+                    b.HasDiscriminator<string>("ConnectionType").HasValue("Connection");
+
+                    b.UseTphMappingStrategy();
+                });
+
+            modelBuilder.Entity("QRStickers.Meraki.CachedDevice", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -244,7 +284,7 @@ namespace QRStickers.Migrations
 
                     b.HasIndex("ConnectionId");
 
-                    b.HasIndex("NetworkId");
+                    b.HasIndex("ConnectionId", "NetworkId");
 
                     b.HasIndex("ConnectionId", "Serial")
                         .IsUnique();
@@ -252,7 +292,7 @@ namespace QRStickers.Migrations
                     b.ToTable("CachedDevices");
                 });
 
-            modelBuilder.Entity("QRStickers.CachedNetwork", b =>
+            modelBuilder.Entity("QRStickers.Meraki.CachedNetwork", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -298,15 +338,15 @@ namespace QRStickers.Migrations
 
                     b.HasIndex("ConnectionId");
 
-                    b.HasIndex("OrganizationId");
-
                     b.HasIndex("ConnectionId", "NetworkId")
                         .IsUnique();
+
+                    b.HasIndex("ConnectionId", "OrganizationId");
 
                     b.ToTable("CachedNetworks");
                 });
 
-            modelBuilder.Entity("QRStickers.CachedOrganization", b =>
+            modelBuilder.Entity("QRStickers.Meraki.CachedOrganization", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -343,46 +383,6 @@ namespace QRStickers.Migrations
                         .IsUnique();
 
                     b.ToTable("CachedOrganizations");
-                });
-
-            modelBuilder.Entity("QRStickers.Connection", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("ConnectionType")
-                        .IsRequired()
-                        .HasMaxLength(13)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("DisplayName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("Connections");
-
-                    b.HasDiscriminator<string>("ConnectionType").HasValue("Connection");
-
-                    b.UseTphMappingStrategy();
                 });
 
             modelBuilder.Entity("QRStickers.Meraki.MerakiOAuthToken", b =>
@@ -511,56 +511,6 @@ namespace QRStickers.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("QRStickers.CachedDevice", b =>
-                {
-                    b.HasOne("QRStickers.Connection", "Connection")
-                        .WithMany()
-                        .HasForeignKey("ConnectionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("QRStickers.CachedNetwork", "Network")
-                        .WithMany("Devices")
-                        .HasForeignKey("NetworkId")
-                        .HasPrincipalKey("NetworkId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("Connection");
-
-                    b.Navigation("Network");
-                });
-
-            modelBuilder.Entity("QRStickers.CachedNetwork", b =>
-                {
-                    b.HasOne("QRStickers.Connection", "Connection")
-                        .WithMany()
-                        .HasForeignKey("ConnectionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("QRStickers.CachedOrganization", "Organization")
-                        .WithMany("Networks")
-                        .HasForeignKey("OrganizationId")
-                        .HasPrincipalKey("OrganizationId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Connection");
-
-                    b.Navigation("Organization");
-                });
-
-            modelBuilder.Entity("QRStickers.CachedOrganization", b =>
-                {
-                    b.HasOne("QRStickers.Connection", "Connection")
-                        .WithMany()
-                        .HasForeignKey("ConnectionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Connection");
-                });
-
             modelBuilder.Entity("QRStickers.Connection", b =>
                 {
                     b.HasOne("QRStickers.ApplicationUser", "User")
@@ -570,6 +520,56 @@ namespace QRStickers.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("QRStickers.Meraki.CachedDevice", b =>
+                {
+                    b.HasOne("QRStickers.Connection", "Connection")
+                        .WithMany()
+                        .HasForeignKey("ConnectionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("QRStickers.Meraki.CachedNetwork", "Network")
+                        .WithMany("Devices")
+                        .HasForeignKey("ConnectionId", "NetworkId")
+                        .HasPrincipalKey("ConnectionId", "NetworkId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Connection");
+
+                    b.Navigation("Network");
+                });
+
+            modelBuilder.Entity("QRStickers.Meraki.CachedNetwork", b =>
+                {
+                    b.HasOne("QRStickers.Connection", "Connection")
+                        .WithMany()
+                        .HasForeignKey("ConnectionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("QRStickers.Meraki.CachedOrganization", "Organization")
+                        .WithMany("Networks")
+                        .HasForeignKey("ConnectionId", "OrganizationId")
+                        .HasPrincipalKey("ConnectionId", "OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Connection");
+
+                    b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("QRStickers.Meraki.CachedOrganization", b =>
+                {
+                    b.HasOne("QRStickers.Connection", "Connection")
+                        .WithMany()
+                        .HasForeignKey("ConnectionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Connection");
                 });
 
             modelBuilder.Entity("QRStickers.Meraki.MerakiOAuthToken", b =>
@@ -599,12 +599,12 @@ namespace QRStickers.Migrations
                     b.Navigation("Connections");
                 });
 
-            modelBuilder.Entity("QRStickers.CachedNetwork", b =>
+            modelBuilder.Entity("QRStickers.Meraki.CachedNetwork", b =>
                 {
                     b.Navigation("Devices");
                 });
 
-            modelBuilder.Entity("QRStickers.CachedOrganization", b =>
+            modelBuilder.Entity("QRStickers.Meraki.CachedOrganization", b =>
                 {
                     b.Navigation("Networks");
                 });
