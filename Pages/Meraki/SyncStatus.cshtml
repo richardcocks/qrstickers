@@ -12,7 +12,7 @@
         <div class="alert alert-danger">
             <h2>Sync Failed</h2>
             <p>There was an error syncing your Meraki data:</p>
-            <p><strong>@Model.ErrorMessage</strong></p>
+            <p><strong id="error-message">@Model.ErrorMessage</strong></p>
             <p><a href="/Meraki/Connection?connectionId=@Model.ConnectionId" class="btn">Go to Connection</a></p>
         </div>
     }
@@ -21,36 +21,132 @@
         <div class="alert alert-success">
             <h2>Sync Complete!</h2>
             <p>Your Meraki data has been successfully synced.</p>
-            <p>Redirecting to Connection page...</p>
+            <p id="redirect-message">Redirecting to Connection page...</p>
         </div>
-        <script>
-            setTimeout(function() {
-                window.location.href = '/Meraki/Connection?connectionId=@Model.ConnectionId';
-            }, 2000);
-        </script>
     }
     else
     {
-        <div class="alert alert-info">
+        <div class="alert alert-info" id="sync-progress">
             <h2>Syncing Your Meraki Data</h2>
-            <p><strong>@Model.CurrentStep</strong></p>
-            <p>Step @Model.CurrentStepNumber of @Model.TotalSteps</p>
+            <p><strong id="current-step">@Model.CurrentStep</strong></p>
+            <p id="step-counter">Step <span id="current-step-number">@Model.CurrentStepNumber</span> of <span id="total-steps">@Model.TotalSteps</span></p>
 
             <div style="width: 100%; background-color: #f0f0f0; border-radius: 4px; margin: 20px 0; height: 30px;">
-                <div style="width: @(Model.TotalSteps > 0 ? (Model.CurrentStepNumber * 100.0 / Model.TotalSteps) : 0)%; background-color: #4CAF50; height: 100%; border-radius: 4px; transition: width 0.5s;"></div>
+                <div id="progress-bar" style="width: @(Model.TotalSteps > 0 ? (Model.CurrentStepNumber * 100.0 / Model.TotalSteps) : 0)%; background-color: #4CAF50; height: 100%; border-radius: 4px; transition: width 0.5s;"></div>
             </div>
 
             <p style="color: #666; font-size: 0.9em;">This may take a few moments. Please don't close this page.</p>
+            <p style="color: #999; font-size: 0.8em; margin-top: 10px;" id="connection-status">Connected</p>
         </div>
-
-        <script>
-            // Poll for status updates every 2 seconds
-            setTimeout(function() {
-                window.location.reload();
-            }, 2000);
-        </script>
     }
 </div>
 
 <hr />
 <p><a href="/Meraki/Connection?connectionId=@Model.ConnectionId">Back to Connection (skip sync status)</a></p>
+
+<script src="https://cdn.jsdelivr.net/npm/@@microsoft/signalr@8.0.0/dist/browser/signalr.min.js"></script>
+<script>
+    const connectionId = @Model.ConnectionId;
+
+    // Create SignalR connection
+    const connection = new signalR.HubConnectionBuilder()
+        .withUrl("/syncStatusHub")
+        .withAutomaticReconnect()
+        .build();
+
+    // Handle sync status updates
+    connection.on("SyncStatusUpdate", function(update) {
+        console.log("Received sync status update:", update);
+
+        const syncStatus = document.getElementById("sync-status");
+
+        if (update.status === "Failed") {
+            // Show error state
+            syncStatus.innerHTML = `
+                <div class="alert alert-danger">
+                    <h2>Sync Failed</h2>
+                    <p>There was an error syncing your Meraki data:</p>
+                    <p><strong>${update.errorMessage || "Unknown error"}</strong></p>
+                    <p><a href="/Meraki/Connection?connectionId=${connectionId}" class="btn">Go to Connection</a></p>
+                </div>
+            `;
+        } else if (update.status === "Completed") {
+            // Show success state
+            syncStatus.innerHTML = `
+                <div class="alert alert-success">
+                    <h2>Sync Complete!</h2>
+                    <p>Your Meraki data has been successfully synced.</p>
+                    <p>Redirecting to Connection page...</p>
+                </div>
+            `;
+
+            // Redirect after 2 seconds
+            setTimeout(function() {
+                window.location.href = '/Meraki/Connection?connectionId=' + connectionId;
+            }, 2000);
+        } else {
+            // Update progress (InProgress state)
+            const currentStepElement = document.getElementById("current-step");
+            const currentStepNumberElement = document.getElementById("current-step-number");
+            const totalStepsElement = document.getElementById("total-steps");
+            const progressBar = document.getElementById("progress-bar");
+
+            if (currentStepElement) currentStepElement.textContent = update.currentStep;
+            if (currentStepNumberElement) currentStepNumberElement.textContent = update.currentStepNumber;
+            if (totalStepsElement) totalStepsElement.textContent = update.totalSteps;
+
+            // Update progress bar
+            if (progressBar && update.totalSteps > 0) {
+                const percentage = (update.currentStepNumber * 100.0 / update.totalSteps);
+                progressBar.style.width = percentage + '%';
+            }
+        }
+    });
+
+    // Handle reconnection
+    connection.onreconnecting(() => {
+        const status = document.getElementById("connection-status");
+        if (status) status.textContent = "Reconnecting...";
+    });
+
+    connection.onreconnected(() => {
+        const status = document.getElementById("connection-status");
+        if (status) status.textContent = "Connected";
+        // Rejoin the group after reconnection
+        connection.invoke("JoinConnectionGroup", connectionId);
+    });
+
+    connection.onclose(() => {
+        const status = document.getElementById("connection-status");
+        if (status) status.textContent = "Disconnected - Refresh page to reconnect";
+    });
+
+    // Start connection and join group
+    connection.start()
+        .then(() => {
+            console.log("SignalR connected");
+            return connection.invoke("JoinConnectionGroup", connectionId);
+        })
+        .then(() => {
+            console.log("Joined connection group:", connectionId);
+            const status = document.getElementById("connection-status");
+            if (status) status.textContent = "Connected";
+        })
+        .catch(err => {
+            console.error("SignalR connection error:", err);
+            const status = document.getElementById("connection-status");
+            if (status) status.textContent = "Connection error - Page will refresh in 5 seconds";
+            // Fallback to polling if SignalR fails
+            setTimeout(() => window.location.reload(), 5000);
+        });
+
+    // Auto-redirect if already completed on page load
+    @if (Model.Status == QRStickers.SyncState.Completed)
+    {
+        <text>
+        setTimeout(function() {
+            window.location.href = '/Meraki/Connection?connectionId=' + connectionId;
+        }, 2000);
+        </text>
+    }
+</script>

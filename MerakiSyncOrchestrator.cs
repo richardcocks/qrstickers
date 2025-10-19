@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using QRStickers.Meraki;
 using System.Text.Json;
@@ -12,15 +13,34 @@ public class MerakiSyncOrchestrator
     private readonly MerakiServiceFactory _merakiFactory;
     private readonly QRStickersDbContext _db;
     private readonly ILogger<MerakiSyncOrchestrator> _logger;
+    private readonly IHubContext<SyncStatusHub> _hubContext;
 
     public MerakiSyncOrchestrator(
         MerakiServiceFactory merakiFactory,
         QRStickersDbContext db,
-        ILogger<MerakiSyncOrchestrator> logger)
+        ILogger<MerakiSyncOrchestrator> logger,
+        IHubContext<SyncStatusHub> hubContext)
     {
         _merakiFactory = merakiFactory ?? throw new ArgumentNullException(nameof(merakiFactory));
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _hubContext = hubContext ?? throw new ArgumentNullException(nameof(hubContext));
+    }
+
+    /// <summary>
+    /// Broadcasts sync status update to connected SignalR clients
+    /// </summary>
+    private async Task BroadcastStatusUpdateAsync(int connectionId, SyncStatus status)
+    {
+        var groupName = SyncStatusHub.GetGroupName(connectionId);
+        await _hubContext.Clients.Group(groupName).SendAsync("SyncStatusUpdate", new
+        {
+            status = status.Status.ToString(),
+            currentStep = status.CurrentStep,
+            currentStepNumber = status.CurrentStepNumber,
+            totalSteps = status.TotalSteps,
+            errorMessage = status.ErrorMessage
+        });
     }
 
     /// <summary>
@@ -46,6 +66,7 @@ public class MerakiSyncOrchestrator
             syncStatus.TotalSteps = 3;
             syncStatus.ErrorMessage = null;
             await _db.SaveChangesAsync();
+            await BroadcastStatusUpdateAsync(connectionId, syncStatus);
 
             // Get Meraki service for this connection
             var merakiService = _merakiFactory.CreateForConnection(connectionId);
@@ -54,18 +75,24 @@ public class MerakiSyncOrchestrator
             syncStatus.CurrentStep = "Syncing organizations";
             syncStatus.CurrentStepNumber = 1;
             await _db.SaveChangesAsync();
+            await BroadcastStatusUpdateAsync(connectionId, syncStatus);
+            await Task.Delay(500); // Visual delay for smoother UX
             await SyncOrganizationsAsync(connectionId, merakiService);
 
             // Step 2: Sync networks for all organizations
             syncStatus.CurrentStep = "Syncing networks";
             syncStatus.CurrentStepNumber = 2;
             await _db.SaveChangesAsync();
+            await BroadcastStatusUpdateAsync(connectionId, syncStatus);
+            await Task.Delay(500); // Visual delay for smoother UX
             await SyncNetworksAsync(connectionId, merakiService);
 
             // Step 3: Sync devices for all organizations
             syncStatus.CurrentStep = "Syncing devices";
             syncStatus.CurrentStepNumber = 3;
             await _db.SaveChangesAsync();
+            await BroadcastStatusUpdateAsync(connectionId, syncStatus);
+            await Task.Delay(500); // Visual delay for smoother UX
             await SyncDevicesAsync(connectionId, merakiService);
 
             // Mark sync as completed
@@ -73,6 +100,7 @@ public class MerakiSyncOrchestrator
             syncStatus.LastSyncCompletedAt = DateTime.UtcNow;
             syncStatus.CurrentStep = "Completed";
             await _db.SaveChangesAsync();
+            await BroadcastStatusUpdateAsync(connectionId, syncStatus);
 
             _logger.LogInformation("Successfully completed Meraki data sync for connection {ConnectionId}", connectionId);
         }
@@ -88,6 +116,7 @@ public class MerakiSyncOrchestrator
                 syncStatus.LastSyncCompletedAt = DateTime.UtcNow;
                 syncStatus.ErrorMessage = ex.Message;
                 await _db.SaveChangesAsync();
+                await BroadcastStatusUpdateAsync(connectionId, syncStatus);
             }
 
             throw; // Re-throw to let caller handle

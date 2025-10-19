@@ -62,6 +62,9 @@ builder.Services.ConfigureApplicationCookie(options =>
 // Add Razor Pages
 builder.Services.AddRazorPages();
 
+// Add SignalR for real-time updates
+builder.Services.AddSignalR();
+
 // Register services
 builder.Services.AddSingleton(new QRCodeGenerator());
 builder.Services.AddHttpClient<MerakiApiClient>();
@@ -128,5 +131,10 @@ app.MapGet("/qrcode", (HttpContext httpContext, string q, QRCodeGenerator qrGene
 
 // Map Razor Pages (will handle all page routes including Index, Meraki pages, and Identity pages)
 app.MapRazorPages();
+
+// ===================== SIGNALR HUBS =====================
+
+// Map SignalR hub for real-time sync status updates
+app.MapHub<SyncStatusHub>("/syncStatusHub");
 
 app.Run();
