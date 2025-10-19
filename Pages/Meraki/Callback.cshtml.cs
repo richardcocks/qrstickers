@@ -89,7 +89,7 @@ public class CallbackModel : PageModel
 
             if (!_cache.TryGetValue($"oauth_nonce_{stateNonce}", out _))
             {
-                _logger.LogWarning("OAuth callback received with invalid or expired nonce: {Nonce}. Possible CSRF attack.", stateNonce);
+                _logger.LogWarning("OAuth callback received with invalid or expired nonce. Possible CSRF attack.");
                 Success = false;
                 ErrorMessage = "Invalid or expired OAuth state. Please try connecting again.";
                 return Page();
@@ -97,16 +97,6 @@ public class CallbackModel : PageModel
 
             // Remove nonce from cache (single-use enforcement)
             _cache.Remove($"oauth_nonce_{stateNonce}");
-
-            // Log whether Meraki echoed back the dedicated nonce parameter
-            if (!string.IsNullOrEmpty(nonce))
-            {
-                _logger.LogInformation("Meraki echoed back dedicated nonce parameter: {Nonce}", nonce);
-            }
-            else
-            {
-                _logger.LogInformation("Meraki did not echo back dedicated nonce parameter (using state-embedded nonce for validation)");
-            }
 
             // Build the redirect URI (should match what's configured in Meraki OAuth)
             var redirectUri = "https://qrstickers-htbteydbgjh0b9c4.uksouth-01.azurewebsites.net/Meraki/Callback";
@@ -123,9 +113,6 @@ public class CallbackModel : PageModel
             }
 
             var (accessToken, refreshToken, expiresIn) = tokenResult.Value;
-
-            _logger.LogInformation("Token exchange successful. Access token length: {Length}, Expires in: {ExpiresIn} seconds",
-                accessToken?.Length ?? 0, expiresIn);
 
             if (string.IsNullOrEmpty(refreshToken))
             {
@@ -161,9 +148,6 @@ public class CallbackModel : PageModel
             };
             _db.MerakiOAuthTokens.Add(oauthToken);
             await _db.SaveChangesAsync();
-
-            _logger.LogInformation("Stored refresh token for connection {ConnectionId}, expires at {ExpiresAt}",
-                connection.Id, oauthToken.RefreshTokenExpiresAt);
 
             ConnectionId = connection.Id;
 
