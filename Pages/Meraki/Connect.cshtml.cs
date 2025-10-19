@@ -22,7 +22,7 @@ public class ConnectModel : PageModel
     public IActionResult OnGet(string? displayName)
     {
         var clientId = _configuration.GetValue<string>("meraki_client_id") ?? "";
-        var redirectUrl = UrlEncoder.Default.Encode("https://qrstickers-htbteydbgjh0b9c4.uksouth-01.azurewebsites.net/Meraki/Callback");
+        var redirectUrl = UrlEncoder.Default.Encode(Url.PageLink("/Meraki/Callback")!);
         var scopes = UrlEncoder.Default.Encode("sdwan:config:read dashboard:general:config:read");
 
         // Generate cryptographic nonce for CSRF protection

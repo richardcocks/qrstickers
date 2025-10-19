@@ -99,7 +99,7 @@ public class CallbackModel : PageModel
             _cache.Remove($"oauth_nonce_{stateNonce}");
 
             // Build the redirect URI (should match what's configured in Meraki OAuth)
-            var redirectUri = "https://qrstickers-htbteydbgjh0b9c4.uksouth-01.azurewebsites.net/Meraki/Callback";
+            var redirectUri = Url.PageLink("/Meraki/Callback")!;
 
             // Exchange code for token
             var tokenResult = await _merakiClient.ExchangeCodeForTokenAsync(code, redirectUri);
