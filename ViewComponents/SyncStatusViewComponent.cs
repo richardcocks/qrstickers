@@ -22,22 +22,30 @@ public class SyncStatusViewComponent : ViewComponent
             return View(new SyncStatusViewModel { IsVisible = false });
         }
 
-        // Check if user has Meraki connection
-        var hasToken = await _db.OAuthTokens.AnyAsync(t => t.UserId == userId);
+        // Check if user has any connections
+        var hasConnection = await _db.Connections.AnyAsync(c => c.UserId == userId);
 
-        if (!hasToken)
+        if (!hasConnection)
         {
             return View(new SyncStatusViewModel
             {
                 IsVisible = true,
                 ColorClass = "sync-status-none",
-                StatusText = "No Meraki connection",
+                StatusText = "No connections",
                 TimeAgo = null
             });
         }
 
-        // Get sync status
-        var syncStatus = await _db.SyncStatuses.FindAsync(userId);
+        // Get most recent sync status across all user's connections
+        var connectionIds = await _db.Connections
+            .Where(c => c.UserId == userId)
+            .Select(c => c.Id)
+            .ToListAsync();
+
+        var syncStatus = await _db.SyncStatuses
+            .Where(s => connectionIds.Contains(s.ConnectionId))
+            .OrderByDescending(s => s.LastSyncCompletedAt)
+            .FirstOrDefaultAsync();
 
         if (syncStatus == null || syncStatus.LastSyncCompletedAt == null)
         {

@@ -1,0 +1,46 @@
+@page
+@model QRStickers.Pages.Connections.CreateModel
+@{
+    ViewData["Title"] = "Add New Connection";
+}
+
+<h1>Add New Connection</h1>
+
+<p>Connect a new account to access your network data.</p>
+
+<form method="post" style="max-width: 500px;">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+    <div style="margin-bottom: 15px;">
+        <label asp-for="DisplayName" style="display: block; font-weight: bold; margin-bottom: 5px;"></label>
+        <input asp-for="DisplayName"
+               type="text"
+               placeholder="e.g., Work Account, Home Network"
+               style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
+        <span asp-validation-for="DisplayName" class="text-danger"></span>
+        <small style="color: #666; display: block; margin-top: 5px;">
+            Give this connection a name to help you identify it later.
+        </small>
+    </div>
+
+    <div style="margin-bottom: 20px;">
+        <label asp-for="ConnectionType" style="display: block; font-weight: bold; margin-bottom: 5px;"></label>
+        <select asp-for="ConnectionType"
+                style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            <option value="Meraki">Cisco Meraki</option>
+            <!-- Future connection types will be added here -->
+        </select>
+        <span asp-validation-for="ConnectionType" class="text-danger"></span>
+    </div>
+
+    <div style="margin-top: 20px;">
+        <button type="submit"
+                style="padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+            Continue to Authorization
+        </button>
+        <a href="/Connections" style="margin-left: 10px;">Cancel</a>
+    </div>
+</form>
+
+<hr />
+<p><a href="/Connections">Back to Connections</a></p>

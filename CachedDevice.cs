@@ -11,10 +11,10 @@ public class CachedDevice
     public int Id { get; set; }
 
     /// <summary>
-    /// Foreign key to ApplicationUser
+    /// Foreign key to Connection (MerakiConnection)
     /// </summary>
     [Required]
-    public string UserId { get; set; } = null!;
+    public int ConnectionId { get; set; }
 
     /// <summary>
     /// Foreign key to CachedNetwork (reference by NetworkId string, nullable if device not assigned)
@@ -53,9 +53,9 @@ public class CachedDevice
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     /// <summary>
-    /// Navigation property to user
+    /// Navigation property to connection
     /// </summary>
-    public ApplicationUser User { get; set; } = null!;
+    public Connection Connection { get; set; } = null!;
 
     /// <summary>
     /// Navigation property to network (nullable - device may not be assigned)

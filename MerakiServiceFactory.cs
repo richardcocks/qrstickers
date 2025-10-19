@@ -1,19 +1,21 @@
+using QRStickers.Meraki;
+
 namespace QRStickers;
 
 /// <summary>
-/// Factory for creating MerakiService instances with user-specific context
+/// Factory for creating MerakiService instances with connection-specific context
 /// </summary>
 public class MerakiServiceFactory
 {
     private readonly MerakiApiClient _apiClient;
     private readonly QRStickersDbContext _db;
-    private readonly AccessTokenCache _tokenCache;
+    private readonly MerakiAccessTokenCache _tokenCache;
     private readonly ILogger<MerakiService> _logger;
 
     public MerakiServiceFactory(
         MerakiApiClient apiClient,
         QRStickersDbContext db,
-        AccessTokenCache tokenCache,
+        MerakiAccessTokenCache tokenCache,
         ILogger<MerakiService> logger)
     {
         _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
@@ -23,10 +25,10 @@ public class MerakiServiceFactory
     }
 
     /// <summary>
-    /// Creates a MerakiService instance for the specified user
+    /// Creates a MerakiService instance for the specified connection
     /// </summary>
-    public MerakiService CreateForUser(string userId)
+    public MerakiService CreateForConnection(int connectionId)
     {
-        return new MerakiService(userId, _apiClient, _db, _tokenCache, _logger);
+        return new MerakiService(connectionId, _apiClient, _db, _tokenCache, _logger);
     }
 }

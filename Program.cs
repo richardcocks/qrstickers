@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using QRStickers;
+using QRStickers.Meraki;
 
 // ===================== APPLICATION SETUP =====================
 
@@ -65,8 +66,8 @@ builder.Services.AddRazorPages();
 builder.Services.AddSingleton(new QRCodeGenerator());
 builder.Services.AddHttpClient<MerakiApiClient>();
 
-// Register AccessTokenCache as singleton (shared across all requests)
-builder.Services.AddSingleton<AccessTokenCache>();
+// Register MerakiAccessTokenCache as singleton (shared across all requests)
+builder.Services.AddSingleton<MerakiAccessTokenCache>();
 
 // Register MerakiServiceFactory as scoped (per request)
 builder.Services.AddScoped<MerakiServiceFactory>();

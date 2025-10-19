@@ -13,8 +13,8 @@ public class IndexModel : PageModel
         _db = db;
     }
 
-    public bool HasMerakiToken { get; set; }
-    public DateTime? RefreshTokenExpiresAt { get; set; }
+    public List<Connection> Connections { get; set; } = new();
+    public int ConnectionCount { get; set; }
 
     public async Task OnGetAsync()
     {
@@ -23,9 +23,12 @@ public class IndexModel : PageModel
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId != null)
             {
-                var token = await _db.OAuthTokens.FirstOrDefaultAsync(t => t.UserId == userId);
-                HasMerakiToken = token != null;
-                RefreshTokenExpiresAt = token?.RefreshTokenExpiresAt;
+                Connections = await _db.Connections
+                    .Where(c => c.UserId == userId)
+                    .OrderByDescending(c => c.CreatedAt)
+                    .ToListAsync();
+
+                ConnectionCount = Connections.Count;
             }
         }
     }

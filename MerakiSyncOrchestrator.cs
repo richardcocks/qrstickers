@@ -23,19 +23,19 @@ public class MerakiSyncOrchestrator
     }
 
     /// <summary>
-    /// Syncs all Meraki data for a user (organizations, networks, devices)
+    /// Syncs all Meraki data for a connection (organizations, networks, devices)
     /// </summary>
-    public async Task SyncUserDataAsync(string userId)
+    public async Task SyncConnectionDataAsync(int connectionId)
     {
-        _logger.LogInformation("Starting Meraki data sync for user {UserId}", userId);
+        _logger.LogInformation("Starting Meraki data sync for connection {ConnectionId}", connectionId);
 
         try
         {
             // Initialize or update sync status
-            var syncStatus = await _db.SyncStatuses.FindAsync(userId);
+            var syncStatus = await _db.SyncStatuses.FirstOrDefaultAsync(s => s.ConnectionId == connectionId);
             if (syncStatus == null)
             {
-                syncStatus = new SyncStatus { UserId = userId };
+                syncStatus = new SyncStatus { ConnectionId = connectionId };
                 _db.SyncStatuses.Add(syncStatus);
             }
 
@@ -46,26 +46,26 @@ public class MerakiSyncOrchestrator
             syncStatus.ErrorMessage = null;
             await _db.SaveChangesAsync();
 
-            // Get Meraki service for this user
-            var merakiService = _merakiFactory.CreateForUser(userId);
+            // Get Meraki service for this connection
+            var merakiService = _merakiFactory.CreateForConnection(connectionId);
 
             // Step 1: Sync organizations
             syncStatus.CurrentStep = "Syncing organizations";
             syncStatus.CurrentStepNumber = 1;
             await _db.SaveChangesAsync();
-            await SyncOrganizationsAsync(userId, merakiService);
+            await SyncOrganizationsAsync(connectionId, merakiService);
 
             // Step 2: Sync networks for all organizations
             syncStatus.CurrentStep = "Syncing networks";
             syncStatus.CurrentStepNumber = 2;
             await _db.SaveChangesAsync();
-            await SyncNetworksAsync(userId, merakiService);
+            await SyncNetworksAsync(connectionId, merakiService);
 
             // Step 3: Sync devices for all organizations
             syncStatus.CurrentStep = "Syncing devices";
             syncStatus.CurrentStepNumber = 3;
             await _db.SaveChangesAsync();
-            await SyncDevicesAsync(userId, merakiService);
+            await SyncDevicesAsync(connectionId, merakiService);
 
             // Mark sync as completed
             syncStatus.Status = SyncState.Completed;
@@ -73,14 +73,14 @@ public class MerakiSyncOrchestrator
             syncStatus.CurrentStep = "Completed";
             await _db.SaveChangesAsync();
 
-            _logger.LogInformation("Successfully completed Meraki data sync for user {UserId}", userId);
+            _logger.LogInformation("Successfully completed Meraki data sync for connection {ConnectionId}", connectionId);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error syncing Meraki data for user {UserId}", userId);
+            _logger.LogError(ex, "Error syncing Meraki data for connection {ConnectionId}", connectionId);
 
             // Update sync status to failed
-            var syncStatus = await _db.SyncStatuses.FindAsync(userId);
+            var syncStatus = await _db.SyncStatuses.FirstOrDefaultAsync(s => s.ConnectionId == connectionId);
             if (syncStatus != null)
             {
                 syncStatus.Status = SyncState.Failed;
@@ -93,21 +93,21 @@ public class MerakiSyncOrchestrator
         }
     }
 
-    private async Task SyncOrganizationsAsync(string userId, MerakiService merakiService)
+    private async Task SyncOrganizationsAsync(int connectionId, MerakiService merakiService)
     {
-        _logger.LogInformation("Syncing organizations for user {UserId}", userId);
+        _logger.LogInformation("Syncing organizations for connection {ConnectionId}", connectionId);
 
         // Fetch organizations from API
         var apiOrgs = await merakiService.GetOrganizationsAsync();
         if (apiOrgs == null)
         {
-            _logger.LogWarning("No organizations returned from API for user {UserId}", userId);
+            _logger.LogWarning("No organizations returned from API for connection {ConnectionId}", connectionId);
             return;
         }
 
-        // Get existing cached organizations for this user
+        // Get existing cached organizations for this connection
         var cachedOrgs = await _db.CachedOrganizations
-            .Where(o => o.UserId == userId)
+            .Where(o => o.ConnectionId == connectionId)
             .ToListAsync();
 
         var now = DateTime.UtcNow;
@@ -131,7 +131,7 @@ public class MerakiSyncOrchestrator
                 // Insert new
                 _db.CachedOrganizations.Add(new CachedOrganization
                 {
-                    UserId = userId,
+                    ConnectionId = connectionId,
                     OrganizationId = apiOrg.Id,
                     Name = apiOrg.Name,
                     Url = apiOrg.Url,
@@ -151,16 +151,16 @@ public class MerakiSyncOrchestrator
         }
 
         await _db.SaveChangesAsync();
-        _logger.LogInformation("Synced {Count} organizations for user {UserId}", apiOrgs.Count, userId);
+        _logger.LogInformation("Synced {Count} organizations for connection {ConnectionId}", apiOrgs.Count, connectionId);
     }
 
-    private async Task SyncNetworksAsync(string userId, MerakiService merakiService)
+    private async Task SyncNetworksAsync(int connectionId, MerakiService merakiService)
     {
-        _logger.LogInformation("Syncing networks for user {UserId}", userId);
+        _logger.LogInformation("Syncing networks for connection {ConnectionId}", connectionId);
 
-        // Get all active organizations for this user
+        // Get all active organizations for this connection
         var orgs = await _db.CachedOrganizations
-            .Where(o => o.UserId == userId && !o.IsDeleted)
+            .Where(o => o.ConnectionId == connectionId && !o.IsDeleted)
             .ToListAsync();
 
         var allApiNetworks = new List<Network>();
@@ -183,9 +183,9 @@ public class MerakiSyncOrchestrator
             }
         }
 
-        // Get existing cached networks for this user
+        // Get existing cached networks for this connection
         var cachedNetworks = await _db.CachedNetworks
-            .Where(n => n.UserId == userId)
+            .Where(n => n.ConnectionId == connectionId)
             .ToListAsync();
 
         var now = DateTime.UtcNow;
@@ -213,7 +213,7 @@ public class MerakiSyncOrchestrator
                 // Insert new
                 _db.CachedNetworks.Add(new CachedNetwork
                 {
-                    UserId = userId,
+                    ConnectionId = connectionId,
                     OrganizationId = apiNetwork.OrganizationId,
                     NetworkId = apiNetwork.Id,
                     Name = apiNetwork.Name,
@@ -237,16 +237,16 @@ public class MerakiSyncOrchestrator
         }
 
         await _db.SaveChangesAsync();
-        _logger.LogInformation("Synced {Count} networks for user {UserId}", allApiNetworks.Count, userId);
+        _logger.LogInformation("Synced {Count} networks for connection {ConnectionId}", allApiNetworks.Count, connectionId);
     }
 
-    private async Task SyncDevicesAsync(string userId, MerakiService merakiService)
+    private async Task SyncDevicesAsync(int connectionId, MerakiService merakiService)
     {
-        _logger.LogInformation("Syncing devices for user {UserId}", userId);
+        _logger.LogInformation("Syncing devices for connection {ConnectionId}", connectionId);
 
-        // Get all active organizations for this user
+        // Get all active organizations for this connection
         var orgs = await _db.CachedOrganizations
-            .Where(o => o.UserId == userId && !o.IsDeleted)
+            .Where(o => o.ConnectionId == connectionId && !o.IsDeleted)
             .ToListAsync();
 
         var allApiDevices = new List<Device>();
@@ -269,9 +269,9 @@ public class MerakiSyncOrchestrator
             }
         }
 
-        // Get existing cached devices for this user
+        // Get existing cached devices for this connection
         var cachedDevices = await _db.CachedDevices
-            .Where(d => d.UserId == userId)
+            .Where(d => d.ConnectionId == connectionId)
             .ToListAsync();
 
         var now = DateTime.UtcNow;
@@ -296,7 +296,7 @@ public class MerakiSyncOrchestrator
                 // Insert new
                 _db.CachedDevices.Add(new CachedDevice
                 {
-                    UserId = userId,
+                    ConnectionId = connectionId,
                     Serial = apiDevice.Serial!,
                     Name = apiDevice.Name,
                     Model = apiDevice.Model,
@@ -317,6 +317,6 @@ public class MerakiSyncOrchestrator
         }
 
         await _db.SaveChangesAsync();
-        _logger.LogInformation("Synced {Count} devices for user {UserId}", allApiDevices.Count, userId);
+        _logger.LogInformation("Synced {Count} devices for connection {ConnectionId}", allApiDevices.Count, connectionId);
     }
 }

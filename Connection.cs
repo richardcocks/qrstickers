@@ -1,0 +1,53 @@
+using System.ComponentModel.DataAnnotations;
+
+namespace QRStickers;
+
+/// <summary>
+/// Base class for all OAuth/integration connections (Meraki, LogicMonitor, etc.)
+/// Uses Table-per-Hierarchy (TPH) with discriminator pattern
+/// </summary>
+public abstract class Connection
+{
+    [Key]
+    public int Id { get; set; }
+
+    /// <summary>
+    /// Foreign key to ApplicationUser who owns this connection
+    /// </summary>
+    [Required]
+    public string UserId { get; set; } = null!;
+
+    /// <summary>
+    /// User-defined display name (e.g., "Work Meraki Account", "Home LogicMonitor")
+    /// </summary>
+    [Required]
+    [MaxLength(100)]
+    public string DisplayName { get; set; } = null!;
+
+    /// <summary>
+    /// Connection type discriminator (set by derived classes)
+    /// Values: "Meraki", "LogicMonitor", etc.
+    /// </summary>
+    [Required]
+    public string ConnectionType { get; set; } = null!;
+
+    /// <summary>
+    /// Whether this connection is currently active (user can disable temporarily)
+    /// </summary>
+    public bool IsActive { get; set; } = true;
+
+    /// <summary>
+    /// When this connection was created
+    /// </summary>
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// When this connection was last updated
+    /// </summary>
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// Navigation property to the user who owns this connection
+    /// </summary>
+    public ApplicationUser User { get; set; } = null!;
+}

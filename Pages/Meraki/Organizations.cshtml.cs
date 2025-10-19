@@ -8,52 +8,61 @@ namespace QRStickers.Pages.Meraki;
 [Authorize]
 public class OrganizationsModel : PageModel
 {
-    private readonly MerakiServiceFactory _merakiFactory;
     private readonly QRStickersDbContext _db;
     private readonly ILogger<OrganizationsModel> _logger;
 
-    public OrganizationsModel(MerakiServiceFactory merakiFactory, QRStickersDbContext db, ILogger<OrganizationsModel> logger)
+    public OrganizationsModel(QRStickersDbContext db, ILogger<OrganizationsModel> logger)
     {
-        _merakiFactory = merakiFactory;
         _db = db;
         _logger = logger;
     }
 
-    public bool HasToken { get; set; }
+    public List<Connection> UserConnections { get; set; } = new();
+    public Connection? SelectedConnection { get; set; }
     public List<CachedOrganization>? Organizations { get; set; }
     public Dictionary<string, int> NetworkCounts { get; set; } = new();
     public DateTime? LastSyncedAt { get; set; }
 
-    public async Task OnGetAsync()
+    public async Task OnGetAsync(int? connectionId)
     {
         try
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null)
             {
-                HasToken = false;
                 return;
             }
 
-            var token = await _db.OAuthTokens.FirstOrDefaultAsync(t => t.UserId == userId);
+            // Load all user's Meraki connections
+            UserConnections = await _db.Connections
+                .OfType<MerakiConnection>()
+                .Where(c => c.UserId == userId)
+                .OrderBy(c => c.DisplayName)
+                .Cast<Connection>()
+                .ToListAsync();
 
-            if (token == null)
+            if (!UserConnections.Any())
             {
-                HasToken = false;
                 return;
             }
 
-            HasToken = true;
+            // Select connection: use specified connectionId, or default to first active connection
+            if (connectionId.HasValue)
+            {
+                SelectedConnection = UserConnections.FirstOrDefault(c => c.Id == connectionId.Value);
+            }
 
-            // Load organizations from cache (fast!)
+            SelectedConnection ??= UserConnections.FirstOrDefault(c => c.IsActive) ?? UserConnections.First();
+
+            // Load organizations from cache for selected connection
             Organizations = await _db.CachedOrganizations
-                .Where(o => o.UserId == userId && !o.IsDeleted)
+                .Where(o => o.ConnectionId == SelectedConnection.Id && !o.IsDeleted)
                 .OrderBy(o => o.Name)
                 .ToListAsync();
 
             // Get network counts from cache
             var networkCounts = await _db.CachedNetworks
-                .Where(n => n.UserId == userId && !n.IsDeleted)
+                .Where(n => n.ConnectionId == SelectedConnection.Id && !n.IsDeleted)
                 .GroupBy(n => n.OrganizationId)
                 .Select(g => new { OrganizationId = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(x => x.OrganizationId, x => x.Count);
@@ -61,10 +70,12 @@ public class OrganizationsModel : PageModel
             NetworkCounts = networkCounts;
 
             // Get last sync time
-            var syncStatus = await _db.SyncStatuses.FindAsync(userId);
+            var syncStatus = await _db.SyncStatuses
+                .FirstOrDefaultAsync(s => s.ConnectionId == SelectedConnection.Id);
             LastSyncedAt = syncStatus?.LastSyncCompletedAt;
 
-            _logger.LogInformation("Loaded {Count} organizations from cache for user {UserId}", Organizations.Count, userId);
+            _logger.LogInformation("Loaded {Count} organizations from cache for connection {ConnectionId}",
+                Organizations.Count, SelectedConnection.Id);
         }
         catch (Exception ex)
         {
