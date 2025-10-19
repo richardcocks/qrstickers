@@ -118,7 +118,7 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<QRStickersDbContext>();
-    await dbContext.Database.MigrateAsync(); // Use migrations instead of EnsureCreated for production
+    await dbContext.Database.MigrateAsync();
 }
 
 // Add authentication and authorization middleware
