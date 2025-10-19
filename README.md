@@ -23,8 +23,12 @@ QRStickers is a web application that combines user authentication with a flexibl
 
 - .NET 9.0 with ASP.NET Core Razor Pages
 - ASP.NET Identity for user authentication
-- Entity Framework Core 9.0 with SQLite
+- Entity Framework Core 9.0 with **SQL Server**:
+  - **SQL Server LocalDB** - Local development (file-based, zero-config, free)
+  - **Azure SQL Database** - Production (free tier, serverless, managed identity)
 - QRCoder library for QR code generation
+- SignalR for real-time sync status updates
+- Azure Service Connector for passwordless database authentication
 - Docker multi-stage builds
 - GitHub Actions CI/CD
 
@@ -63,8 +67,9 @@ QRStickers is a web application that combines user authentication with a flexibl
 ### First Run
 
 On first run, the application will automatically:
-- Create the SQLite database (`qrstickers.db`)
-- Apply all EF Core migrations (Identity tables + OAuthTokens table)
+- Create the LocalDB database (`QRStickers`)
+- Apply all EF Core migrations (Identity tables, Connections, OAuth tokens, etc.)
+- **Note:** Requires SQL Server Express LocalDB (included with Visual Studio or SQL Server Express)
 
 ## Project Structure
 
@@ -123,7 +128,32 @@ On first run, the application will automatically:
 
 ## Database
 
-The application uses SQLite with the following schema:
+The application uses **SQL Server** for both development and production:
+
+### Development (SQL Server LocalDB)
+- **Provider:** SQL Server LocalDB - file-based, free, included with Visual Studio
+- **Database Name:** `QRStickers`
+- **Connection String:** `Server=(localdb)\\mssqllocaldb;Database=QRStickers;Trusted_Connection=True;MultipleActiveResultSets=true`
+- **Configuration:** Set in `appsettings.Development.json`
+- **Benefits:**
+  - Zero-cost (included with Visual Studio or SQL Server Express)
+  - File-based automatic database creation (like SQLite)
+  - Full SQL Server features (same as production)
+  - **No migration conflicts** - same provider as production
+- **Installation:** Comes with Visual Studio or install [SQL Server Express](https://www.microsoft.com/en-us/sql-server/sql-server-downloads)
+
+### Production (Azure SQL Database)
+- **Provider:** Azure SQL Database - serverless, auto-pause
+- **Free Tier:** 100,000 vCore seconds/month + 32 GB storage (**FREE FOREVER**)
+- **Authentication:** Managed identity (passwordless) via Azure Service Connector
+- **Auto-pause:** Database pauses after 1 hour of inactivity (zero cost when paused)
+- **Benefits:** Production-ready, proper FK constraints, auto-scaling, no passwords needed
+- **Setup Instructions:** See "Production Deployment" section below
+
+### Why SQL Server Only?
+EF Core migrations are database-provider-specific. SQLite migrations won't work with SQL Server due to different SQL syntax, data types, and constraints. Using the same provider for development and production eliminates migration conflicts.
+
+### Database Schema
 - **ASP.NET Identity tables** - User accounts, roles, claims
 - **Connections** - User's third-party connections (TPH: MerakiConnection, etc.)
 - **MerakiOAuthTokens** - OAuth refresh tokens per connection (FK to Connections)
@@ -156,14 +186,18 @@ dotnet ef migrations remove
 
 The application uses a hybrid token persistence strategy:
 
-- **Refresh Tokens** - Stored securely in SQLite database per connection (90-day lifetime for Meraki)
-- **Access Tokens** - Cached in-memory only via singleton `MerakiAccessTokenCache` (1-hour lifetime)
+- **Refresh Tokens** - Stored securely in SQL Server per connection (LocalDB for dev, Azure SQL for prod)
+  - Lifetime: 90 days for Meraki
+  - Survives application restarts
+- **Access Tokens** - Cached in-memory only via singleton `MerakiAccessTokenCache`
+  - Lifetime: 1 hour
+  - Cleared on application restart
 - **Benefits:**
   - Reduces database queries by 50-80% during active sessions
-  - Survives application restarts (refresh tokens persist in database)
   - Automatic refresh when access token expires
   - Secure: refresh tokens never exposed to client
   - Per-connection isolation: each connection has independent token lifecycle
+  - Consistent database provider across environments (no migration conflicts)
 
 ## Docker
 
@@ -174,10 +208,77 @@ docker build -t qrstickers:latest .
 docker run -p 8080:8080 qrstickers:latest
 ```
 
-**Note:** Mount the `/App/` volume to persist the SQLite database across container restarts:
-```bash
-docker run -p 8080:8080 -v /path/to/local:/App qrstickers:latest
-```
+**Note:** Production uses Azure SQL Database (cloud-hosted). No volume mounting needed for database persistence.
+
+## Production Deployment (Azure)
+
+### Option 1: Azure Service Connector (Recommended - Passwordless)
+
+Azure Service Connector automates the connection between your Web App and Azure SQL Database using managed identity.
+
+**Prerequisites:**
+- Azure subscription
+- Azure Web App deployed
+- Azure SQL Database created (free tier available)
+
+**Steps:**
+
+1. **Create Azure SQL Database** (via Azure Portal):
+   - Navigate to **Create a resource** → **SQL Database**
+   - Configure:
+     - Compute tier: **Serverless**
+     - Service tier: **General Purpose**
+     - vCores: **0.5 - 4 vCores**
+     - Data max size: **32 GB** (within free tier)
+     - Auto-pause: **Yes** (1 hour delay)
+   - Enable **Microsoft Entra authentication** (required for managed identity)
+
+2. **Connect Web App to SQL Database**:
+   - Go to your **Azure Web App** → **Service Connector** (left menu)
+   - Click **+ Create** → **SQL Database**
+   - Select your SQL server and database
+   - Client type: **.NET**
+   - Authentication: **System-assigned managed identity** (passwordless!)
+   - Click **Create**
+
+3. **Configure Application Settings**:
+   - Go to **Web App** → **Configuration** → **Application settings**
+   - Rename `AZURE_SQL_CONNECTIONSTRING` to `ConnectionStrings__DefaultConnection`
+     - Note: Double underscore `__` is Azure's separator for nested JSON
+   - Click **Save** and restart
+
+4. **Deploy and Verify**:
+   - App auto-runs migrations on startup
+   - Connection deletion now works with proper cascade deletes
+   - No passwords stored anywhere!
+
+**What Service Connector Does Automatically:**
+- ✅ Enables managed identity on Web App
+- ✅ Grants database permissions to the identity
+- ✅ Creates passwordless connection string
+- ✅ Configures Microsoft Entra (Azure AD) authentication
+- ✅ No secrets in configuration
+
+### Option 2: Manual Connection String (SQL Authentication)
+
+If you prefer username/password authentication:
+
+1. **Get Connection String** from Azure Portal → SQL Database → Connection strings
+2. **Configure Web App**:
+   - Go to **Configuration** → **Connection strings**
+   - Add connection string:
+     - Name: `DefaultConnection`
+     - Value: `Server=tcp:{server}.database.windows.net,1433;Database=qrstickers;User ID={admin};Password={password};Encrypt=True;`
+     - Type: `SQLServer`
+3. Save and restart
+
+### Azure SQL Free Tier Limits
+
+- ✅ **100,000 vCore seconds/month** (enough for low-traffic apps running continuously)
+- ✅ **32 GB storage** + 32 GB backup
+- ✅ **Auto-pause when inactive** (no charges during pause)
+- ✅ **Forever free** (renews monthly, no expiration)
+- ✅ **Monitor usage** in Azure Portal → SQL Database → Metrics
 
 ## Learning Objectives
 
@@ -189,6 +290,9 @@ This project demonstrates:
 - **Table-per-Hierarchy (TPH) inheritance** - Flexible connection type extensibility
 - **User-defined connection naming** - Passing state through OAuth flow
 - Separating authentication (identity) from authorization (access tokens)
+- **SQL Server architecture** - LocalDB for dev, Azure SQL for prod (no migration conflicts)
+- **Azure Service Connector integration** - Automated passwordless database connections
+- **Managed identity authentication** - No passwords or secrets in configuration
 - Hybrid token persistence strategy (in-memory caching + database storage)
 - Singleton pattern for cross-request token caching
 - Factory pattern for connection-scoped service creation
@@ -198,11 +302,13 @@ This project demonstrates:
 - Cookie-based session management
 - Razor tag helpers and page models
 - Rate limiting middleware
-- **Background data synchronization** - Fire-and-forget async tasks
+- **Background data synchronization** - Fire-and-forget async tasks with SignalR updates
 - Docker multi-stage containerization
-- Azure deployment patterns (Web Apps and Container Apps)
+- Azure deployment patterns (Web Apps, Container Apps, SQL Database)
+- **Azure SQL Database free tier** - Production database at zero cost
 - Dependency injection and service lifetimes
 - Performance optimization through caching and query optimization
+- Environment-specific configuration (appsettings.Development.json vs production)
 
 ## License
 
