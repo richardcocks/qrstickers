@@ -10,20 +10,47 @@
 {
     <h2>Hello @User.Identity.Name!</h2>
 
-    @if (Model.HasMerakiToken)
+    <h3>Your Connections</h3>
+
+    @if (Model.ConnectionCount == 0)
     {
-        <div class="alert alert-success">
-            <h3>✓ Meraki Account Connected</h3>
-            <p>Refresh token expires: @Model.RefreshTokenExpiresAt?.ToLocalTime().ToString("o") (local time)</p>
-            <p><a href="/Meraki/Organizations">View your organizations</a></p>
-            <p><a href="/Meraki/Disconnect">Disconnect Meraki account</a></p>
+        <div class="alert alert-info">
+            <p>You haven't connected any accounts yet.</p>
+            <p><a href="/Connections/Create" class="btn btn-primary">Add Your First Connection</a></p>
         </div>
     }
     else
     {
-        <div class="alert alert-warning">
-            <p><a href="/Meraki/Connect">Click to connect your Meraki account</a></p>
-        </div>
+        <p>You have <strong>@Model.ConnectionCount</strong> connection@(Model.ConnectionCount == 1 ? "" : "s").</p>
+
+        <ul style="list-style: none; padding: 0;">
+            @foreach (var connection in Model.Connections)
+            {
+                <li style="padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px; background-color: #f9f9f9;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong>@connection.DisplayName</strong>
+                            <span style="color: #666; margin-left: 10px;">(@connection.ConnectionType)</span>
+                            @if (connection.IsActive)
+                            {
+                                <span style="color: #28a745; margin-left: 10px; font-size: 0.9em;">● Active</span>
+                            }
+                        </div>
+                        <div>
+                            @if (connection.ConnectionType == "Meraki")
+                            {
+                                <a href="/Meraki/Organizations?connectionId=@connection.Id" style="margin-right: 10px;">View Organizations</a>
+                            }
+                        </div>
+                    </div>
+                </li>
+            }
+        </ul>
+
+        <p>
+            <a href="/Connections" class="btn btn-secondary">Manage Connections</a>
+            <a href="/Connections/Create" class="btn btn-primary" style="margin-left: 10px;">Add New Connection</a>
+        </p>
     }
 }
 else

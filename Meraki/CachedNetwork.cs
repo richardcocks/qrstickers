@@ -2,10 +2,10 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json;
 
-namespace QRStickers;
+namespace QRStickers.Meraki;
 
 /// <summary>
-/// Cached Meraki network data per user
+/// Cached Meraki network data per connection
 /// </summary>
 public class CachedNetwork
 {
@@ -13,10 +13,10 @@ public class CachedNetwork
     public int Id { get; set; }
 
     /// <summary>
-    /// Foreign key to ApplicationUser
+    /// Foreign key to Connection (MerakiConnection)
     /// </summary>
     [Required]
-    public string UserId { get; set; } = null!;
+    public int ConnectionId { get; set; }
 
     /// <summary>
     /// Foreign key to CachedOrganization (reference by OrganizationId string)
@@ -72,9 +72,9 @@ public class CachedNetwork
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     /// <summary>
-    /// Navigation property to user
+    /// Navigation property to connection
     /// </summary>
-    public ApplicationUser User { get; set; } = null!;
+    public Connection Connection { get; set; } = null!;
 
     /// <summary>
     /// Navigation property to organization

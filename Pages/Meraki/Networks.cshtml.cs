@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
+using QRStickers.Meraki;
 using System.Security.Claims;
 
 namespace QRStickers.Pages.Meraki;
@@ -20,19 +21,20 @@ public class NetworksModel : PageModel
         _logger = logger;
     }
 
-    public bool HasToken { get; set; }
+    public int? ConnectionId { get; set; }
     public string? OrganizationId { get; set; }
     public List<CachedNetwork>? Networks { get; set; }
     public Dictionary<string, int> DeviceCounts { get; set; } = new();
     public DateTime? LastSyncedAt { get; set; }
 
-    public async Task<IActionResult> OnGetAsync(string? orgId)
+    public async Task<IActionResult> OnGetAsync(int? connectionId, string? orgId)
     {
         if (string.IsNullOrEmpty(orgId))
         {
-            return RedirectToPage("/Meraki/Organizations");
+            return RedirectToPage("/Meraki/Organizations", new { connectionId });
         }
 
+        ConnectionId = connectionId;
         OrganizationId = orgId;
 
         try
@@ -40,29 +42,30 @@ public class NetworksModel : PageModel
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null)
             {
-                HasToken = false;
                 return Page();
             }
 
-            var token = await _db.OAuthTokens.FirstOrDefaultAsync(t => t.UserId == userId);
+            // Get connection (default to first if not specified)
+            var connection = connectionId.HasValue
+                ? await _db.Connections.OfType<MerakiConnection>().FirstOrDefaultAsync(c => c.Id == connectionId.Value && c.UserId == userId)
+                : await _db.Connections.OfType<MerakiConnection>().FirstOrDefaultAsync(c => c.UserId == userId);
 
-            if (token == null)
+            if (connection == null)
             {
-                HasToken = false;
-                return Page();
+                return RedirectToPage("/Connections/Create");
             }
 
-            HasToken = true;
+            ConnectionId = connection.Id;
 
-            // Load networks from cache (fast!)
+            // Load networks from cache
             Networks = await _db.CachedNetworks
-                .Where(n => n.UserId == userId && n.OrganizationId == orgId && !n.IsDeleted)
+                .Where(n => n.ConnectionId == connection.Id && n.OrganizationId == orgId && !n.IsDeleted)
                 .OrderBy(n => n.Name)
                 .ToListAsync();
 
             // Get device counts from cache
             var deviceCounts = await _db.CachedDevices
-                .Where(d => d.UserId == userId && !d.IsDeleted && d.NetworkId != null)
+                .Where(d => d.ConnectionId == connection.Id && !d.IsDeleted && d.NetworkId != null)
                 .GroupBy(d => d.NetworkId!)
                 .Select(g => new { NetworkId = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(x => x.NetworkId, x => x.Count);
@@ -70,7 +73,7 @@ public class NetworksModel : PageModel
             DeviceCounts = deviceCounts;
 
             // Get last sync time
-            var syncStatus = await _db.SyncStatuses.FindAsync(userId);
+            var syncStatus = await _db.SyncStatuses.FirstOrDefaultAsync(s => s.ConnectionId == connection.Id);
             LastSyncedAt = syncStatus?.LastSyncCompletedAt;
 
             _logger.LogInformation("Loaded {Count} networks from cache for organization {OrgId}", Networks.Count, orgId);

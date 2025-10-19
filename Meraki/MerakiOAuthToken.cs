@@ -1,25 +1,25 @@
-﻿namespace QRStickers;
+namespace QRStickers.Meraki;
 
 /// <summary>
-/// Represents an OAuth refresh token stored for a user
+/// Represents a Meraki OAuth refresh token for a specific connection
 /// </summary>
-public class OAuthToken
+public class MerakiOAuthToken
 {
     public int Id { get; set; }
 
     /// <summary>
-    /// Foreign key to ApplicationUser
+    /// Foreign key to Connection (MerakiConnection)
     /// </summary>
-    public string UserId { get; set; } = null!;
+    public int ConnectionId { get; set; }
 
     /// <summary>
-    /// Navigation property to the user who owns this token
+    /// Navigation property to the connection that owns this token
     /// </summary>
-    public ApplicationUser User { get; set; } = null!;
+    public Connection Connection { get; set; } = null!;
 
     /// <summary>
     /// OAuth refresh token (long-lived, 90 days)
-    /// Access tokens are ephemeral and not stored
+    /// Access tokens are ephemeral and not stored in the database
     /// </summary>
     public string RefreshToken { get; set; } = null!;
 

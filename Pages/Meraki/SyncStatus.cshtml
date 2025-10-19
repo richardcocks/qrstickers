@@ -13,7 +13,7 @@
             <h2>Sync Failed</h2>
             <p>There was an error syncing your Meraki data:</p>
             <p><strong>@Model.ErrorMessage</strong></p>
-            <p><a href="/Meraki/Organizations" class="btn">Go to Organizations</a></p>
+            <p><a href="/Meraki/Organizations?connectionId=@Model.ConnectionId" class="btn">Go to Organizations</a></p>
         </div>
     }
     else if (Model.Status == QRStickers.SyncState.Completed)
@@ -25,7 +25,7 @@
         </div>
         <script>
             setTimeout(function() {
-                window.location.href = '/Meraki/Organizations';
+                window.location.href = '/Meraki/Organizations?connectionId=@Model.ConnectionId';
             }, 2000);
         </script>
     }
@@ -53,4 +53,4 @@
 </div>
 
 <hr />
-<p><a href="/Meraki/Organizations">Back to Organizations (skip sync status)</a></p>
+<p><a href="/Meraki/Organizations?connectionId=@Model.ConnectionId">Back to Organizations (skip sync status)</a></p>

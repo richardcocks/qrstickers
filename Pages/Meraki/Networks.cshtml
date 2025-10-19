@@ -6,16 +6,20 @@
 
 <h1>Networks for Organization: @Model.OrganizationId</h1>
 
-@if (!Model.HasToken)
+@if (Model.LastSyncedAt.HasValue)
 {
-    <div class="alert alert-warning">
-        <p>You haven't connected your Meraki account yet.</p>
-        <p><a href="/Meraki/Connect" class="btn">Connect Meraki Account</a></p>
-    </div>
+    <p style="color: #666; font-size: 0.9em;">
+        <em>Last synced: @Model.LastSyncedAt.Value.ToString("g")</em>
+    </p>
 }
-else if (Model.Networks == null || !Model.Networks.Any())
+
+@if (Model.Networks == null || !Model.Networks.Any())
 {
     <p>No networks found for this organization.</p>
+    @if (Model.ConnectionId.HasValue)
+    {
+        <p><a href="/Meraki/SyncStatus?connectionId=@Model.ConnectionId&trigger=true">Sync Data</a></p>
+    }
 }
 else
 {
@@ -74,4 +78,4 @@ else
 }
 
 <hr />
-<p><a href="/Meraki/Organizations">Back to Organizations</a></p>
+<p><a href="/Meraki/Organizations?connectionId=@Model.ConnectionId">Back to Organizations</a></p>

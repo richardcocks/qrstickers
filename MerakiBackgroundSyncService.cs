@@ -62,42 +62,41 @@ public class MerakiBackgroundSyncService : BackgroundService
 
     private async Task SyncAllUsersAsync()
     {
-        _logger.LogInformation("Starting background sync for all users");
+        _logger.LogInformation("Starting background sync for all connections");
 
         using var scope = _serviceProvider.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<QRStickersDbContext>();
-        var orchestratorFactory = scope.ServiceProvider.GetRequiredService<MerakiSyncOrchestrator>();
 
-        // Get all users with OAuth tokens (and thus Meraki accounts)
-        var userIds = await db.OAuthTokens
-            .Where(t => t.RefreshTokenExpiresAt > DateTime.UtcNow) // Only sync users with valid refresh tokens
-            .Select(t => t.UserId)
+        // Get all connections with valid OAuth tokens
+        var connectionIds = await db.MerakiOAuthTokens
+            .Where(t => t.RefreshTokenExpiresAt > DateTime.UtcNow) // Only sync connections with valid refresh tokens
+            .Select(t => t.ConnectionId)
             .Distinct()
             .ToListAsync();
 
-        _logger.LogInformation("Found {Count} users with valid Meraki tokens", userIds.Count);
+        _logger.LogInformation("Found {Count} connections with valid Meraki tokens", connectionIds.Count);
 
-        foreach (var userId in userIds)
+        foreach (var connectionId in connectionIds)
         {
             try
             {
-                _logger.LogInformation("Syncing data for user {UserId}", userId);
+                _logger.LogInformation("Syncing data for connection {ConnectionId}", connectionId);
 
-                // Create a new scope for each user to avoid DbContext lifetime issues
-                using var userScope = _serviceProvider.CreateScope();
-                var userOrchestrator = userScope.ServiceProvider.GetRequiredService<MerakiSyncOrchestrator>();
+                // Create a new scope for each connection to avoid DbContext lifetime issues
+                using var connectionScope = _serviceProvider.CreateScope();
+                var syncOrchestrator = connectionScope.ServiceProvider.GetRequiredService<MerakiSyncOrchestrator>();
 
-                await userOrchestrator.SyncUserDataAsync(userId);
+                await syncOrchestrator.SyncConnectionDataAsync(connectionId);
 
-                _logger.LogInformation("Successfully synced data for user {UserId}", userId);
+                _logger.LogInformation("Successfully synced data for connection {ConnectionId}", connectionId);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error syncing data for user {UserId}", userId);
-                // Continue with next user
+                _logger.LogError(ex, "Error syncing data for connection {ConnectionId}", connectionId);
+                // Continue with next connection
             }
         }
 
-        _logger.LogInformation("Completed background sync for all users");
+        _logger.LogInformation("Completed background sync for all connections");
     }
 }

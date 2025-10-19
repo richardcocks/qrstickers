@@ -14,16 +14,21 @@ public enum SyncState
 }
 
 /// <summary>
-/// Tracks Meraki data sync status per user
+/// Tracks Meraki data sync status per connection
 /// </summary>
 public class SyncStatus
 {
     /// <summary>
-    /// Foreign key to ApplicationUser (also serves as primary key - one sync status per user)
+    /// Primary key
     /// </summary>
     [Key]
+    public int Id { get; set; }
+
+    /// <summary>
+    /// Foreign key to Connection (MerakiConnection) - one sync status per connection
+    /// </summary>
     [Required]
-    public string UserId { get; set; } = null!;
+    public int ConnectionId { get; set; }
 
     /// <summary>
     /// When the last sync started
@@ -61,7 +66,7 @@ public class SyncStatus
     public string? ErrorMessage { get; set; }
 
     /// <summary>
-    /// Navigation property to user
+    /// Navigation property to connection
     /// </summary>
-    public ApplicationUser User { get; set; } = null!;
+    public Connection Connection { get; set; } = null!;
 }
