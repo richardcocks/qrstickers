@@ -46,7 +46,7 @@ public class MerakiBackgroundSyncService : BackgroundService
         {
             try
             {
-                await SyncAllUsersAsync();
+                await SyncAllConnectionsAsync();
             }
             catch (Exception ex)
             {
@@ -60,7 +60,7 @@ public class MerakiBackgroundSyncService : BackgroundService
         _logger.LogInformation("Meraki background sync service stopped");
     }
 
-    private async Task SyncAllUsersAsync()
+    private async Task SyncAllConnectionsAsync()
     {
         _logger.LogInformation("Starting background sync for all connections");
 
