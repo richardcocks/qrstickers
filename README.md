@@ -77,6 +77,8 @@ On first run, the application will automatically:
 - `MerakiConnection.cs` - Meraki-specific connection specialization
 - `ApplicationUser.cs` - Identity user model (owns Connections collection)
 - `QRStickersDbContext.cs` - Entity Framework DbContext with TPH discriminator
+- `SyncStatus.cs` - Sync status tracking per connection
+- `MerakiBackgroundSyncService.cs` - Background service for periodic connection syncing
 - `Meraki/` - Meraki-specific components
   - `MerakiOAuthToken.cs` - OAuth token storage per connection
   - `MerakiAccessTokenCache.cs` - In-memory token caching for performance
@@ -84,9 +86,9 @@ On first run, the application will automatically:
   - `MerakiService.cs` - High-level Meraki service with automatic token refresh
   - `MerakiServiceFactory.cs` - Factory for creating connection-specific Meraki services
   - `MerakiSyncOrchestrator.cs` - Orchestrates syncing connection data from API to cache
-- `CachedOrganization.cs`, `CachedNetwork.cs`, `CachedDevice.cs` - Cached Meraki data per connection
-- `SyncStatus.cs` - Sync status tracking per connection
-- `MerakiBackgroundSyncService.cs` - Background service for periodic connection syncing
+  - `CachedOrganization.cs` - Cached Meraki organization data per connection
+  - `CachedNetwork.cs` - Cached Meraki network data per connection
+  - `CachedDevice.cs` - Cached Meraki device data per connection
 
 ## API Endpoints
 
