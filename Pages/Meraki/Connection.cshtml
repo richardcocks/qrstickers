@@ -1,0 +1,138 @@
+@page
+@model QRStickers.Pages.Meraki.ConnectionModel
+@{
+    ViewData["Title"] = "Connection Details";
+}
+
+<h1>Connection: @Model.Connection?.DisplayName</h1>
+
+@if (Model.Connection == null)
+{
+    <div class="alert alert-warning">
+        <p>Connection not found.</p>
+        <p><a href="/Connections" class="btn btn-primary">Back to Connections</a></p>
+    </div>
+}
+else
+{
+    @if (Model.LastSyncedAt.HasValue)
+    {
+        <p style="color: #666; font-size: 0.9em;">
+            <em>Last synced: @Model.LastSyncedAt.Value.ToString("g")</em>
+        </p>
+    }
+
+    @if (Model.Organization == null)
+    {
+        <div class="alert alert-info">
+            <p>No organization data has been synced yet for this connection.</p>
+            <p><a href="/Meraki/SyncStatus?connectionId=@Model.Connection.Id&trigger=true" class="btn btn-primary">Sync Data Now</a></p>
+        </div>
+    }
+    else
+    {
+        <div style="margin-bottom: 30px; padding: 20px; background-color: #f9f9f9; border-radius: 4px; border: 1px solid #ddd;">
+            <h2 style="margin-top: 0;">Organization</h2>
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <div>
+                    @if (!string.IsNullOrEmpty(Model.Organization.Url))
+                    {
+                        <a href="@Model.Organization.Url" target="_blank" rel="noopener noreferrer" style="text-decoration: none;">
+                            <img src="/qrcode?q=@Uri.EscapeDataString(Model.Organization.Url)"
+                                 alt="QR Code for @Model.Organization.Name - Dashboard Link"
+                                 style="width: 100px; height: 100px; border: 1px solid #ddd; border-radius: 4px; padding: 4px; background-color: #fff;" />
+                        </a>
+                    }
+                    else
+                    {
+                        <span style="color: #999; font-size: 0.9em;">No QR Code</span>
+                    }
+                </div>
+                <div>
+                    <p style="margin: 5px 0;">
+                        <strong>Name:</strong> @Model.Organization.Name
+                    </p>
+                    <p style="margin: 5px 0;">
+                        <strong>Organization ID:</strong> <span style="font-family: monospace; font-size: 0.9em;">@Model.Organization.OrganizationId</span>
+                    </p>
+                    @if (!string.IsNullOrEmpty(Model.Organization.Url))
+                    {
+                        <p style="margin: 5px 0;">
+                            <strong>Dashboard:</strong> <a href="@Model.Organization.Url" target="_blank" rel="noopener noreferrer">Open in Meraki Dashboard</a>
+                        </p>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <h2>Networks</h2>
+
+        @if (!Model.Networks.Any())
+        {
+            <div class="alert alert-info">
+                <p>No networks found for this organization.</p>
+                <p><a href="/Meraki/SyncStatus?connectionId=@Model.Connection.Id&trigger=true">Sync Data</a></p>
+            </div>
+        }
+        else
+        {
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background-color: #f5f5f5; border-bottom: 2px solid #ddd;">
+                        <th style="padding: 10px; text-align: center;">Dashboard</th>
+                        <th style="padding: 10px; text-align: left;">Network Name</th>
+                        <th style="padding: 10px; text-align: left;">Network ID</th>
+                        <th style="padding: 10px; text-align: left;">Product Types</th>
+                        <th style="padding: 10px; text-align: right;">Device Count</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var network in Model.Networks)
+                    {
+                        <tr style="border-bottom: 1px solid #ddd;">
+                            <td style="padding: 10px; text-align: center; vertical-align: middle;">
+                                @if (!string.IsNullOrEmpty(network.Url))
+                                {
+                                    <a href="@network.Url" target="_blank" rel="noopener noreferrer" style="text-decoration: none;">
+                                        <img src="/qrcode?q=@Uri.EscapeDataString(network.Url)"
+                                             alt="QR Code for @network.Name - Dashboard Link"
+                                             style="width: 100px; height: 100px; border: 1px solid #ddd; border-radius: 4px; padding: 4px; background-color: #fff;" />
+                                    </a>
+                                }
+                                else
+                                {
+                                    <span style="color: #999; font-size: 0.9em;">N/A</span>
+                                }
+                            </td>
+                            <td style="padding: 10px;"><strong>@network.Name</strong></td>
+                            <td style="padding: 10px; font-family: monospace; font-size: 0.9em;">@network.NetworkId</td>
+                            <td style="padding: 10px;">
+                                @if (network.ProductTypes != null && network.ProductTypes.Any())
+                                {
+                                    @string.Join(", ", network.ProductTypes)
+                                }
+                                else
+                                {
+                                    <span style="color: #999;">None</span>
+                                }
+                            </td>
+                            <td style="padding: 10px; text-align: right;">
+                                @if (Model.DeviceCounts.ContainsKey(network.NetworkId))
+                                {
+                                    @Model.DeviceCounts[network.NetworkId]
+                                }
+                                else
+                                {
+                                    <span>0</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    }
+}
+
+<hr />
+<p><a href="/">Back to home</a> | <a href="/Connections">Manage Connections</a></p>

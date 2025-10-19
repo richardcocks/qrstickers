@@ -55,7 +55,7 @@ else
                     <td style="padding: 10px; text-align: center;">
                         @if (connection.ConnectionType == "Meraki")
                         {
-                            <a href="/Meraki/Organizations?connectionId=@connection.Id" style="margin-right: 10px;">View</a>
+                            <a href="/Meraki/Connection?connectionId=@connection.Id" style="margin-right: 10px;">View</a>
                         }
                         <a href="/Connections/Delete?connectionId=@connection.Id" style="color: #dc3545;">Delete</a>
                     </td>
