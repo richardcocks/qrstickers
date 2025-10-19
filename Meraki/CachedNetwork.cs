@@ -2,10 +2,10 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json;
 
-namespace QRStickers;
+namespace QRStickers.Meraki;
 
 /// <summary>
-/// Cached Meraki network data per user
+/// Cached Meraki network data per connection
 /// </summary>
 public class CachedNetwork
 {

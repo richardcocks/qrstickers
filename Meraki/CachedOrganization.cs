@@ -1,9 +1,9 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace QRStickers;
+namespace QRStickers.Meraki;
 
 /// <summary>
-/// Cached Meraki organization data per user
+/// Cached Meraki organization data per connection
 /// </summary>
 public class CachedOrganization
 {

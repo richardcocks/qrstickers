@@ -1,9 +1,9 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace QRStickers;
+namespace QRStickers.Meraki;
 
 /// <summary>
-/// Cached Meraki device data per user
+/// Cached Meraki device data per connection
 /// </summary>
 public class CachedDevice
 {
