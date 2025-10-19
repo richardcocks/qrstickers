@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using System.Security.Claims;
 using System.Text.Json;
 using QRStickers.Meraki;
@@ -15,20 +16,22 @@ public class CallbackModel : PageModel
     private readonly QRStickersDbContext _db;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<CallbackModel> _logger;
+    private readonly IMemoryCache _cache;
 
-    public CallbackModel(MerakiApiClient merakiClient, QRStickersDbContext db, IServiceProvider serviceProvider, ILogger<CallbackModel> logger)
+    public CallbackModel(MerakiApiClient merakiClient, QRStickersDbContext db, IServiceProvider serviceProvider, ILogger<CallbackModel> logger, IMemoryCache cache)
     {
         _merakiClient = merakiClient;
         _db = db;
         _serviceProvider = serviceProvider;
         _logger = logger;
+        _cache = cache;
     }
 
     public bool Success { get; set; }
     public string? ErrorMessage { get; set; }
     public int? ConnectionId { get; set; }
 
-    public async Task<IActionResult> OnGetAsync(string? code, string? state)
+    public async Task<IActionResult> OnGetAsync(string? code, string? state, string? nonce)
     {
         try
         {
@@ -51,8 +54,10 @@ public class CallbackModel : PageModel
                 return Page();
             }
 
-            // Parse state parameter to get displayName
+            // Parse state parameter to get displayName and nonce
             string displayName = "My Meraki Connection";
+            string? stateNonce = null;
+
             if (!string.IsNullOrEmpty(state))
             {
                 try
@@ -62,11 +67,45 @@ public class CallbackModel : PageModel
                     {
                         displayName = displayNameElement.GetString() ?? displayName;
                     }
+                    if (stateObj.TryGetProperty("nonce", out var nonceElement))
+                    {
+                        stateNonce = nonceElement.GetString();
+                    }
                 }
                 catch (Exception ex)
                 {
                     _logger.LogWarning(ex, "Failed to parse state parameter, using default display name");
                 }
+            }
+
+            // CSRF Protection: Validate nonce from state parameter
+            if (string.IsNullOrEmpty(stateNonce))
+            {
+                _logger.LogWarning("OAuth callback received with missing nonce in state parameter. Possible CSRF attack.");
+                Success = false;
+                ErrorMessage = "Invalid OAuth state. Please try connecting again.";
+                return Page();
+            }
+
+            if (!_cache.TryGetValue($"oauth_nonce_{stateNonce}", out _))
+            {
+                _logger.LogWarning("OAuth callback received with invalid or expired nonce: {Nonce}. Possible CSRF attack.", stateNonce);
+                Success = false;
+                ErrorMessage = "Invalid or expired OAuth state. Please try connecting again.";
+                return Page();
+            }
+
+            // Remove nonce from cache (single-use enforcement)
+            _cache.Remove($"oauth_nonce_{stateNonce}");
+
+            // Log whether Meraki echoed back the dedicated nonce parameter
+            if (!string.IsNullOrEmpty(nonce))
+            {
+                _logger.LogInformation("Meraki echoed back dedicated nonce parameter: {Nonce}", nonce);
+            }
+            else
+            {
+                _logger.LogInformation("Meraki did not echo back dedicated nonce parameter (using state-embedded nonce for validation)");
             }
 
             // Build the redirect URI (should match what's configured in Meraki OAuth)
