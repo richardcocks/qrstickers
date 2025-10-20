@@ -1,0 +1,119 @@
+@page
+@model QRStickers.Pages.Meraki.NetworkModel
+@{
+    ViewData["Title"] = "Network Details";
+}
+
+<h1>Network: @Model.Network?.Name</h1>
+
+@if (Model.Connection == null || Model.Network == null)
+{
+    <div class="alert alert-warning">
+        <p>Network not found.</p>
+        <p><a href="/Connections" class="btn btn-primary">Back to Connections</a></p>
+    </div>
+}
+else
+{
+    <div style="margin-bottom: 30px; padding: 20px; background-color: #f9f9f9; border-radius: 4px; border: 1px solid #ddd;">
+        <h2 style="margin-top: 0;">Network Information</h2>
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <div>
+                @if (!string.IsNullOrEmpty(Model.Network.Url))
+                {
+                    <a href="@Model.Network.Url" target="_blank" rel="noopener noreferrer" style="text-decoration: none;">
+                        <img src="/qrcode?q=@Uri.EscapeDataString(Model.Network.Url)"
+                             alt="QR Code for @Model.Network.Name - Dashboard Link"
+                             style="width: 100px; height: 100px; border: 1px solid #ddd; border-radius: 4px; padding: 4px; background-color: #fff;" />
+                    </a>
+                }
+                else
+                {
+                    <span style="color: #999; font-size: 0.9em;">No QR Code</span>
+                }
+            </div>
+            <div>
+                <p style="margin: 5px 0;">
+                    <strong>Name:</strong> @Model.Network.Name
+                </p>
+                <p style="margin: 5px 0;">
+                    <strong>Network ID:</strong> <span style="font-family: monospace; font-size: 0.9em;">@Model.Network.NetworkId</span>
+                </p>
+                @if (Model.Network.ProductTypes != null && Model.Network.ProductTypes.Any())
+                {
+                    <p style="margin: 5px 0;">
+                        <strong>Product Types:</strong>
+                        @for (int i = 0; i < Model.Network.ProductTypes.Count; i++)
+                        {
+                            var productType = Model.Network.ProductTypes[i];
+                            if (Model.ProductTypesPresent.Contains(productType))
+                            {
+                                <strong>@productType</strong>
+                            }
+                            else
+                            {
+                                @productType
+                            }
+
+                            if (i < Model.Network.ProductTypes.Count - 1)
+                            {
+                                <text>, </text>
+                            }
+                        }
+                    </p>
+                }
+                @if (!string.IsNullOrEmpty(Model.Network.Url))
+                {
+                    <p style="margin: 5px 0;">
+                        <strong>Dashboard:</strong> <a href="@Model.Network.Url" target="_blank" rel="noopener noreferrer">Open in Meraki Dashboard</a>
+                    </p>
+                }
+            </div>
+        </div>
+    </div>
+
+    <h2>Devices</h2>
+
+    @if (!Model.Devices.Any())
+    {
+        <div class="alert alert-info">
+            <p>No devices found for this network.</p>
+            <p><a href="/Meraki/SyncStatus?connectionId=@Model.Connection.Id&trigger=true">Sync Data</a></p>
+        </div>
+    }
+    else
+    {
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background-color: #f5f5f5; border-bottom: 2px solid #ddd;">
+                    <th style="padding: 10px; text-align: left;">Device Name</th>
+                    <th style="padding: 10px; text-align: left;">Serial Number</th>
+                    <th style="padding: 10px; text-align: left;">Product Type</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var device in Model.Devices)
+                {
+                    <tr style="border-bottom: 1px solid #ddd;">
+                        <td style="padding: 10px;">
+                            <strong>@(device.Name ?? "Unnamed Device")</strong>
+                        </td>
+                        <td style="padding: 10px; font-family: monospace; font-size: 0.9em;">
+                            @device.Serial
+                        </td>
+                        <td style="padding: 10px;">
+                            @(device.Model ?? "Unknown")
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+
+<hr />
+<p>
+    <a href="/Meraki/Connection?connectionId=@Model.Connection?.Id">Back to Connection</a> |
+    <a href="/">Back to home</a> |
+    <a href="/Connections">Manage Connections</a>
+</p>

@@ -316,6 +316,7 @@ public class MerakiSyncOrchestrator
                 // Update existing
                 existing.Name = apiDevice.Name;
                 existing.Model = apiDevice.Model;
+                existing.ProductType = apiDevice.ProductType;
                 existing.NetworkId = apiDevice.NetworkId;
                 existing.IsDeleted = false;
                 existing.LastSyncedAt = now;
@@ -330,6 +331,7 @@ public class MerakiSyncOrchestrator
                     Serial = apiDevice.Serial!,
                     Name = apiDevice.Name,
                     Model = apiDevice.Model,
+                    ProductType = apiDevice.ProductType,
                     NetworkId = apiDevice.NetworkId,
                     IsDeleted = false,
                     LastSyncedAt = now,

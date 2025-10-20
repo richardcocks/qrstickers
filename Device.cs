@@ -15,4 +15,7 @@ public class Device
 
     [JsonPropertyName("model")]
     public string? Model { get; set; }
+
+    [JsonPropertyName("productType")]
+    public string? ProductType { get; set; }
 }

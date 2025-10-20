@@ -38,6 +38,11 @@ public class CachedDevice
     public string? Model { get; set; }
 
     /// <summary>
+    /// Product type (e.g., "wireless", "switch", "appliance")
+    /// </summary>
+    public string? ProductType { get; set; }
+
+    /// <summary>
     /// Soft delete flag - true if device no longer exists in Meraki
     /// </summary>
     public bool IsDeleted { get; set; } = false;

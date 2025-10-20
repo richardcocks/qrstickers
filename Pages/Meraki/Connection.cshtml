@@ -104,12 +104,38 @@ else
                                     <span style="color: #999; font-size: 0.9em;">N/A</span>
                                 }
                             </td>
-                            <td style="padding: 10px;"><strong>@network.Name</strong></td>
+                            <td style="padding: 10px;">
+                                <strong>
+                                    <a href="/Meraki/Network?connectionId=@Model.Connection.Id&networkId=@Uri.EscapeDataString(network.NetworkId)">
+                                        @network.Name
+                                    </a>
+                                </strong>
+                            </td>
                             <td style="padding: 10px; font-family: monospace; font-size: 0.9em;">@network.NetworkId</td>
                             <td style="padding: 10px;">
                                 @if (network.ProductTypes != null && network.ProductTypes.Any())
                                 {
-                                    @string.Join(", ", network.ProductTypes)
+                                    var presentTypes = Model.NetworkProductTypesPresent.ContainsKey(network.NetworkId)
+                                        ? Model.NetworkProductTypesPresent[network.NetworkId]
+                                        : new HashSet<string>();
+
+                                    @for (int i = 0; i < network.ProductTypes.Count; i++)
+                                    {
+                                        var productType = network.ProductTypes[i];
+                                        if (presentTypes.Contains(productType))
+                                        {
+                                            <strong>@productType</strong>
+                                        }
+                                        else
+                                        {
+                                            @productType
+                                        }
+
+                                        if (i < network.ProductTypes.Count - 1)
+                                        {
+                                            <text>, </text>
+                                        }
+                                    }
                                 }
                                 else
                                 {

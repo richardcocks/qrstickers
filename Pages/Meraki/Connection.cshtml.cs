@@ -23,6 +23,7 @@ public class ConnectionModel : PageModel
     public CachedOrganization? Organization { get; set; }
     public List<CachedNetwork> Networks { get; set; } = new();
     public Dictionary<string, int> DeviceCounts { get; set; } = new();
+    public Dictionary<string, HashSet<string>> NetworkProductTypesPresent { get; set; } = new();
     public DateTime? LastSyncedAt { get; set; }
 
     public async Task<IActionResult> OnGetAsync(int? connectionId)
@@ -72,6 +73,18 @@ public class ConnectionModel : PageModel
                     .ToDictionaryAsync(x => x.NetworkId, x => x.Count);
 
                 DeviceCounts = deviceCounts;
+
+                // Get product types present in each network
+                var networkProductTypes = await _db.CachedDevices
+                    .Where(d => d.ConnectionId == Connection.Id && !d.IsDeleted && d.NetworkId != null && d.ProductType != null)
+                    .GroupBy(d => d.NetworkId!)
+                    .Select(g => new { NetworkId = g.Key, ProductTypes = g.Select(d => d.ProductType!).Distinct().ToList() })
+                    .ToListAsync();
+
+                NetworkProductTypesPresent = networkProductTypes.ToDictionary(
+                    x => x.NetworkId,
+                    x => new HashSet<string>(x.ProductTypes)
+                );
             }
 
             // Get last sync time
