@@ -88,6 +88,7 @@ else
                 <tr style="background-color: #f5f5f5; border-bottom: 2px solid #ddd;">
                     <th style="padding: 10px; text-align: left;">Device Name</th>
                     <th style="padding: 10px; text-align: left;">Serial Number</th>
+                    <th style="padding: 10px; text-align: left;">Model</th>
                     <th style="padding: 10px; text-align: left;">Product Type</th>
                 </tr>
             </thead>
@@ -103,6 +104,9 @@ else
                         </td>
                         <td style="padding: 10px;">
                             @(device.Model ?? "Unknown")
+                        </td>
+                        <td style="padding: 10px;">
+                            @(device.ProductType ?? "Unknown")
                         </td>
                     </tr>
                 }
