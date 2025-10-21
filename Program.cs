@@ -114,6 +114,9 @@ using (var scope = app.Services.CreateScope())
     await SystemTemplateSeeder.SeedTemplatesAsync(dbContext);
 }
 
+// Enable static files (CSS, JS, images from wwwroot)
+app.UseStaticFiles();
+
 // Add authentication and authorization middleware
 app.UseAuthentication();
 app.UseAuthorization();

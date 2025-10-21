@@ -72,45 +72,46 @@ function initCanvas(pageWidthMm, pageHeightMm) {
  * Draw grid on canvas
  */
 function drawGrid() {
-    if (!document.getElementById('chkShowGrid').checked) {
-        canvas.backgroundImage = null;
-        canvas.renderAll();
-        return;
+    // Use canvas overlay to draw grid
+    canvas.off('after:render', renderGrid);
+
+    if (document.getElementById('chkShowGrid').checked) {
+        canvas.on('after:render', renderGrid);
     }
 
+    canvas.renderAll();
+}
+
+/**
+ * Render grid on canvas overlay
+ */
+function renderGrid() {
+    const ctx = canvas.getContext();
     const gridSizePx = mmToPx(gridSize);
     const width = canvas.getWidth();
     const height = canvas.getHeight();
 
-    // Create grid pattern
-    const gridCanvas = document.createElement('canvas');
-    gridCanvas.width = width;
-    gridCanvas.height = height;
-    const ctx = gridCanvas.getContext('2d');
-
+    ctx.save();
     ctx.strokeStyle = '#e0e0e0';
     ctx.lineWidth = 0.5;
 
     // Vertical lines
     for (let x = 0; x <= width; x += gridSizePx) {
         ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, height);
+        ctx.moveTo(x + 0.5, 0);
+        ctx.lineTo(x + 0.5, height);
         ctx.stroke();
     }
 
     // Horizontal lines
     for (let y = 0; y <= height; y += gridSizePx) {
         ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(width, y);
+        ctx.moveTo(0, y + 0.5);
+        ctx.lineTo(width, y + 0.5);
         ctx.stroke();
     }
 
-    // Set as background
-    fabric.Image.fromURL(gridCanvas.toDataURL(), function(img) {
-        canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas));
-    });
+    ctx.restore();
 }
 
 /**

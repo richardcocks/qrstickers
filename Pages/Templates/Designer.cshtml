@@ -312,12 +312,14 @@
 
     <script>
         // Initialize designer with template data
-        const templateData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Template));
-        const isEditMode = @Model.IsEditMode.ToString().ToLower();
-        const isSystemTemplate = @Model.IsSystemTemplate.ToString().ToLower();
+        (function() {
+            const templateData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Template));
+            const editMode = @Model.IsEditMode.ToString().ToLower();
+            const systemTemplate = @Model.IsSystemTemplate.ToString().ToLower();
 
-        document.addEventListener('DOMContentLoaded', function() {
-            initDesigner(templateData, isEditMode, isSystemTemplate);
-        });
+            document.addEventListener('DOMContentLoaded', function() {
+                initDesigner(templateData, editMode, systemTemplate);
+            });
+        })();
     </script>
 }
