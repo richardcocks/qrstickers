@@ -258,12 +258,20 @@ function updateDataBinding(fabricObject, dataSource) {
  * Serialize canvas to template JSON format
  */
 function canvasToTemplateJson(canvas, pageWidth, pageHeight) {
-    const objects = canvas.getObjects().map(obj => {
+    // Get boundary offset (passed from designer.js globals)
+    const offsetX = typeof boundaryLeft !== 'undefined' ? boundaryLeft : 0;
+    const offsetY = typeof boundaryTop !== 'undefined' ? boundaryTop : 0;
+
+    // Filter out boundary and other non-exportable objects
+    const objects = canvas.getObjects()
+        .filter(obj => !obj.excludeFromExport && obj.name !== 'stickerBoundary')
+        .map(obj => {
+        // Adjust positions to be relative to sticker boundary (0,0)
         const baseObj = {
             type: obj.type,
             id: obj.id || generateId(),
-            left: pxToMm(obj.left),
-            top: pxToMm(obj.top),
+            left: pxToMm(obj.left - offsetX),
+            top: pxToMm(obj.top - offsetY),
             width: pxToMm(obj.getScaledWidth()),
             height: pxToMm(obj.getScaledHeight()),
             scaleX: obj.scaleX || 1,

@@ -1,4 +1,5 @@
 @page
+@using System.Text.Json
 @model QRStickers.Pages.Templates.DesignerModel
 @{
     ViewData["Title"] = Model.IsEditMode ? $"Edit Template: {Model.Template.Name}" : "Create New Template";
@@ -15,13 +16,13 @@
 
         <div class="toolbar-section toolbar-controls">
             <button type="button" id="btnZoomIn" class="btn-toolbar" title="Zoom In">
-                <span>+</span>
+                <span>🔍+</span>
             </button>
             <button type="button" id="btnZoomOut" class="btn-toolbar" title="Zoom Out">
-                <span>−</span>
+                <span>🔍−</span>
             </button>
-            <button type="button" id="btnZoomReset" class="btn-toolbar" title="Reset Zoom">
-                <span>100%</span>
+            <button type="button" id="btnZoomReset" class="btn-toolbar" title="Reset Zoom to 100%">
+                <span id="zoomLevel">100%</span>
             </button>
             <span class="toolbar-divider"></span>
 
@@ -57,7 +58,7 @@
             <h3 class="sidebar-title">Elements</h3>
 
             <div class="element-palette">
-                <div class="palette-item" data-element-type="qrcode">
+                <div class="palette-item" data-element-type="qrcode" draggable="true">
                     <div class="palette-icon">
                         <svg width="40" height="40" viewBox="0 0 40 40">
                             <rect x="2" y="2" width="36" height="36" fill="none" stroke="#333" stroke-width="2"/>
@@ -70,7 +71,7 @@
                     <span class="palette-label">QR Code</span>
                 </div>
 
-                <div class="palette-item" data-element-type="text">
+                <div class="palette-item" data-element-type="text" draggable="true">
                     <div class="palette-icon">
                         <svg width="40" height="40" viewBox="0 0 40 40">
                             <text x="20" y="28" font-size="24" text-anchor="middle" fill="#333">T</text>
@@ -79,7 +80,7 @@
                     <span class="palette-label">Text</span>
                 </div>
 
-                <div class="palette-item" data-element-type="image">
+                <div class="palette-item" data-element-type="image" draggable="true">
                     <div class="palette-icon">
                         <svg width="40" height="40" viewBox="0 0 40 40">
                             <rect x="4" y="4" width="32" height="32" fill="none" stroke="#333" stroke-width="2"/>
@@ -90,7 +91,7 @@
                     <span class="palette-label">Image</span>
                 </div>
 
-                <div class="palette-item" data-element-type="rectangle">
+                <div class="palette-item" data-element-type="rectangle" draggable="true">
                     <div class="palette-icon">
                         <svg width="40" height="40" viewBox="0 0 40 40">
                             <rect x="6" y="10" width="28" height="20" fill="none" stroke="#333" stroke-width="2"/>
@@ -99,7 +100,7 @@
                     <span class="palette-label">Rectangle</span>
                 </div>
 
-                <div class="palette-item" data-element-type="line">
+                <div class="palette-item" data-element-type="line" draggable="true">
                     <div class="palette-icon">
                         <svg width="40" height="40" viewBox="0 0 40 40">
                             <line x1="6" y1="20" x2="34" y2="20" stroke="#333" stroke-width="2"/>
@@ -273,6 +274,23 @@
                         <label>Rotation (°)</label>
                         <input type="number" id="rotation" class="form-control" min="0" max="360" />
                     </div>
+                    <h4 class="property-section-title">Layer Order</h4>
+                    <div class="property-row">
+                        <div class="property-group">
+                            <button type="button" id="btnBringToFront" class="btn-layer" title="Bring to Front">⬆️ To Front</button>
+                        </div>
+                        <div class="property-group">
+                            <button type="button" id="btnSendToBack" class="btn-layer" title="Send to Back">⬇️ To Back</button>
+                        </div>
+                    </div>
+                    <div class="property-row">
+                        <div class="property-group">
+                            <button type="button" id="btnBringForward" class="btn-layer" title="Bring Forward">↑ Forward</button>
+                        </div>
+                        <div class="property-group">
+                            <button type="button" id="btnSendBackward" class="btn-layer" title="Send Backward">↓ Backward</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -313,7 +331,7 @@
     <script>
         // Initialize designer with template data
         (function() {
-            const templateData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Template));
+            const templateData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Template, JsonSerializerOptions.Web));
             const editMode = @Model.IsEditMode.ToString().ToLower();
             const systemTemplate = @Model.IsSystemTemplate.ToString().ToLower();
 

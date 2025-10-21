@@ -9,6 +9,9 @@ let isEditMode = false;
 let isSystemTemplate = false;
 let gridSize = 5; // mm
 let currentZoom = 1;
+let stickerBoundary = null; // Reference to the boundary rectangle
+let boundaryLeft = 0; // Boundary position
+let boundaryTop = 0;
 
 /**
  * Initialize the designer
@@ -17,7 +20,7 @@ function initDesigner(templateData, editMode, systemTemplate) {
     currentTemplate = templateData;
     isEditMode = editMode;
     isSystemTemplate = systemTemplate;
-
+    console.log(templateData);
     // Initialize Fabric.js canvas
     initCanvas(templateData.pageWidth, templateData.pageHeight);
 
@@ -48,21 +51,88 @@ function initDesigner(templateData, editMode, systemTemplate) {
  * Initialize Fabric.js canvas
  */
 function initCanvas(pageWidthMm, pageHeightMm) {
-    const canvasWidth = mmToPx(pageWidthMm);
-    const canvasHeight = mmToPx(pageHeightMm);
+    // Calculate sticker size in pixels
+    const stickerWidth = mmToPx(pageWidthMm);
+    const stickerHeight = mmToPx(pageHeightMm);
+
+    console.log('initCanvas - Sticker dimensions:', pageWidthMm, 'mm x', pageHeightMm, 'mm');
+    console.log('initCanvas - Sticker in pixels:', stickerWidth, 'px x', stickerHeight, 'px');
+
+    // Make canvas larger than sticker (3x or minimum 800x600)
+    const canvasWidth = Math.max(stickerWidth * 3, 800);
+    const canvasHeight = Math.max(stickerHeight * 3, 600);
+
+    console.log('initCanvas - Canvas size:', canvasWidth, 'px x', canvasHeight, 'px');
 
     canvas = new fabric.Canvas('designCanvas', {
         width: canvasWidth,
         height: canvasHeight,
-        backgroundColor: 'white',
+        backgroundColor: '#f5f5f5', // Light gray background
         selection: true,
         preserveObjectStacking: true
+    });
+
+    // Verify canvas element dimensions
+    const canvasElement = document.getElementById('designCanvas');
+    console.log('Canvas element dimensions:', {
+        canvasWidth: canvas.getWidth(),
+        canvasHeight: canvas.getHeight(),
+        domWidth: canvasElement.width,
+        domHeight: canvasElement.height,
+        styleWidth: canvasElement.style.width,
+        styleHeight: canvasElement.style.height,
+        offsetWidth: canvasElement.offsetWidth,
+        offsetHeight: canvasElement.offsetHeight
     });
 
     // Enable object controls
     canvas.selectionColor = 'rgba(25, 118, 210, 0.1)';
     canvas.selectionBorderColor = '#1976d2';
     canvas.selectionLineWidth = 2;
+
+    // Calculate boundary position (centered)
+    boundaryLeft = (canvasWidth - stickerWidth) / 2;
+    boundaryTop = (canvasHeight - stickerHeight) / 2;
+
+    // Create sticker boundary rectangle with dashed border
+    stickerBoundary = new fabric.Rect({
+        left: boundaryLeft,
+        top: boundaryTop,
+        width: stickerWidth,
+        height: stickerHeight,
+        fill: 'white', // White background for sticker area
+        stroke: '#ff0000', // Bright red dashed border
+        strokeWidth: 4, // Thicker border for visibility
+        strokeDashArray: [15, 10],
+        selectable: false,
+        evented: false,
+        hoverCursor: 'default',
+        excludeFromExport: true,
+        name: 'stickerBoundary'
+    });
+
+    console.log('Boundary position:', boundaryLeft, ',', boundaryTop);
+    console.log('Boundary size:', stickerWidth, 'x', stickerHeight);
+
+    // Add boundary to canvas
+    canvas.add(stickerBoundary);
+    canvas.sendToBack(stickerBoundary); // Ensure it's behind all objects
+
+    // Verify boundary was added
+    console.log('Boundary added to canvas. Total objects:', canvas.getObjects().length);
+    console.log('Boundary object:', {
+        left: stickerBoundary.left,
+        top: stickerBoundary.top,
+        width: stickerBoundary.width,
+        height: stickerBoundary.height,
+        stroke: stickerBoundary.stroke,
+        strokeWidth: stickerBoundary.strokeWidth,
+        visible: stickerBoundary.visible
+    });
+
+    // Sync input fields with actual sticker dimensions
+    document.getElementById('pageWidth').value = pageWidthMm;
+    document.getElementById('pageHeight').value = pageHeightMm;
 
     // Draw grid
     drawGrid();
@@ -115,6 +185,30 @@ function renderGrid() {
 }
 
 /**
+ * Update sticker boundary size and position
+ */
+function updateStickerBoundary() {
+    if (!stickerBoundary) return;
+
+    const stickerWidth = mmToPx(currentTemplate.pageWidth);
+    const stickerHeight = mmToPx(currentTemplate.pageHeight);
+
+    // Recalculate boundary position (keep it centered)
+    boundaryLeft = (canvas.getWidth() - stickerWidth) / 2;
+    boundaryTop = (canvas.getHeight() - stickerHeight) / 2;
+
+    // Update boundary rectangle
+    stickerBoundary.set({
+        left: boundaryLeft,
+        top: boundaryTop,
+        width: stickerWidth,
+        height: stickerHeight
+    });
+
+    canvas.renderAll();
+}
+
+/**
  * Initialize toolbar controls
  */
 function initToolbar() {
@@ -122,19 +216,19 @@ function initToolbar() {
     document.getElementById('btnZoomIn').addEventListener('click', () => {
         currentZoom = Math.min(currentZoom + 0.1, 3);
         canvas.setZoom(currentZoom);
-        updateStatus(`Zoom: ${Math.round(currentZoom * 100)}%`);
+        updateZoomDisplay();
     });
 
     document.getElementById('btnZoomOut').addEventListener('click', () => {
         currentZoom = Math.max(currentZoom - 0.1, 0.1);
         canvas.setZoom(currentZoom);
-        updateStatus(`Zoom: ${Math.round(currentZoom * 100)}%`);
+        updateZoomDisplay();
     });
 
     document.getElementById('btnZoomReset').addEventListener('click', () => {
         currentZoom = 1;
         canvas.setZoom(1);
-        updateStatus('Zoom reset to 100%');
+        updateZoomDisplay();
     });
 
     // Grid toggle
@@ -151,9 +245,8 @@ function initToolbar() {
     document.getElementById('pageWidth').addEventListener('change', function() {
         const newWidth = parseFloat(this.value);
         if (newWidth >= 10 && newWidth <= 500) {
-            canvas.setWidth(mmToPx(newWidth));
             currentTemplate.pageWidth = newWidth;
-            drawGrid();
+            updateStickerBoundary();
             updateStatus(`Page width set to ${newWidth}mm`);
         }
     });
@@ -161,37 +254,110 @@ function initToolbar() {
     document.getElementById('pageHeight').addEventListener('change', function() {
         const newHeight = parseFloat(this.value);
         if (newHeight >= 10 && newHeight <= 500) {
-            canvas.setHeight(mmToPx(newHeight));
             currentTemplate.pageHeight = newHeight;
-            drawGrid();
+            updateStickerBoundary();
             updateStatus(`Page height set to ${newHeight}mm`);
         }
     });
 
     // Save button
     document.getElementById('btnSave').addEventListener('click', saveTemplate);
-}
 
-/**
- * Initialize element palette (click to add to canvas)
- */
-function initElementPalette() {
-    const paletteItems = document.querySelectorAll('.palette-item');
+    // Layer ordering buttons
+    document.getElementById('btnBringToFront').addEventListener('click', () => {
+        const activeObject = canvas.getActiveObject();
+        if (activeObject) {
+            canvas.bringToFront(activeObject);
+            canvas.renderAll();
+            updateStatus('Brought object to front');
+        }
+    });
 
-    paletteItems.forEach(item => {
-        item.addEventListener('click', function() {
-            const elementType = this.getAttribute('data-element-type');
-            addElementToCanvas(elementType);
-        });
+    document.getElementById('btnSendToBack').addEventListener('click', () => {
+        const activeObject = canvas.getActiveObject();
+        if (activeObject) {
+            canvas.sendToBack(activeObject);
+            canvas.renderAll();
+            updateStatus('Sent object to back');
+        }
+    });
+
+    document.getElementById('btnBringForward').addEventListener('click', () => {
+        const activeObject = canvas.getActiveObject();
+        if (activeObject) {
+            canvas.bringForward(activeObject);
+            canvas.renderAll();
+            updateStatus('Brought object forward');
+        }
+    });
+
+    document.getElementById('btnSendBackward').addEventListener('click', () => {
+        const activeObject = canvas.getActiveObject();
+        if (activeObject) {
+            canvas.sendBackwards(activeObject);
+            canvas.renderAll();
+            updateStatus('Sent object backward');
+        }
     });
 }
 
 /**
- * Add element to canvas center
+ * Initialize element palette (click to add to canvas, drag to position)
+ */
+function initElementPalette() {
+    const paletteItems = document.querySelectorAll('.palette-item');
+    const canvasContainer = document.querySelector('.designer-canvas-container');
+    const canvasWrapper = document.querySelector('.canvas-wrapper');
+
+    paletteItems.forEach(item => {
+        // Click to add (centered)
+        item.addEventListener('click', function() {
+            const elementType = this.getAttribute('data-element-type');
+            addElementToCanvas(elementType);
+        });
+
+        // Drag start
+        item.addEventListener('dragstart', function(e) {
+            const elementType = this.getAttribute('data-element-type');
+            e.dataTransfer.setData('elementType', elementType);
+            e.dataTransfer.effectAllowed = 'copy';
+        });
+    });
+
+    // Allow drop on canvas container
+    canvasContainer.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+    });
+
+    // Handle drop
+    canvasContainer.addEventListener('drop', function(e) {
+        e.preventDefault();
+        const elementType = e.dataTransfer.getData('elementType');
+
+        if (elementType) {
+            // Get drop position relative to canvas
+            const canvasRect = document.getElementById('designCanvas').getBoundingClientRect();
+            const containerRect = canvasContainer.getBoundingClientRect();
+
+            // Calculate position accounting for scroll and zoom
+            const x = (e.clientX - canvasRect.left) / currentZoom;
+            const y = (e.clientY - canvasRect.top) / currentZoom;
+
+            addElementToCanvasAtPosition(elementType, x, y);
+        }
+    });
+}
+
+/**
+ * Add element to sticker boundary center
  */
 function addElementToCanvas(elementType) {
-    const centerX = canvas.getWidth() / 2;
-    const centerY = canvas.getHeight() / 2;
+    // Calculate sticker boundary center
+    const stickerWidth = mmToPx(currentTemplate.pageWidth);
+    const stickerHeight = mmToPx(currentTemplate.pageHeight);
+    const centerX = boundaryLeft + stickerWidth / 2;
+    const centerY = boundaryTop + stickerHeight / 2;
 
     let element;
 
@@ -256,6 +422,76 @@ function addElementToCanvas(elementType) {
         canvas.setActiveObject(element);
         canvas.renderAll();
         updateStatus(`${elementType} added to canvas`);
+    }
+}
+
+/**
+ * Add element to canvas at specific position (for drag & drop)
+ */
+function addElementToCanvasAtPosition(elementType, x, y) {
+    let element;
+
+    switch (elementType) {
+        case 'qrcode':
+            element = createQRCode({
+                left: x - 50,
+                top: y - 50,
+                width: 100,
+                height: 100,
+                dataSource: 'device.Serial'
+            });
+            break;
+
+        case 'text':
+            element = createBoundText({
+                left: x,
+                top: y,
+                text: '{{device.Name}}',
+                dataSource: 'device.Name',
+                fontSize: 16,
+                fontFamily: 'Arial'
+            });
+            break;
+
+        case 'image':
+            element = createImagePlaceholder({
+                left: x - 50,
+                top: y - 50,
+                width: 100,
+                height: 100,
+                dataSource: 'connection.CompanyLogoUrl'
+            });
+            break;
+
+        case 'rectangle':
+            element = createRectangle({
+                left: x - 50,
+                top: y - 25,
+                width: 100,
+                height: 50,
+                fill: 'transparent',
+                stroke: '#333',
+                strokeWidth: 2
+            });
+            break;
+
+        case 'line':
+            element = createLine({
+                x1: x - 50,
+                y1: y,
+                x2: x + 50,
+                y2: y,
+                stroke: '#333',
+                strokeWidth: 2
+            });
+            break;
+    }
+
+    if (element) {
+        canvas.add(element);
+        canvas.setActiveObject(element);
+        canvas.renderAll();
+        updateStatus(`${elementType} added at position`);
     }
 }
 
@@ -401,7 +637,8 @@ function initPropertyInspector() {
     document.getElementById('posX').addEventListener('input', function() {
         const activeObject = canvas.getActiveObject();
         if (activeObject) {
-            activeObject.set('left', mmToPx(parseFloat(this.value)));
+            // Add boundary offset to convert from sticker-relative to canvas-absolute position
+            activeObject.set('left', mmToPx(parseFloat(this.value)) + boundaryLeft);
             canvas.renderAll();
         }
     });
@@ -409,7 +646,8 @@ function initPropertyInspector() {
     document.getElementById('posY').addEventListener('input', function() {
         const activeObject = canvas.getActiveObject();
         if (activeObject) {
-            activeObject.set('top', mmToPx(parseFloat(this.value)));
+            // Add boundary offset to convert from sticker-relative to canvas-absolute position
+            activeObject.set('top', mmToPx(parseFloat(this.value)) + boundaryTop);
             canvas.renderAll();
         }
     });
@@ -509,9 +747,9 @@ function updatePropertyInspector() {
     // Show common properties
     document.getElementById('commonProperties').style.display = 'flex';
 
-    // Update common properties
-    document.getElementById('posX').value = pxToMm(activeObject.left).toFixed(1);
-    document.getElementById('posY').value = pxToMm(activeObject.top).toFixed(1);
+    // Update common properties (relative to sticker boundary)
+    document.getElementById('posX').value = pxToMm(activeObject.left - boundaryLeft).toFixed(1);
+    document.getElementById('posY').value = pxToMm(activeObject.top - boundaryTop).toFixed(1);
     document.getElementById('sizeWidth').value = pxToMm(activeObject.getScaledWidth()).toFixed(1);
     document.getElementById('sizeHeight').value = pxToMm(activeObject.getScaledHeight()).toFixed(1);
     document.getElementById('rotation').value = activeObject.angle || 0;
@@ -606,8 +844,8 @@ function loadTemplateDesign(templateJsonString) {
             switch (obj.type) {
                 case 'qrcode':
                     fabricObject = createQRCode({
-                        left: mmToPx(obj.left),
-                        top: mmToPx(obj.top),
+                        left: mmToPx(obj.left) + boundaryLeft,
+                        top: mmToPx(obj.top) + boundaryTop,
                         width: mmToPx(obj.width || 30),
                         height: mmToPx(obj.height || 30),
                         dataSource: obj.properties?.dataSource || 'device.Serial',
@@ -618,8 +856,8 @@ function loadTemplateDesign(templateJsonString) {
                 case 'text':
                 case 'i-text':
                     fabricObject = createBoundText({
-                        left: mmToPx(obj.left),
-                        top: mmToPx(obj.top),
+                        left: mmToPx(obj.left) + boundaryLeft,
+                        top: mmToPx(obj.top) + boundaryTop,
                         text: obj.text || '',
                         dataSource: obj.properties?.dataSource || '',
                         fontFamily: obj.fontFamily || 'Arial',
@@ -631,8 +869,8 @@ function loadTemplateDesign(templateJsonString) {
 
                 case 'image':
                     fabricObject = createImagePlaceholder({
-                        left: mmToPx(obj.left),
-                        top: mmToPx(obj.top),
+                        left: mmToPx(obj.left) + boundaryLeft,
+                        top: mmToPx(obj.top) + boundaryTop,
                         width: mmToPx(obj.width || 50),
                         height: mmToPx(obj.height || 50),
                         dataSource: obj.properties?.dataSource || '',
@@ -642,8 +880,8 @@ function loadTemplateDesign(templateJsonString) {
 
                 case 'rect':
                     fabricObject = createRectangle({
-                        left: mmToPx(obj.left),
-                        top: mmToPx(obj.top),
+                        left: mmToPx(obj.left) + boundaryLeft,
+                        top: mmToPx(obj.top) + boundaryTop,
                         width: mmToPx(obj.width || 50),
                         height: mmToPx(obj.height || 50),
                         fill: obj.fill || 'transparent',
@@ -653,8 +891,8 @@ function loadTemplateDesign(templateJsonString) {
                     break;
 
                 case 'line':
-                    const x1 = mmToPx(obj.left);
-                    const y1 = mmToPx(obj.top);
+                    const x1 = mmToPx(obj.left) + boundaryLeft;
+                    const y1 = mmToPx(obj.top) + boundaryTop;
                     const x2 = x1 + mmToPx(obj.width || 50);
                     const y2 = y1;
                     fabricObject = createLine({
@@ -698,6 +936,15 @@ function autoSaveToLocalStorage() {
 
     localStorage.setItem('qrstickers_autosave', JSON.stringify(templateJson));
     console.log('Auto-saved to localStorage');
+}
+
+/**
+ * Update zoom level display
+ */
+function updateZoomDisplay() {
+    const zoomPercent = Math.round(currentZoom * 100);
+    document.getElementById('zoomLevel').textContent = `${zoomPercent}%`;
+    updateStatus(`Zoom: ${zoomPercent}%`);
 }
 
 /**
