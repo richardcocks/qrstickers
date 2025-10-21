@@ -147,7 +147,12 @@ function updateGridBackground() {
 
     if (showGrid) {
         // Calculate grid size in pixels accounting for zoom
-        const gridSizePx = mmToPx(gridSize) * currentZoom;
+        let gridSizePx = mmToPx(gridSize) * currentZoom;
+
+        // Round to nearest integer at 100% zoom to avoid tiling artifacts
+        if (currentZoom === 1) {
+            gridSizePx = Math.round(gridSizePx);
+        }
 
         // Create grid using CSS linear gradients (more reliable than SVG)
         canvasWrapper.style.backgroundImage = `
