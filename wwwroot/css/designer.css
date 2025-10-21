@@ -2,7 +2,7 @@
 .designer-container {
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 60px); /* Account for navbar */
+    height: calc(100vh - 160px); /* Account for navbar and footer */
     background: #f5f5f5;
     overflow: hidden;
 }
