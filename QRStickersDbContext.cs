@@ -17,6 +17,8 @@ public class QRStickersDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<CachedNetwork> CachedNetworks { get; set; } = null!;
     public DbSet<CachedDevice> CachedDevices { get; set; } = null!;
     public DbSet<SyncStatus> SyncStatuses { get; set; } = null!;
+    public DbSet<StickerTemplate> StickerTemplates { get; set; } = null!;
+    public DbSet<GlobalVariable> GlobalVariables { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -121,5 +123,40 @@ public class QRStickersDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<SyncStatus>()
             .HasIndex(s => s.ConnectionId)
             .IsUnique(); // One sync status per connection
+
+        // Configure StickerTemplate relationships
+        modelBuilder.Entity<StickerTemplate>()
+            .HasOne(t => t.Connection)
+            .WithMany()
+            .HasForeignKey(t => t.ConnectionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Indexes for StickerTemplate performance
+        modelBuilder.Entity<StickerTemplate>()
+            .HasIndex(t => t.ConnectionId);
+
+        modelBuilder.Entity<StickerTemplate>()
+            .HasIndex(t => t.ProductTypeFilter);
+
+        modelBuilder.Entity<StickerTemplate>()
+            .HasIndex(t => t.IsDefault);
+
+        modelBuilder.Entity<StickerTemplate>()
+            .HasIndex(t => t.IsRackMount);
+
+        // Configure GlobalVariable relationships
+        modelBuilder.Entity<GlobalVariable>()
+            .HasOne(v => v.Connection)
+            .WithMany()
+            .HasForeignKey(v => v.ConnectionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Unique constraint on ConnectionId + VariableName (no duplicate variable names per connection)
+        modelBuilder.Entity<GlobalVariable>()
+            .HasIndex(v => new { v.ConnectionId, v.VariableName })
+            .IsUnique();
+
+        modelBuilder.Entity<GlobalVariable>()
+            .HasIndex(v => v.ConnectionId);
     }
 }

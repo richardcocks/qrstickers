@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using QRStickers;
 using QRStickers.Meraki;
+using QRStickers.Data;
 
 // ===================== APPLICATION SETUP =====================
 
@@ -80,6 +81,9 @@ builder.Services.AddScoped<MerakiServiceFactory>();
 builder.Services.AddScoped<MerakiSyncOrchestrator>();
 builder.Services.AddHostedService<MerakiBackgroundSyncService>();
 
+// Register sticker template service
+builder.Services.AddScoped<TemplateService>();
+
 builder.Services.AddRateLimiter(rateLimiterOptions => rateLimiterOptions
     .AddTokenBucketLimiter(policyName: "tokenBucket", options =>
     {
@@ -105,6 +109,9 @@ using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<QRStickersDbContext>();
     await dbContext.Database.MigrateAsync();
+
+    // Seed system templates
+    await SystemTemplateSeeder.SeedTemplatesAsync(dbContext);
 }
 
 // Add authentication and authorization middleware
