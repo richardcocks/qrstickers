@@ -7,11 +7,78 @@
 
 <link rel="stylesheet" href="~/css/designer.css" />
 
+<style>
+    .breadcrumb-nav {
+        padding: 10px 20px;
+        background: #f5f5f5;
+        border-bottom: 1px solid #ddd;
+        font-size: 14px;
+    }
+
+    .breadcrumb-nav a {
+        color: #1976d2;
+        text-decoration: none;
+    }
+
+    .breadcrumb-nav a:hover {
+        text-decoration: underline;
+    }
+
+    .breadcrumb-nav span {
+        margin: 0 8px;
+        color: #999;
+    }
+
+    .system-template-banner {
+        background: #fff3e0;
+        border-left: 4px solid #ff9800;
+        padding: 12px 20px;
+        margin: 0;
+        color: #e65100;
+        font-size: 14px;
+    }
+
+    .system-template-banner strong {
+        font-weight: 600;
+    }
+</style>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success" style="margin: 20px 20px 0 20px;">
+        @TempData["SuccessMessage"]
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger" style="margin: 20px 20px 0 20px;">
+        @TempData["ErrorMessage"]
+    </div>
+}
+
+@if (Model.IsSystemTemplate && Model.IsEditMode)
+{
+    <div class="system-template-banner">
+        <strong>⚠️ System Template (Read-Only)</strong> - This is a read-only system template. To customize it, please clone it first from the Templates page.
+    </div>
+}
+
+<div class="breadcrumb-nav">
+    <a href="/Templates">Templates</a>
+    <span>›</span>
+    <strong>@Model.Template.Name</strong>
+    @if (Model.IsSystemTemplate)
+    {
+        <span class="badge badge-system" style="margin-left: 10px; background: #e3f2fd; color: #1976d2; padding: 3px 8px; font-size: 11px; border-radius: 3px;">SYSTEM</span>
+    }
+</div>
+
 <div class="designer-container">
     <!-- Top Toolbar -->
     <div class="designer-toolbar">
         <div class="toolbar-section">
-            <h2 class="toolbar-title">@ViewData["Title"]</h2>
+            <h2 class="toolbar-title">@Model.Template.Name</h2>
         </div>
 
         <div class="toolbar-section toolbar-controls">
@@ -47,6 +114,7 @@
         </div>
 
         <div class="toolbar-section">
+            <a href="/Templates" class="btn btn-secondary" style="margin-right: 10px;">← Back to Templates</a>
             <button type="button" id="btnSave" class="btn btn-primary">Save Template</button>
             <span id="saveStatus" class="save-status-tick">✓</span>
         </div>

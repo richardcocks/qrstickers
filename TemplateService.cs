@@ -101,4 +101,45 @@ public class TemplateService
     {
         return await _db.StickerTemplates.FindAsync(templateId);
     }
+
+    /// <summary>
+    /// Clones an existing template to a new connection-specific template
+    /// </summary>
+    /// <param name="templateId">The template ID to clone</param>
+    /// <param name="targetConnectionId">The connection ID to assign the clone to</param>
+    /// <param name="newName">Optional new name for the cloned template</param>
+    /// <returns>The newly created template</returns>
+    /// <exception cref="InvalidOperationException">Thrown if source template not found</exception>
+    public async Task<StickerTemplate> CloneTemplateAsync(
+        int templateId,
+        int targetConnectionId,
+        string? newName = null)
+    {
+        var sourceTemplate = await _db.StickerTemplates.FindAsync(templateId);
+        if (sourceTemplate == null)
+        {
+            throw new InvalidOperationException($"Template {templateId} not found.");
+        }
+
+        var clonedTemplate = new StickerTemplate
+        {
+            Name = newName ?? $"{sourceTemplate.Name} (Copy)",
+            Description = sourceTemplate.Description,
+            ConnectionId = targetConnectionId,
+            PageWidth = sourceTemplate.PageWidth,
+            PageHeight = sourceTemplate.PageHeight,
+            ProductTypeFilter = sourceTemplate.ProductTypeFilter,
+            IsRackMount = sourceTemplate.IsRackMount,
+            IsDefault = false, // Never default on clone
+            IsSystemTemplate = false, // Always user template
+            TemplateJson = sourceTemplate.TemplateJson,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        _db.StickerTemplates.Add(clonedTemplate);
+        await _db.SaveChangesAsync();
+
+        return clonedTemplate;
+    }
 }

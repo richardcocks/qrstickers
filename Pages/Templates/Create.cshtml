@@ -1,0 +1,416 @@
+@page
+@model QRStickers.Pages.Templates.CreateModel
+@{
+    ViewData["Title"] = "Create New Template";
+}
+
+<style>
+    .wizard-container {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .wizard-section {
+        background: white;
+        padding: 30px;
+        margin-bottom: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .wizard-section h2 {
+        margin-top: 0;
+        margin-bottom: 20px;
+        color: #333;
+        font-size: 1.5em;
+        border-bottom: 2px solid #1976d2;
+        padding-bottom: 10px;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 5px;
+        color: #555;
+    }
+
+    .form-group input[type="text"],
+    .form-group input[type="number"],
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+
+    .form-group textarea {
+        resize: vertical;
+        min-height: 80px;
+    }
+
+    .form-group-inline {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+    }
+
+    .preset-buttons {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+
+    .preset-btn {
+        padding: 8px 16px;
+        background: #f5f5f5;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.2s;
+    }
+
+    .preset-btn:hover {
+        background: #e0e0e0;
+        border-color: #1976d2;
+    }
+
+    .preset-btn.active {
+        background: #1976d2;
+        color: white;
+        border-color: #1976d2;
+    }
+
+    .checkbox-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+        width: auto;
+        cursor: pointer;
+    }
+
+    .starting-point-options {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-top: 15px;
+    }
+
+    .starting-point-card {
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        padding: 20px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .starting-point-card:hover {
+        border-color: #1976d2;
+        background: #f0f7ff;
+    }
+
+    .starting-point-card.selected {
+        border-color: #1976d2;
+        background: #e3f2fd;
+    }
+
+    .starting-point-card input[type="radio"] {
+        margin-right: 10px;
+    }
+
+    .starting-point-card h3 {
+        margin: 0 0 10px 0;
+        font-size: 1.1em;
+    }
+
+    .starting-point-card p {
+        margin: 0;
+        color: #666;
+        font-size: 14px;
+    }
+
+    .system-templates-list {
+        margin-top: 15px;
+        padding-left: 20px;
+    }
+
+    .system-template-option {
+        margin: 10px 0;
+        padding: 10px;
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        background: #fafafa;
+    }
+
+    .system-template-option label {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        font-weight: normal;
+    }
+
+    .system-template-option input[type="radio"] {
+        margin-right: 10px;
+    }
+
+    .template-info {
+        color: #666;
+        font-size: 13px;
+        margin-left: 28px;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        padding-top: 20px;
+        border-top: 1px solid #eee;
+    }
+
+    .help-text {
+        font-size: 13px;
+        color: #666;
+        margin-top: 5px;
+    }
+
+    .error-message {
+        color: #d32f2f;
+        font-size: 13px;
+        margin-top: 5px;
+    }
+</style>
+
+<div class="wizard-container">
+    <h1>Create New Template</h1>
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger">
+            @TempData["ErrorMessage"]
+        </div>
+    }
+
+    <form method="post">
+        <!-- Step 1: Template Properties -->
+        <div class="wizard-section">
+            <h2>Step 1: Template Properties</h2>
+
+            <div class="form-group">
+                <label for="Name">Template Name *</label>
+                <input type="text" id="Name" name="Name" asp-for="Name" required maxlength="200" />
+                <span asp-validation-for="Name" class="error-message"></span>
+            </div>
+
+            <div class="form-group">
+                <label for="Description">Description</label>
+                <textarea id="Description" name="Description" asp-for="Description" maxlength="1000"></textarea>
+                <div class="help-text">Optional description to help identify this template</div>
+            </div>
+
+            <div class="form-group">
+                <label for="ConnectionId">Connection *</label>
+                <select id="ConnectionId" name="ConnectionId" asp-for="ConnectionId" required>
+                    <option value="">Select a connection...</option>
+                    @foreach (var connection in Model.UserConnections)
+                    {
+                        <option value="@connection.Id" selected="@(Model.ConnectionId == connection.Id)">
+                            @connection.DisplayName
+                        </option>
+                    }
+                </select>
+                <span asp-validation-for="ConnectionId" class="error-message"></span>
+            </div>
+
+            <div class="form-group">
+                <label>Page Size</label>
+                <div class="preset-buttons">
+                    <button type="button" class="preset-btn" onclick="setPageSize(100, 50, true)">
+                        100×50mm (Rack Mount)
+                    </button>
+                    <button type="button" class="preset-btn" onclick="setPageSize(60, 60, false)">
+                        60×60mm (Ceiling/Wall)
+                    </button>
+                    <button type="button" class="preset-btn" onclick="enableCustomSize()">
+                        Custom Size
+                    </button>
+                </div>
+
+                <div class="form-group-inline">
+                    <div>
+                        <label for="PageWidth">Width (mm) *</label>
+                        <input type="number" id="PageWidth" name="PageWidth" asp-for="PageWidth"
+                               min="10" max="500" step="0.1" required />
+                        <span asp-validation-for="PageWidth" class="error-message"></span>
+                    </div>
+                    <div>
+                        <label for="PageHeight">Height (mm) *</label>
+                        <input type="number" id="PageHeight" name="PageHeight" asp-for="PageHeight"
+                               min="10" max="500" step="0.1" required />
+                        <span asp-validation-for="PageHeight" class="error-message"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="ProductTypeFilter">Product Type Filter</label>
+                <select id="ProductTypeFilter" name="ProductTypeFilter" asp-for="ProductTypeFilter">
+                    <option value="">All Product Types</option>
+                    <option value="switch">Switch</option>
+                    <option value="wireless">Wireless AP</option>
+                    <option value="appliance">Appliance</option>
+                    <option value="camera">Camera</option>
+                    <option value="sensor">Sensor</option>
+                    <option value="cellularGateway">Cellular Gateway</option>
+                </select>
+                <div class="help-text">Optional: Restrict this template to specific device types</div>
+            </div>
+
+            <div class="form-group checkbox-group">
+                <input type="checkbox" id="IsRackMount" name="IsRackMount" asp-for="IsRackMount" />
+                <label for="IsRackMount">Rack Mount Template</label>
+            </div>
+
+            <div class="form-group checkbox-group">
+                <input type="checkbox" id="IsDefault" name="IsDefault" asp-for="IsDefault" />
+                <label for="IsDefault">Set as Default Template</label>
+                <div class="help-text" style="margin-left: 28px;">Default template is used when no specific template matches</div>
+            </div>
+        </div>
+
+        <!-- Step 2: Choose Starting Point -->
+        <div class="wizard-section">
+            <h2>Step 2: Choose Starting Point</h2>
+
+            <div class="starting-point-options">
+                <div class="starting-point-card" id="blankCard" onclick="selectStartingPoint('blank')">
+                    <h3>
+                        <input type="radio" name="startingPoint" value="blank" id="radioBlank"
+                               checked="@(Model.CloneFromTemplateId == null)" />
+                        Start from Blank
+                    </h3>
+                    <p>Create an empty template and design from scratch</p>
+                </div>
+
+                <div class="starting-point-card" id="cloneCard" onclick="selectStartingPoint('clone')">
+                    <h3>
+                        <input type="radio" name="startingPoint" value="clone" id="radioClone"
+                               checked="@(Model.CloneFromTemplateId != null)" />
+                        Clone Template
+                    </h3>
+                    <p>Start with a copy of an existing template</p>
+                </div>
+            </div>
+
+            <div id="systemTemplatesList" class="system-templates-list"
+                 style="display: @(Model.CloneFromTemplateId != null ? "block" : "none");">
+                <label>Select a template to clone:</label>
+                @foreach (var template in Model.SystemTemplates)
+                {
+                    <div class="system-template-option">
+                        <label>
+                            <input type="radio" name="CloneFromTemplateId" value="@template.Id"
+                                   checked="@(Model.CloneFromTemplateId == template.Id)" />
+                            <strong>@template.Name</strong>
+                        </label>
+                        <div class="template-info">
+                            @template.Description<br />
+                            Size: @(template.PageWidth)×@(template.PageHeight)mm
+                            @(template.IsRackMount ? "• Rack Mount" : "• Ceiling/Wall")
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="wizard-section">
+            <div class="form-actions">
+                <a href="/Templates" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">Create Template</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    function setPageSize(width, height, isRackMount) {
+        document.getElementById('PageWidth').value = width;
+        document.getElementById('PageHeight').value = height;
+        document.getElementById('IsRackMount').checked = isRackMount;
+        updatePresetButtons();
+    }
+
+    function enableCustomSize() {
+        document.getElementById('PageWidth').focus();
+        updatePresetButtons();
+    }
+
+    function updatePresetButtons() {
+        const width = parseFloat(document.getElementById('PageWidth').value);
+        const height = parseFloat(document.getElementById('PageHeight').value);
+        const buttons = document.querySelectorAll('.preset-btn');
+
+        buttons.forEach(btn => btn.classList.remove('active'));
+
+        if (width === 100 && height === 50) {
+            buttons[0].classList.add('active');
+        } else if (width === 60 && height === 60) {
+            buttons[1].classList.add('active');
+        }
+    }
+
+    function selectStartingPoint(type) {
+        const blankCard = document.getElementById('blankCard');
+        const cloneCard = document.getElementById('cloneCard');
+        const systemTemplatesList = document.getElementById('systemTemplatesList');
+        const radioBlank = document.getElementById('radioBlank');
+        const radioClone = document.getElementById('radioClone');
+
+        if (type === 'blank') {
+            blankCard.classList.add('selected');
+            cloneCard.classList.remove('selected');
+            radioBlank.checked = true;
+            systemTemplatesList.style.display = 'none';
+
+            // Clear clone selection
+            document.querySelectorAll('input[name="CloneFromTemplateId"]').forEach(r => r.checked = false);
+        } else {
+            blankCard.classList.remove('selected');
+            cloneCard.classList.add('selected');
+            radioClone.checked = true;
+            systemTemplatesList.style.display = 'block';
+
+            // Select first template if none selected
+            const cloneRadios = document.querySelectorAll('input[name="CloneFromTemplateId"]');
+            if (cloneRadios.length > 0 && !Array.from(cloneRadios).some(r => r.checked)) {
+                cloneRadios[0].checked = true;
+            }
+        }
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        updatePresetButtons();
+
+        // Set initial card selection
+        const radioClone = document.getElementById('radioClone');
+        if (radioClone.checked) {
+            document.getElementById('cloneCard').classList.add('selected');
+        } else {
+            document.getElementById('blankCard').classList.add('selected');
+        }
+
+        // Update page size inputs
+        document.getElementById('PageWidth').addEventListener('input', updatePresetButtons);
+        document.getElementById('PageHeight').addEventListener('input', updatePresetButtons);
+    });
+</script>

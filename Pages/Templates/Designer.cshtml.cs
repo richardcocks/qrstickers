@@ -160,11 +160,13 @@ public class DesignerModel : PageModel
                 return NotFound();
             }
 
-            // Verify user has access to this template
+            // System templates cannot be modified - user must clone
             if (existingTemplate.IsSystemTemplate)
             {
+                _logger.LogWarning("User {UserId} attempted to modify system template {TemplateId}",
+                    userId, existingTemplate.Id);
                 ModelState.AddModelError("", "Cannot modify system templates. Please clone the template first.");
-                return Page();
+                return BadRequest(new { error = "Cannot modify system templates. Please clone the template first." });
             }
 
             if (existingTemplate.ConnectionId.HasValue)
