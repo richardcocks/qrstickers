@@ -67,7 +67,7 @@ function initCanvas(pageWidthMm, pageHeightMm) {
     canvas = new fabric.Canvas('designCanvas', {
         width: canvasWidth,
         height: canvasHeight,
-        backgroundColor: '#f5f5f5', // Light gray background
+        backgroundColor: 'transparent', // Transparent so wrapper's grid shows through
         selection: true,
         preserveObjectStacking: true
     });
@@ -134,54 +134,31 @@ function initCanvas(pageWidthMm, pageHeightMm) {
     document.getElementById('pageWidth').value = pageWidthMm;
     document.getElementById('pageHeight').value = pageHeightMm;
 
-    // Draw grid
-    drawGrid();
+    // Initialize grid background
+    updateGridBackground();
 }
 
 /**
- * Draw grid on canvas
+ * Update grid background based on current zoom level
  */
-function drawGrid() {
-    // Use canvas overlay to draw grid
-    canvas.off('after:render', renderGrid);
+function updateGridBackground() {
+    const canvasWrapper = document.getElementById('canvasWrapper');
+    const showGrid = document.getElementById('chkShowGrid').checked;
 
-    if (document.getElementById('chkShowGrid').checked) {
-        canvas.on('after:render', renderGrid);
+    if (showGrid) {
+        // Calculate grid size in pixels accounting for zoom
+        const gridSizePx = mmToPx(gridSize) * currentZoom;
+
+        // Create grid using CSS linear gradients (more reliable than SVG)
+        canvasWrapper.style.backgroundImage = `
+            linear-gradient(to right, #cccccc 1px, transparent 1px),
+            linear-gradient(to bottom, #cccccc 1px, transparent 1px)
+        `;
+        canvasWrapper.style.backgroundSize = `${gridSizePx}px ${gridSizePx}px`;
+    } else {
+        // Hide grid
+        canvasWrapper.style.backgroundImage = 'none';
     }
-
-    canvas.renderAll();
-}
-
-/**
- * Render grid on canvas overlay
- */
-function renderGrid() {
-    const ctx = canvas.getContext();
-    const gridSizePx = mmToPx(gridSize);
-    const width = canvas.getWidth();
-    const height = canvas.getHeight();
-
-    ctx.save();
-    ctx.strokeStyle = '#e0e0e0';
-    ctx.lineWidth = 0.5;
-
-    // Vertical lines
-    for (let x = 0; x <= width; x += gridSizePx) {
-        ctx.beginPath();
-        ctx.moveTo(x + 0.5, 0);
-        ctx.lineTo(x + 0.5, height);
-        ctx.stroke();
-    }
-
-    // Horizontal lines
-    for (let y = 0; y <= height; y += gridSizePx) {
-        ctx.beginPath();
-        ctx.moveTo(0, y + 0.5);
-        ctx.lineTo(width, y + 0.5);
-        ctx.stroke();
-    }
-
-    ctx.restore();
 }
 
 /**
@@ -217,23 +194,26 @@ function initToolbar() {
         currentZoom = Math.min(currentZoom + 0.1, 3);
         canvas.setZoom(currentZoom);
         updateZoomDisplay();
+        updateGridBackground();
     });
 
     document.getElementById('btnZoomOut').addEventListener('click', () => {
         currentZoom = Math.max(currentZoom - 0.1, 0.1);
         canvas.setZoom(currentZoom);
         updateZoomDisplay();
+        updateGridBackground();
     });
 
     document.getElementById('btnZoomReset').addEventListener('click', () => {
         currentZoom = 1;
         canvas.setZoom(1);
         updateZoomDisplay();
+        updateGridBackground();
     });
 
     // Grid toggle
     document.getElementById('chkShowGrid').addEventListener('change', function() {
-        drawGrid();
+        updateGridBackground();
     });
 
     // Snap to grid toggle

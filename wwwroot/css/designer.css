@@ -201,11 +201,13 @@
 }
 
 .canvas-wrapper {
-    background: white;
+    background-color: white;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     border: 1px solid #ccc;
     position: relative;
     display: inline-block;
+    /* Grid background - updated dynamically by JavaScript */
+    background-position: 0 0;
 }
 
 #designCanvas {
