@@ -821,9 +821,48 @@ function saveTemplate() {
     document.getElementById('templatePageHeight').value = document.getElementById('pageHeight').value;
     document.getElementById('templateJson').value = JSON.stringify(templateJson, null, 2);
 
-    // Submit form
+    // Show save status tick with animation
+    const saveStatus = document.getElementById('saveStatus');
+    saveStatus.classList.remove('show');
+    // Trigger reflow to restart animation
+    void saveStatus.offsetWidth;
+    saveStatus.classList.add('show');
+
+    // Update status
     updateStatus('Saving template...');
-    document.getElementById('saveForm').submit();
+
+    // Use fetch to save without page reload
+    const form = document.getElementById('saveForm');
+    const formData = new FormData(form);
+
+    fetch(window.location.href, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (response.ok) {
+            updateStatus('Template saved successfully');
+            // Update browser URL if this was a new template (ID will be in redirect)
+            if (!isEditMode && response.redirected) {
+                const redirectUrl = new URL(response.url);
+                const templateId = redirectUrl.searchParams.get('id');
+                if (templateId) {
+                    // Update URL without reload
+                    window.history.replaceState(null, '', `?id=${templateId}`);
+                    isEditMode = true;
+                    // Update form ID field for subsequent saves
+                    document.querySelector('input[name="Template.Id"]').value = templateId;
+                }
+            }
+        } else {
+            updateStatus('Error saving template');
+            console.error('Save failed:', response.status, response.statusText);
+        }
+    })
+    .catch(error => {
+        updateStatus('Error saving template');
+        console.error('Save error:', error);
+    });
 }
 
 /**

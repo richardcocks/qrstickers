@@ -122,12 +122,12 @@
 }
 
 .designer-sidebar-left {
-    width: 250px;
+    width: 200px;
     border-right: 1px solid #ddd;
 }
 
 .designer-sidebar-right {
-    width: 300px;
+    width: 250px;
     border-left: 1px solid #ddd;
 }
 
@@ -367,4 +367,42 @@ input[type="color"].form-control {
     padding: 12px;
     margin-bottom: 15px;
     border-radius: 4px;
+}
+
+/* Save Status Tick */
+.save-status-tick {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    margin-left: 8px;
+    font-size: 18px;
+    font-weight: bold;
+    color: #4caf50;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.save-status-tick.show {
+    animation: tickFadeOut 2s ease-out forwards;
+}
+
+@keyframes tickFadeOut {
+    0% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    10% {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+    90% {
+        opacity: 0.1;
+        transform: scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(0.9);
+    }
 }
