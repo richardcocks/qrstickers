@@ -391,7 +391,7 @@ function createDeviceDataMap(exportData) {
             // Add to root level for easy lookup
             dataMap[bindingKey] = image.dataUri;
 
-            console.log(`[Device Export] Mapped ${bindingKey} → data URI (${image.name})`);
+            console.log(`[Device Export] Mapped ${bindingKey} → data URI (${image.name}, length: ${image.dataUri.length}, prefix: ${image.dataUri.substring(0, 50)}...)`);
         });
     }
 
@@ -416,9 +416,15 @@ function replacePlaceholdersInTemplate(templateObj, dataMap) {
         // Replace dataSource bindings for QR codes and other objects
         if (obj.properties && obj.properties.dataSource) {
             const dataSource = obj.properties.dataSource;
+            console.log('[replacePlaceholders] Object type:', obj.type, 'dataSource:', dataSource);
+
             const value = resolveDataSource(dataSource, dataMap);
+
             if (value !== null) {
                 obj.properties.data = value;
+                console.log('[replacePlaceholders] ✓ Set properties.data for', dataSource, 'length:', value.length);
+            } else {
+                console.log('[replacePlaceholders] ✗ No value found for', dataSource);
             }
         }
 
@@ -433,6 +439,8 @@ function replacePlaceholdersInTemplate(templateObj, dataMap) {
  * Resolves a dataSource binding (e.g., "device.serial") to its actual value
  */
 function resolveDataSource(dataSource, dataMap) {
+    console.log('[resolveDataSource] Looking up:', dataSource);
+
     if (!dataSource) return null;
 
     // Parse "entity.field" format (case-insensitive)
@@ -446,14 +454,25 @@ function resolveDataSource(dataSource, dataMap) {
     // Check for custom images first (special case: customImage.Image_42)
     // These are stored at root level with lowercase keys: customimage.image_42
     const customImageKey = `${entityLower}.${fieldLower}`;
+    console.log('[resolveDataSource] Checking custom image key:', customImageKey);
+
     if (dataMap[customImageKey] !== undefined) {
+        console.log('[resolveDataSource] ✓ Found custom image!', customImageKey, '→ length:', dataMap[customImageKey].length, 'prefix:', dataMap[customImageKey].substring(0, 50) + '...');
         return dataMap[customImageKey];
     }
+
+    console.log('[resolveDataSource] Not a custom image, checking regular entities for', entity + '.' + field);
 
     // Try exact match first, then lowercase match for regular entities
     let value = dataMap[entity]?.[field];
     if (value === undefined) {
         value = dataMap[entityLower]?.[fieldLower];
+    }
+
+    if (value !== undefined) {
+        console.log('[resolveDataSource] ✓ Found regular entity value');
+    } else {
+        console.log('[resolveDataSource] ✗ No value found for', dataSource);
     }
 
     return value !== undefined ? value : null;

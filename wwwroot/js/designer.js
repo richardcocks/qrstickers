@@ -1471,7 +1471,7 @@ function loadPreviewTemplateObjects(templateJson, canvas, scale) {
     }
 
     console.log('[Preview.Load] Starting load, scale:', scale);
-    const placeholders = generatePlaceholderMap(templateJson);
+    const placeholders = generatePlaceholderMap(templateJson, uploadedImages);
     console.log('[Preview.Load] Placeholders generated:', Object.keys(placeholders).length, 'entries');
     console.log('[Preview.Load] Placeholder keys:', Object.keys(placeholders));
     console.log('[Preview.Load] Has device.qrcode?', 'device.qrcode' in placeholders);
@@ -1610,6 +1610,49 @@ function loadPreviewTemplateObjects(templateJson, canvas, scale) {
                     }
                 }
 
+                // Replace image placeholder with real custom image if we have image data in placeholders
+                if (obj.type === 'image' && obj.properties?.dataSource) {
+                    const dataSource = obj.properties.dataSource.toLowerCase();
+                    console.log('[Preview.Load] Image detected, dataSource:', dataSource);
+
+                    // Check if this is a custom image with placeholder data
+                    if (dataSource.startsWith('customimage.')) {
+                        const imageDataUri = placeholders[dataSource];
+                        console.log('[Preview.Load] Custom image data URI found:', !!imageDataUri, 'length:', imageDataUri?.length);
+
+                        if (imageDataUri) {
+                            console.log('[Preview.Load] Loading real custom image...');
+                            fabric.Image.fromURL(imageDataUri, function(img) {
+                                if (!img || !img.width) {
+                                    console.error('[Preview.Load] Custom image loaded but has no dimensions');
+                                    return;
+                                }
+                                console.log('[Preview.Load] Custom image loaded - dimensions:', img.width, 'x', img.height);
+
+                                img.set({
+                                    left: fabricObject.left,
+                                    top: fabricObject.top,
+                                    scaleX: fabricObject.width / img.width,
+                                    scaleY: fabricObject.height / img.height,
+                                    angle: fabricObject.angle || 0,
+                                    originX: fabricObject.originX || 'center',
+                                    originY: fabricObject.originY || 'center'
+                                });
+
+                                canvas.add(img);
+                                canvas.renderAll();
+                                console.log('[Preview.Load] Custom image added to canvas successfully');
+                            }, function(error) {
+                                console.error('[Preview.Load] Error loading custom image:', error);
+                            }, { crossOrigin: 'anonymous' });
+
+                            shouldAddToCanvas = false;  // Don't add placeholder
+                            objectsCreated++;
+                            console.log(`[Preview.Load] Object ${index} queued for custom image loading, type: ${obj.type}`);
+                        }
+                    }
+                }
+
                 if (shouldAddToCanvas) {
                     canvas.add(fabricObject);
                     objectsCreated++;
@@ -1644,7 +1687,8 @@ async function downloadExport() {
         const exportCanvas = await createPreviewCanvas(
             templateJson,
             parseFloat(document.getElementById('pageWidth').value),
-            parseFloat(document.getElementById('pageHeight').value)
+            parseFloat(document.getElementById('pageHeight').value),
+            uploadedImages
         );
 
         if (currentExportFormat === 'png') {
