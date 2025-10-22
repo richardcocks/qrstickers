@@ -8,12 +8,25 @@ QRStickers is a web application that combines user authentication with a flexibl
 
 ## Key Features
 
+### Core Platform
 - **User Authentication** - Email/password registration and login using ASP.NET Identity
 - **Multi-Connection Architecture** - Connect multiple third-party accounts with user-defined display names
 - **Meraki OAuth 2.0** - Connect one or more Cisco Meraki Dashboard accounts to access organization data
 - **Connection Management** - Add, view, and delete connections through a dedicated management UI
 - **Token Management** - Automatic OAuth token refresh and secure per-connection database storage
 - **QR Code Generation** - Public API endpoint for generating QR codes with rate limiting
+
+### QR Sticker Designer & Export (Phases 2-5)
+- **Visual Template Designer** - Drag-and-drop canvas editor with Fabric.js for creating sticker templates
+- **Template Management** - Create, clone, edit, and delete templates with connection-specific storage
+- **Data Binding** - Dynamic placeholders ({{device.serial}}, {{device.name}}, etc.) for device data
+- **Device Export** - Export individual devices from Network page with real device data
+- **Intelligent Template Matching** - 6-level priority matching (Model → Type → ProductTypeFilter → User Default → System Default → Fallback)
+- **Live Preview** - Real-time canvas preview with actual device data before export
+- **Multi-Format Export** - PNG (96/150/300 DPI) and SVG formats with white or transparent backgrounds
+- **Export History** - Automatic logging of all exports for analytics and audit trails
+
+### UI & Deployment
 - **Responsive UI** - Clean Razor Pages interface with shared layout and connection selectors
 - **Containerized** - Docker support for easy deployment
 - **Cloud Ready** - Configured for Azure deployment (Web Apps and Container Apps)
@@ -73,15 +86,23 @@ On first run, the application will automatically:
 
 ## Project Structure
 
-- `Pages/` - Razor Pages (Identity, Connections, Meraki, Home)
+- `Pages/` - Razor Pages (Identity, Connections, Meraki, Templates, Home)
   - `Identity/Account/` - Login, Register, Logout pages
   - `Connections/` - Connection management (Index, Create, Delete)
   - `Meraki/` - OAuth connection, callback, organizations, networks, sync status pages
-- `Program.cs` - Application configuration and startup
+  - `Templates/` - Sticker template management (Index, Create, Edit, Designer)
+- `Services/` - Business logic services (Phase 5+)
+  - `DeviceExportHelper.cs` - Device data retrieval and export context preparation
+  - `TemplateMatchingService.cs` - Intelligent template-to-device matching
+- `Program.cs` - Application configuration, startup, and API endpoints
 - `Connection.cs` - Base connection class (TPH pattern)
 - `MerakiConnection.cs` - Meraki-specific connection specialization
 - `ApplicationUser.cs` - Identity user model (owns Connections collection)
 - `QRStickersDbContext.cs` - Entity Framework DbContext with TPH discriminator
+- `StickerTemplate.cs` - Sticker template data model
+- `TemplateDeviceModel.cs` - Template-to-device-model mappings
+- `TemplateDeviceType.cs` - Template-to-device-type mappings
+- `ExportHistory.cs` - Export operation audit log
 - `SyncStatus.cs` - Sync status tracking per connection
 - `MerakiBackgroundSyncService.cs` - Background service for periodic connection syncing
 - `Meraki/` - Meraki-specific components
@@ -94,10 +115,20 @@ On first run, the application will automatically:
   - `CachedOrganization.cs` - Cached Meraki organization data per connection
   - `CachedNetwork.cs` - Cached Meraki network data per connection
   - `CachedDevice.cs` - Cached Meraki device data per connection
+- `wwwroot/js/` - Client-side JavaScript
+  - `designer.js` - Template designer canvas interactions
+  - `export-preview.js` - Export preview and rendering engine
+  - `device-export.js` - Device export workflow
+  - `fabric-extensions.js` - Custom Fabric.js objects (QR codes, bound text, images)
 
 ## API Endpoints
 
+**Public:**
 - `GET /qrcode?q={text}` - Generate QR code (public, rate limited)
+
+**Device Export (Authenticated):**
+- `GET /api/export/device/{id}?connectionId={id}` - Retrieve device data + matched template
+- `GET /api/templates/match?deviceId={id}&connectionId={id}` - Template matching + alternatives
 
 ## User Flows
 
@@ -283,6 +314,8 @@ If you prefer username/password authentication:
 ## Learning Objectives
 
 This project demonstrates:
+
+### Core Platform Architecture
 - ASP.NET Core Razor Pages architecture
 - ASP.NET Identity authentication and authorization
 - OAuth 2.0 authorization code flow with token refresh and rotation
@@ -309,6 +342,22 @@ This project demonstrates:
 - Dependency injection and service lifetimes
 - Performance optimization through caching and query optimization
 - Environment-specific configuration (appsettings.Development.json vs production)
+
+### QR Sticker Designer & Export (Phases 2-5)
+- **Fabric.js canvas library** - Building visual editors with HTML5 Canvas
+- **Client-side rendering** - Real-time preview and export without server round-trips
+- **Coordinate system conversion** - Millimeters (storage) to pixels (rendering) with DPI scaling
+- **Data binding system** - Dynamic placeholder replacement ({{device.serial}}) with case-insensitive matching
+- **Template matching algorithms** - Multi-level priority cascades (model → type → user default → fallback)
+- **Export strategies** - PNG (raster at multiple DPI) vs SVG (vector) formats
+- **Canvas-to-image conversion** - Using toDataURL() and Blob API for downloads
+- **Custom Fabric.js objects** - Extending Fabric.js with QR code and bound text objects
+- **Form state management** - ASP.NET Core model binding with hidden fields and JavaScript FormData
+- **Boolean serialization** - Handling ASP.NET "True"/"False" vs JavaScript "true"/"false"
+- **Service layer patterns** - Business logic separation with DeviceExportHelper and TemplateMatchingService
+- **Authorization in APIs** - Ensuring users can only access their own data
+- **Audit logging** - Tracking operations (exports) for compliance and analytics
+- **Testing-driven bug fixes** - Iterative testing revealing 12 bugs in coordinate systems, data binding, and form handling
 
 ## License
 
