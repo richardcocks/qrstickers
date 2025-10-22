@@ -79,7 +79,7 @@ async function openBulkExportModal() {
 
     const selected = getSelectedDevices();
     if (selected.length === 0) {
-        alert('Please select at least one device to export.');
+        showNotification('Please select at least one device to export.', 'error');
         return;
     }
 
@@ -92,7 +92,13 @@ async function openBulkExportModal() {
     }
 
     const modal = bulkExportState.bulkExportModal;
-    modal.style.display = 'block';
+    modal.style.display = 'flex';
+
+    // Reset modal state (in case it was left in export state from previous use)
+    const startExportBtn = modal.querySelector('.btn-start-export');
+    if (startExportBtn) {
+        startExportBtn.style.display = 'inline-block';
+    }
 
     // Show loading state
     const modalBody = modal.querySelector('.modal-body');
@@ -197,7 +203,7 @@ function renderBulkExportModalContent() {
     // Render modal body
     const modalBody = modal.querySelector('.modal-body');
     modalBody.innerHTML = `
-        <div class="selected-devices-section" style="max-height: 300px; overflow-y: auto; margin-bottom: 20px;">
+        <div class="selected-devices-section" style="max-height: 500px; overflow-y: auto; margin-bottom: 20px;">
             <h3>Selected Devices</h3>
             <div id="deviceListContainer" class="device-list">
                 ${renderDeviceList(selected, exportData)}
@@ -252,6 +258,12 @@ function renderBulkExportModalContent() {
             <button id="cancelExportBtn" onclick="cancelBulkExport()" class="btn-secondary" style="display: block; margin: 15px auto;">Cancel</button>
         </div>
     `;
+
+    // Ensure Start Export button is visible (in case it was hidden from previous export)
+    const startExportBtn = modal.querySelector('.btn-start-export');
+    if (startExportBtn) {
+        startExportBtn.style.display = 'inline-block';
+    }
 }
 
 /**
@@ -377,6 +389,9 @@ async function startBulkExport() {
             console.error(`[Bulk Export] Failed to export device ${device.name}:`, error);
             failedDevices.push({ device: device.name, error: error.message });
         }
+
+        // Add small delay to show progress (better UX feedback)
+        await new Promise(resolve => setTimeout(resolve, 50));
     }
 
     // Generate and download ZIP if not cancelled
@@ -384,6 +399,9 @@ async function startBulkExport() {
         try {
             console.log('[Bulk Export] Generating ZIP file...');
             updateProgress(selected.length, selected.length, 'Generating ZIP file...');
+
+            // Small delay to show ZIP generation step
+            await new Promise(resolve => setTimeout(resolve, 300));
 
             const zipBlob = await zip.generateAsync({ type: 'blob' });
             const zipFilename = `device-stickers-${exportedFiles.length}-devices-${Date.now()}.zip`;
@@ -394,7 +412,7 @@ async function startBulkExport() {
 
         } catch (error) {
             console.error('[Bulk Export] Error generating ZIP:', error);
-            alert('Error generating ZIP file: ' + error.message);
+            showNotification('Error generating ZIP file: ' + error.message, 'error');
         }
     }
 
@@ -492,14 +510,23 @@ function downloadBlob(blob, filename) {
  * Shows completion summary
  */
 function showCompletionSummary(successCount, failed) {
-    let message = `✓ Successfully exported ${successCount} device${successCount !== 1 ? 's' : ''}`;
+    // Show success notification
+    const successMessage = `Successfully exported ${successCount} device${successCount !== 1 ? 's' : ''}`;
+    showNotification(successMessage, 'success');
+
+    // If there were failures, show warning and log details
     if (failed.length > 0) {
-        message += `\n\n⚠ Failed to export ${failed.length} device${failed.length !== 1 ? 's' : ''}:\n`;
+        setTimeout(() => {
+            const failMessage = `${failed.length} device${failed.length !== 1 ? 's' : ''} failed to export`;
+            showNotification(failMessage, 'error');
+        }, 500); // Delay slightly so both notifications are visible
+
+        // Log failure details to console for debugging
+        console.warn('[Bulk Export] Failed devices:');
         failed.forEach(f => {
-            message += `  • ${f.device}: ${f.error}\n`;
+            console.warn(`  • ${f.device}: ${f.error}`);
         });
     }
-    alert(message);
 }
 
 /**

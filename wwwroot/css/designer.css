@@ -874,14 +874,23 @@ input[type="color"].form-control {
     color: white;
 }
 
-@keyframes slideIn {
+@keyframes slideDown {
     from {
-        transform: translateX(400px);
+        transform: translateX(-50%) translateY(-20px);
         opacity: 0;
     }
     to {
-        transform: translateX(0);
+        transform: translateX(-50%) translateY(0);
         opacity: 1;
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
     }
 }
 
@@ -917,6 +926,10 @@ input[type="color"].form-control {
    ======================================== */
 
 /* Bulk export modal */
+.bulk-export-modal {
+    display: none; /* Hidden by default, shown with display: flex */
+}
+
 .bulk-export-modal .modal-content {
     max-width: 900px;
 }
@@ -938,7 +951,7 @@ input[type="color"].form-control {
 }
 
 .device-list {
-    max-height: 300px;
+    max-height: 500px;
     overflow-y: auto;
 }
 

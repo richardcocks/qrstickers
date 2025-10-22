@@ -549,19 +549,26 @@ function showNotification(message, type = 'info') {
     notification.style.cssText = `
         position: fixed;
         top: 20px;
-        right: 20px;
+        left: 50%;
+        transform: translateX(-50%);
         padding: 15px 20px;
         background: ${type === 'success' ? '#4CAF50' : '#f44336'};
         color: white;
         border-radius: 4px;
         z-index: 10000;
-        animation: slideIn 0.3s ease-in-out;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        min-width: 300px;
+        text-align: center;
+        animation: slideDown 0.3s ease-in-out;
     `;
 
     document.body.appendChild(notification);
 
     setTimeout(() => {
-        notification.remove();
+        notification.style.animation = 'fadeOut 0.3s ease-in-out';
+        setTimeout(() => {
+            notification.remove();
+        }, 300);
     }, 3000);
 }
 
