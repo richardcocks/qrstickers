@@ -50,14 +50,10 @@ async function openDeviceExportModal(deviceId, connectionId, deviceName) {
         createDeviceExportModal();
     }
 
-    // Show loading state
     const modal = deviceExportState.deviceExportModal;
-    const contentArea = modal.querySelector('.modal-body');
-    contentArea.innerHTML = '<div style="padding: 40px; text-align: center;">Loading device data...</div>';
-    modal.style.display = 'block';
 
     try {
-        // Fetch device export data from API
+        // Fetch device export data from API (while modal still hidden)
         console.log('[Device Export] Fetching export data from API');
         const response = await fetch(`/api/export/device/${deviceId}?connectionId=${connectionId}`, {
             method: 'GET',
