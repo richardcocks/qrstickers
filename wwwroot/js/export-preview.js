@@ -343,3 +343,214 @@ function updateStatus(message) {
         statusEl.textContent = message;
     }
 }
+
+/**
+ * Create and render a preview canvas with template and device data
+ * Used by both Phase 4 (preview mode) and Phase 5 (device export)
+ */
+function createAndRenderPreviewCanvas(
+    canvasElement,
+    templateJson,
+    pageWidthMm = 100,
+    pageHeightMm = 50,
+    forExport = false,
+    exportOptions = { dpi: 96, background: 'white' }) {
+
+    console.log(`[Preview] Creating canvas for ${forExport ? 'export' : 'preview'}`);
+
+    // Calculate canvas dimensions
+    const pxPerMm = 3.779527559; // Standard screen DPI (96 DPI)
+    const canvasWidth = pageWidthMm * pxPerMm;
+    const canvasHeight = pageHeightMm * pxPerMm;
+
+    // For export, apply DPI multiplier
+    const multiplier = forExport ? (exportOptions.dpi || 96) / 96 : 1;
+    const exportWidth = canvasWidth * multiplier;
+    const exportHeight = canvasHeight * multiplier;
+
+    console.log(`[Preview] Canvas size: ${canvasWidth}x${canvasHeight}px (export: ${exportWidth}x${exportHeight}px)`);
+
+    // Set canvas element dimensions
+    canvasElement.width = forExport ? exportWidth : canvasWidth;
+    canvasElement.height = forExport ? exportHeight : canvasHeight;
+    canvasElement.style.width = forExport ? exportWidth + 'px' : canvasWidth + 'px';
+    canvasElement.style.height = forExport ? exportHeight + 'px' : canvasHeight + 'px';
+
+    // Create Fabric.js canvas
+    const canvas = new fabric.Canvas(canvasElement, {
+        width: forExport ? exportWidth : canvasWidth,
+        height: forExport ? exportHeight : canvasHeight,
+        backgroundColor: exportOptions.background === 'transparent' ? 'rgba(0,0,0,0)' : '#ffffff'
+    });
+
+    // Load template objects onto canvas
+    if (templateJson && templateJson.objects) {
+        templateJson.objects.forEach(obj => {
+            try {
+                // Scale object coordinates if exporting at different DPI
+                const scaledObj = JSON.parse(JSON.stringify(obj));
+                if (multiplier !== 1) {
+                    scaledObj.left = (scaledObj.left || 0) * multiplier;
+                    scaledObj.top = (scaledObj.top || 0) * multiplier;
+                    scaledObj.width = (scaledObj.width || 50) * multiplier;
+                    scaledObj.height = (scaledObj.height || 50) * multiplier;
+                    scaledObj.fontSize = (scaledObj.fontSize || 16) * multiplier;
+                    scaledObj.strokeWidth = (scaledObj.strokeWidth || 1) * multiplier;
+                }
+
+                let fabricObject;
+
+                switch (obj.type) {
+                    case 'qrcode':
+                        fabricObject = createQRCodePlaceholder({
+                            left: scaledObj.left,
+                            top: scaledObj.top,
+                            width: scaledObj.width || 50,
+                            height: scaledObj.height || 50,
+                            dataSource: obj.properties?.dataSource || '',
+                            data: obj.properties?.data || ''
+                        });
+                        break;
+
+                    case 'text':
+                    case 'i-text':
+                        fabricObject = createTextObject({
+                            left: scaledObj.left,
+                            top: scaledObj.top,
+                            text: scaledObj.text || '',
+                            dataSource: obj.properties?.dataSource || '',
+                            fontFamily: scaledObj.fontFamily || 'Arial',
+                            fontSize: scaledObj.fontSize || 16,
+                            fontWeight: scaledObj.fontWeight || 'normal',
+                            fill: scaledObj.fill || '#000000'
+                        });
+                        break;
+
+                    case 'image':
+                        fabricObject = createImagePlaceholder({
+                            left: scaledObj.left,
+                            top: scaledObj.top,
+                            width: scaledObj.width || 50,
+                            height: scaledObj.height || 50,
+                            dataSource: obj.properties?.dataSource || '',
+                            src: obj.src || ''
+                        });
+                        break;
+
+                    case 'rect':
+                        fabricObject = createRectangle({
+                            left: scaledObj.left,
+                            top: scaledObj.top,
+                            width: scaledObj.width || 50,
+                            height: scaledObj.height || 50,
+                            fill: scaledObj.fill || 'transparent',
+                            stroke: scaledObj.stroke || '#000000',
+                            strokeWidth: scaledObj.strokeWidth || 1
+                        });
+                        break;
+
+                    case 'line':
+                        fabricObject = createLine({
+                            x1: scaledObj.left,
+                            y1: scaledObj.top,
+                            x2: scaledObj.left + (scaledObj.width || 50),
+                            y2: scaledObj.top,
+                            stroke: scaledObj.stroke || '#000000',
+                            strokeWidth: scaledObj.strokeWidth || 1
+                        });
+                        break;
+                }
+
+                if (fabricObject) {
+                    if (scaledObj.angle) {
+                        fabricObject.set('angle', scaledObj.angle);
+                    }
+                    canvas.add(fabricObject);
+                }
+            } catch (error) {
+                console.error(`[Preview] Error loading object:`, error);
+            }
+        });
+    }
+
+    // Hide Fabric.js upper canvas (interactive overlay)
+    if (canvas.upperCanvasEl) {
+        canvas.upperCanvasEl.style.display = 'none';
+        canvas.upperCanvasEl.style.visibility = 'hidden';
+        canvas.upperCanvasEl.style.pointerEvents = 'none';
+    }
+
+    canvas.renderAll();
+    console.log(`[Preview] Canvas created and rendered`);
+
+    return canvas;
+}
+
+/**
+ * Export canvas as PNG with specified DPI (updated for Phase 5 device export)
+ */
+function exportPNG(canvas, pageWidthMm, pageHeightMm, deviceIdentifier = 'device') {
+    try {
+        const dpi = parseInt(document.querySelector('input[name="export-dpi"]:checked')?.value || '96') || 96;
+        const background = document.querySelector('input[name="export-background"]:checked')?.value || 'white';
+
+        console.log(`[Export] Exporting PNG at ${dpi} DPI`);
+
+        // Calculate multiplier based on DPI (96 DPI = 1x, 150 DPI = 1.56x, 300 DPI = 3.125x)
+        const multiplier = dpi / 96;
+
+        // Export options
+        const options = {
+            format: 'png',
+            multiplier: multiplier,
+            enableRetinaScaling: false,
+            backgroundColor: background === 'transparent' ? 'rgba(0,0,0,0)' : '#ffffff'
+        };
+
+        // Get data URL
+        const dataUrl = canvas.toDataURL(options);
+
+        // Generate filename
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+        const fileName = `sticker-${deviceIdentifier.replace(/\s+/g, '-').toLowerCase()}-${dpi}dpi.png`;
+
+        // Download file
+        downloadFile(dataUrl, fileName, 'image/png');
+
+        console.log(`[Export] PNG exported successfully`);
+    } catch (error) {
+        console.error('[Export] PNG export error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Export canvas as SVG (updated for Phase 5 device export)
+ */
+function exportSVG(canvas, pageWidthMm, pageHeightMm, deviceIdentifier = 'device') {
+    try {
+        console.log(`[Export] Exporting SVG`);
+
+        // Export as SVG string
+        const svgString = canvas.toSVG();
+
+        // Create blob from SVG string
+        const blob = new Blob([svgString], { type: 'image/svg+xml' });
+        const url = URL.createObjectURL(blob);
+
+        // Generate filename
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+        const fileName = `sticker-${deviceIdentifier.replace(/\s+/g, '-').toLowerCase()}.svg`;
+
+        // Download file
+        downloadFile(url, fileName, 'image/svg+xml');
+
+        // Clean up object URL
+        URL.revokeObjectURL(url);
+
+        console.log(`[Export] SVG exported successfully`);
+    } catch (error) {
+        console.error('[Export] SVG export error:', error);
+        throw error;
+    }
+}

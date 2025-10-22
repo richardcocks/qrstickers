@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Identity;
 using QRStickers;
 using QRStickers.Meraki;
 using QRStickers.Data;
+using QRStickers.Services;
 
 // ===================== APPLICATION SETUP =====================
 
@@ -84,6 +85,13 @@ builder.Services.AddHostedService<MerakiBackgroundSyncService>();
 // Register sticker template service
 builder.Services.AddScoped<TemplateService>();
 
+// Register Phase 5 device export services
+builder.Services.AddScoped<DeviceExportHelper>();
+builder.Services.AddScoped<TemplateMatchingService>();
+
+// Add memory caching for template matching
+builder.Services.AddMemoryCache();
+
 builder.Services.AddRateLimiter(rateLimiterOptions => rateLimiterOptions
     .AddTokenBucketLimiter(policyName: "tokenBucket", options =>
     {
@@ -137,6 +145,132 @@ app.MapGet("/qrcode", (HttpContext httpContext, string q, QRCodeGenerator qrGene
     httpContext.Response.ContentType = MediaTypeNames.Image.Png;
     return Results.File(qrCodeImage, MediaTypeNames.Image.Png);
 }).RequireRateLimiting("tokenBucket");
+
+// Device export API endpoints (Phase 5)
+app.MapGet("/api/export/device/{deviceId}", async (
+    int deviceId,
+    [FromQuery] int connectionId,
+    HttpContext httpContext,
+    DeviceExportHelper exportHelper,
+    TemplateMatchingService templateMatcher,
+    UserManager<ApplicationUser> userManager) =>
+{
+    try
+    {
+        var user = await userManager.GetUserAsync(httpContext.User);
+        if (user == null)
+            return Results.Unauthorized();
+
+        var exportData = await exportHelper.GetDeviceExportDataAsync(deviceId, connectionId, user);
+
+        // Get template match
+        var templateMatch = await templateMatcher.FindTemplateForDeviceAsync(exportData.Device, user);
+        exportData.MatchedTemplate = templateMatch.Template;
+
+        return Results.Ok(new
+        {
+            success = true,
+            data = new
+            {
+                device = new
+                {
+                    id = exportData.Device.Id,
+                    serial = exportData.Device.Serial,
+                    name = exportData.Device.Name,
+                    model = exportData.Device.Model,
+                    productType = exportData.Device.ProductType,
+                    networkId = exportData.Device.NetworkId,
+                    connectionId = exportData.Device.ConnectionId
+                },
+                network = exportData.Network != null ? new
+                {
+                    id = exportData.Network.Id,
+                    networkId = exportData.Network.NetworkId,
+                    name = exportData.Network.Name,
+                    organizationId = exportData.Network.OrganizationId
+                } : null,
+                connection = new
+                {
+                    id = exportData.Connection.Id,
+                    displayName = exportData.Connection.DisplayName,
+                    type = exportData.Connection.GetType().Name
+                },
+                globalVariables = exportData.GlobalVariables,
+                matchedTemplate = new
+                {
+                    id = templateMatch.Template.Id,
+                    name = templateMatch.Template.Name,
+                    templateJson = templateMatch.Template.TemplateJson,
+                    pageWidth = templateMatch.Template.PageWidth,
+                    pageHeight = templateMatch.Template.PageHeight,
+                    matchReason = templateMatch.MatchReason,
+                    confidence = templateMatch.Confidence
+                }
+            }
+        });
+    }
+    catch (UnauthorizedAccessException)
+    {
+        return Results.Forbid();
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.NotFound(new { error = ex.Message });
+    }
+    catch (Exception)
+    {
+        return Results.StatusCode(500);
+    }
+}).RequireAuthorization();
+
+// Template matching API endpoint
+app.MapGet("/api/templates/match", async (
+    [FromQuery] int deviceId,
+    [FromQuery] int connectionId,
+    HttpContext httpContext,
+    DeviceExportHelper exportHelper,
+    TemplateMatchingService templateMatcher,
+    UserManager<ApplicationUser> userManager) =>
+{
+    try
+    {
+        var user = await userManager.GetUserAsync(httpContext.User);
+        if (user == null)
+            return Results.Unauthorized();
+
+        var exportData = await exportHelper.GetDeviceExportDataAsync(deviceId, connectionId, user);
+        var templateMatch = await templateMatcher.FindTemplateForDeviceAsync(exportData.Device, user);
+        var alternates = await templateMatcher.GetAlternateTemplatesAsync(exportData.Device, user, templateMatch.Template.Id);
+
+        return Results.Ok(new
+        {
+            success = true,
+            data = new
+            {
+                matchedTemplate = new
+                {
+                    id = templateMatch.Template.Id,
+                    name = templateMatch.Template.Name,
+                    matchReason = templateMatch.MatchReason,
+                    confidence = templateMatch.Confidence
+                },
+                alternateTemplates = alternates.Select(t => new
+                {
+                    id = t.Id,
+                    name = t.Name
+                }).ToList()
+            }
+        });
+    }
+    catch (UnauthorizedAccessException)
+    {
+        return Results.Forbid();
+    }
+    catch (ArgumentException)
+    {
+        return Results.NotFound();
+    }
+}).RequireAuthorization();
 
 // ===================== RAZOR PAGES =====================
 
