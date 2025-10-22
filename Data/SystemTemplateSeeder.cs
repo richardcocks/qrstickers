@@ -9,23 +9,40 @@ namespace QRStickers.Data;
 public static class SystemTemplateSeeder
 {
     /// <summary>
-    /// Seeds system templates if they don't already exist
+    /// Seeds or updates system templates
+    /// Updates existing system templates to ensure they have the latest definitions
     /// </summary>
     public static async Task SeedTemplatesAsync(QRStickersDbContext db)
     {
-        // Check if system templates already exist
-        if (await db.StickerTemplates.AnyAsync(t => t.IsSystemTemplate))
-        {
-            return; // Already seeded
-        }
-
         var templates = new List<StickerTemplate>
         {
             CreateRackMountTemplate(),
             CreateCeilingWallTemplate()
         };
 
-        db.StickerTemplates.AddRange(templates);
+        // Get existing system templates
+        var existingTemplates = await db.StickerTemplates
+            .Where(t => t.IsSystemTemplate)
+            .ToListAsync();
+
+        foreach (var newTemplate in templates)
+        {
+            var existing = existingTemplates.FirstOrDefault(t => t.Name == newTemplate.Name);
+            if (existing != null)
+            {
+                // Update existing template with new definition
+                existing.TemplateJson = newTemplate.TemplateJson;
+                existing.Description = newTemplate.Description;
+                existing.UpdatedAt = DateTime.UtcNow;
+                db.StickerTemplates.Update(existing);
+            }
+            else
+            {
+                // Insert new template
+                db.StickerTemplates.Add(newTemplate);
+            }
+        }
+
         await db.SaveChangesAsync();
     }
 
@@ -59,7 +76,7 @@ public static class SystemTemplateSeeder
                     angle = 0,
                     properties = new
                     {
-                        dataSource = "device.Serial",
+                        dataSource = "device.QRCode",  // Updated to use generated QR code image
                         eccLevel = "Q",
                         quietZone = 2
                     }
@@ -187,7 +204,7 @@ public static class SystemTemplateSeeder
                     angle = 0,
                     properties = new
                     {
-                        dataSource = "device.Serial",
+                        dataSource = "device.QRCode",  // Updated to use generated QR code image
                         eccLevel = "Q",
                         quietZone = 2
                     }

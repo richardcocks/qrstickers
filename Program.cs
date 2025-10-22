@@ -205,6 +205,14 @@ app.MapGet("/api/export/device/{deviceId}", async (
                     organizationId = exportData.Network.OrganizationId,
                     qrCode = exportData.Network.QRCodeDataUri
                 } : null,
+                organization = exportData.Organization != null ? new
+                {
+                    id = exportData.Organization.Id,
+                    organizationId = exportData.Organization.OrganizationId,
+                    name = exportData.Organization.Name,
+                    url = exportData.Organization.Url,
+                    qrCode = exportData.Organization.QRCodeDataUri
+                } : null,
                 connection = new
                 {
                     id = exportData.Connection.Id,

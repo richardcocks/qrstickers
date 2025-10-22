@@ -68,6 +68,16 @@ public class DeviceExportHelper
             .Where(n => n.NetworkId == device.NetworkId && n.ConnectionId == connectionId)
             .FirstOrDefaultAsync();
 
+        // Retrieve organization (if network exists)
+        CachedOrganization? organization = null;
+        if (network != null)
+        {
+            organization = await _db.CachedOrganizations
+                .AsNoTracking()
+                .Where(o => o.OrganizationId == network.OrganizationId && o.ConnectionId == connectionId)
+                .FirstOrDefaultAsync();
+        }
+
         // Retrieve global variables for this connection
         var globalVariables = await GetGlobalVariablesAsync(connectionId);
 
@@ -76,6 +86,7 @@ public class DeviceExportHelper
         {
             Device = device,
             Network = network,
+            Organization = organization,
             Connection = connection,
             GlobalVariables = globalVariables
         };
@@ -147,13 +158,32 @@ public class DeviceExportHelper
         // Retrieve global variables once
         var globalVariables = await GetGlobalVariablesAsync(connectionId);
 
+        // Retrieve all organizations for this connection
+        var organizationIds = devices
+            .Where(d => d.Network != null)
+            .Select(d => d.Network!.OrganizationId)
+            .Distinct()
+            .ToList();
+
+        var organizations = await _db.CachedOrganizations
+            .AsNoTracking()
+            .Where(o => organizationIds.Contains(o.OrganizationId) && o.ConnectionId == connectionId)
+            .ToListAsync();
+
         // Build export contexts for all devices
-        var contexts = devices.Select(device => new DeviceExportContext
-        {
-            Device = device,
-            Network = device.Network,
-            Connection = connection,
-            GlobalVariables = globalVariables
+        var contexts = devices.Select(device => {
+            var organization = device.Network != null
+                ? organizations.FirstOrDefault(o => o.OrganizationId == device.Network.OrganizationId)
+                : null;
+
+            return new DeviceExportContext
+            {
+                Device = device,
+                Network = device.Network,
+                Organization = organization,
+                Connection = connection,
+                GlobalVariables = globalVariables
+            };
         }).ToList();
 
         _logger.LogInformation($"[Export] Retrieved bulk export data for {contexts.Count} devices");
@@ -175,6 +205,11 @@ public class DeviceExportContext
     /// Network this device belongs to (for device.network.* bindings)
     /// </summary>
     public CachedNetwork? Network { get; set; }
+
+    /// <summary>
+    /// Organization this device belongs to (for organization.* bindings)
+    /// </summary>
+    public CachedOrganization? Organization { get; set; }
 
     /// <summary>
     /// Connection this device belongs to (for connection.* bindings)

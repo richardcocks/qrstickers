@@ -21,7 +21,8 @@ const PLACEHOLDER_VALUES = {
     'global.supportphone': '+1-555-0100',       // Support phone
     // QR code data URIs (real scannable QR codes for preview)
     'device.qrcode': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAa0AAAGtAQAAAACNLRaaAAABp0lEQVR4nO3bu3HDMAyAYehSpNQIHiWj2aNlFI3g0oXP9BEEXxLzrMDkR5E7hPxUCTRM0hJ+EzeBwWAwGAwGg8H+CbtKiSVc5WzD70v8e6+DNgKD+WXNTH3GKQ6+6b/uMemmwWCOmb7nr4WJjjxkTayvDRhsEpYSiRWgCQw2KZOXNAiDTcgOXXVM4mxl/TQYzC8rYYv5KexXdg0YzDfrorLUYh8DBvPLLmIvvcgaLrEviazrS0YVAIP5Ys223SON75L0QBjMO9MKSF310iZlJgw2B7O9jrJtpzOt3y4jsRxgMN/M+pJwKzM3yU1KCGGTOGIJDOab2cwcmy3m2m9rEoYVAIO5YrZT17ciurLbM5oEBnPMtAJy99G99Kst8/npMJhr1hwSagUcriQ1TQoM5ph10V2oqxsfw8KBwXyx0Xn34cSwBgzml+1vIeUb+3lD76vPABjMCxu1IrqYl6QGDDYFs6+OzXm3fLAdDYO5Zrv1Ww+/v/ebFRjMAbOXO99s3t2u6zaqYTDHrERZzJu7ofl+0qcbHzCYA/bDgMFgMBgMBoPBwp9nTwEx5Yt/LG0pAAAAAElFTkSuQmCC',
-    'network.qrcode': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAYgAAAGIAQAAAABzOEqLAAACEklEQVR4nO2XQY7EMAgE8/9PZ7WhG3CkHOYAp8pqMzamfGk1kOv+9bkgICAgICCCuOK5r+tZ31ePxEt7iBWiiRmUsv6DT17LgFggpFspltoqpAyIVSLUeqdISIhtIraibC45CmKTEKejekWr+a6JECOE+/3339fMADFA+NHZsTszIFYIi1S2Kt2egCcBiBWipbv1VP+Rqi9HQQwSClXuy0O6qjsKYo7QqxupucjfkRBrhAbiyNG5RgIvU0OIcSKaSjsx3NuORwOIDaJ1evcWt5lmNIgVotUuuyn9VcThQYhJQieaAELNs9dkw4FYIKyXnVT3eFYOS0GsEA1KtayoIhoNIDYIy1P9RpFqNK9yCDFJHHlStHq/zJUnENPE9cI1L1dxKwxigbBkoVvFVOFyNmjXQgwSWeaq0qXJTFhHiAXC41goqL1I1bo0HsQ40QqdTt19jlZ0eBBimtC/PSRfae8AxAbhZJW401bHfRALRDSb+kDxSf52L0GMExbIyqn5xCVxY99ADBPpm2YmpanaSVyIFaI3/hBKYqbN0lUQC4Ts9Ly9OJduPxAbhB83e+kWOYe4EBuEvxK1sYnUdcpUTXOISUJLa+VANRu1HIglwvo98ZzMVOgcSdtB7BDK1hAg7XJaPiocxAJhKHO9an6D2CBcyaq0WcqgZDeIHULHoVO/4TlKU0HsED89EBAQEBA3xP0HUHCq6tODNOAAAAAASUVORK5CYII='  // Network dashboard URL QR code
+    'network.qrcode': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAYgAAAGIAQAAAABzOEqLAAACEklEQVR4nO2XQY7EMAgE8/9PZ7WhG3CkHOYAp8pqMzamfGk1kOv+9bkgICAgICCCuOK5r+tZ31ePxEt7iBWiiRmUsv6DT17LgFggpFspltoqpAyIVSLUeqdISIhtIraibC45CmKTEKejekWr+a6JECOE+/3339fMADFA+NHZsTszIFYIi1S2Kt2egCcBiBWipbv1VP+Rqi9HQQwSClXuy0O6qjsKYo7QqxupucjfkRBrhAbiyNG5RgIvU0OIcSKaSjsx3NuORwOIDaJ1evcWt5lmNIgVotUuuyn9VcThQYhJQieaAELNs9dkw4FYIKyXnVT3eFYOS0GsEA1KtayoIhoNIDYIy1P9RpFqNK9yCDFJHHlStHq/zJUnENPE9cI1L1dxKwxigbBkoVvFVOFyNmjXQgwSWeaq0qXJTFhHiAXC41goqL1I1bo0HsQ40QqdTt19jlZ0eBBimtC/PSRfae8AxAbhZJW401bHfRALRDSb+kDxSf52L0GMExbIyqn5xCVxY99ADBPpm2YmpanaSVyIFaI3/hBKYqbN0lUQC4Ts9Ly9OJduPxAbhB83e+kWOYe4EBuEvxK1sYnUdcpUTXOISUJLa+VANRu1HIglwvo98ZzMVOgcSdtB7BDK1hAg7XJaPiocxAJhKHO9an6D2CBcyaq0WcqgZDeIHULHoVO/4TlKU0HsED89EBAQEBA3xP0HUHCq6tODNOAAAAAASUVORK5CYII=',  // Network dashboard URL QR code
+    'organization.qrcode': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAYgAAAGIAQAAAABzOEqLAAACGUlEQVR4nO2XUY/DMAiD+///dE4NtiGtbtKkg3txpi1p4NuLhaHX+nZdJkyYMGHCRBBXrHV/9k087Yd73999Z2KEkDRXwfVzZJiYIEI/baV8GEPIxCSxdyXej3E28S/ETkMRFeU+KGiihyjVE0GoGThyTUwRZQL45fNhZjDx10RZUU1oPtT1zDDRThwCKSO7Dv/JxAixs6ja9jUd1YPS+Ex0E+ouO07NIFy5KhVlopNAGaHfq4yoLZiqoIlGIgsGpoYAbI0eZ2KIQFp4XLLUkO2IFyaaiVCLgFrLaXn0OBP9BOyL6kG+UljvTmSij2AuJrMIRyUFXQYyE/0EkigczUwxmt55a6KLYFWtp1jo+vXOxATBACtrHZoy8eFwJpqI8LbS6zkCVI3jL0wMEDK10nUUQmE9HM5EK1GHsZQydUOZmRgilIxR+FAx9mMuMNFJ5MyVyZiQ5XapqYkRQgKFmHpnxE4TNNFPSCxVlDxPs4GWiXaCd4zW1sN2c3YcE60ERcMZJVW+5EzMENIqE4rXVQc0MUBIIJ5YVUiVviaGiCOWQV4+31hM9BK4wjWxHAtKzzHRTnCVeTgtTk4HxEQ7wZKBx11FUUZeE5mJRgJHllGpIcwELwVNtBLs8bI0qKk+BElNjBKlscRDuh79zsQkEZJRRR5SPhMzhDhOyVBMLGrLxAhBjehqqZ0Ki4CJfuKrZcKECRMmlon1A+oPsuKNVshAAAAAAElFTkSuQmCC'  // Organization dashboard URL QR code (392px)
 };
 
 // Note: MM_TO_PX_RATIO is defined globally in fabric-extensions.js (loaded before this file)
@@ -434,7 +435,7 @@ function updateStatus(message) {
  * Create and render a preview canvas with template and device data
  * Used by both Phase 4 (preview mode) and Phase 5 (device export)
  */
-function createAndRenderPreviewCanvas(
+async function createAndRenderPreviewCanvas(
     canvasElement,
     templateJson,
     pageWidthMm = 100,
@@ -470,6 +471,7 @@ function createAndRenderPreviewCanvas(
     });
 
     // Load template objects onto canvas
+    const qrLoadPromises = [];
     if (templateJson && templateJson.objects) {
         templateJson.objects.forEach(obj => {
             try {
@@ -561,12 +563,62 @@ function createAndRenderPreviewCanvas(
                     if (scaledObj.angle) {
                         fabricObject.set('angle', scaledObj.angle);
                     }
-                    canvas.add(fabricObject);
+
+                    let shouldAddToCanvas = true;
+
+                    // Replace QR code placeholder with real image if we have QR data
+                    if (obj.type === 'qrcode' && obj.properties?.data) {
+                        const qrDataUri = obj.properties.data;
+                        console.log('[Device Export] QR code detected with data, loading real image...');
+
+                        // Create promise for async QR image load
+                        const qrLoadPromise = new Promise((resolve, reject) => {
+                            fabric.Image.fromURL(qrDataUri, function(img) {
+                                if (!img || !img.width) {
+                                    console.error('[Device Export] QR image loaded but has no dimensions');
+                                    reject(new Error('QR image has no dimensions'));
+                                    return;
+                                }
+
+                                img.set({
+                                    left: fabricObject.left,
+                                    top: fabricObject.top,
+                                    scaleX: fabricObject.width / img.width,
+                                    scaleY: fabricObject.height / img.height,
+                                    angle: fabricObject.angle || 0,
+                                    originX: fabricObject.originX || 'center',
+                                    originY: fabricObject.originY || 'center'
+                                });
+
+                                canvas.add(img);
+                                canvas.renderAll();
+                                console.log('[Device Export] QR image added to canvas successfully');
+                                resolve();
+                            }, function(error) {
+                                console.error('[Device Export] Error loading QR image:', error);
+                                reject(error);
+                            }, { crossOrigin: 'anonymous' });
+                        });
+
+                        qrLoadPromises.push(qrLoadPromise);
+                        shouldAddToCanvas = false;  // Don't add placeholder
+                    }
+
+                    if (shouldAddToCanvas) {
+                        canvas.add(fabricObject);
+                    }
                 }
             } catch (error) {
                 console.error(`[Preview] Error loading object:`, error);
             }
         });
+    }
+
+    // Wait for all QR images to load before continuing
+    if (qrLoadPromises.length > 0) {
+        console.log(`[Preview] Waiting for ${qrLoadPromises.length} QR image(s) to load...`);
+        await Promise.all(qrLoadPromises);
+        console.log(`[Preview] All QR images loaded`);
     }
 
     // Hide Fabric.js upper canvas (interactive overlay)

@@ -307,8 +307,8 @@ async function updateDeviceExportPreview() {
             previewContainer.appendChild(canvas);
         }
 
-        // Create preview canvas
-        deviceExportState.previewCanvas = createAndRenderPreviewCanvas(
+        // Create preview canvas and wait for QR images to load
+        deviceExportState.previewCanvas = await createAndRenderPreviewCanvas(
             canvas,
             mergedTemplate,
             template.pageWidth,
@@ -360,6 +360,13 @@ function createDeviceDataMap(exportData) {
             name: exportData.network.name || '',
             organizationId: exportData.network.organizationId,
             qrcode: exportData.network.qrCode || null // QR code data URI
+        } : null,
+        organization: exportData.organization ? {
+            id: exportData.organization.id,
+            organizationid: exportData.organization.organizationId,
+            name: exportData.organization.name || '',
+            url: exportData.organization.url || '',
+            qrcode: exportData.organization.qrCode || null // QR code data URI
         } : null,
         connection: {
             id: exportData.connection.id,
@@ -472,7 +479,8 @@ async function downloadDeviceExport() {
         const tempCanvas = document.createElement('canvas');
 
         // Use createAndRenderPreviewCanvas to render at full resolution
-        const exportCanvas = createAndRenderPreviewCanvas(
+        // Wait for QR images to load before exporting
+        const exportCanvas = await createAndRenderPreviewCanvas(
             tempCanvas,
             exportTemplate,
             template.pageWidth,
