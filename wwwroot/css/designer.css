@@ -640,7 +640,7 @@ input[type="color"].form-control {
     border: 1px solid #888;
     border-radius: 8px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    animation: slideDown 0.3s ease-out;
+    /* Removed slideDown animation - interferes with flexbox centering */
 }
 
 @keyframes slideDown {

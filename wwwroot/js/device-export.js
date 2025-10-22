@@ -86,13 +86,19 @@ async function openDeviceExportModal(deviceId, connectionId, deviceName) {
         // Generate initial preview
         await updateDeviceExportPreview();
 
+        // Show modal after content is fully rendered (prevents left-side flash)
+        modal.style.display = 'flex';
+
     } catch (error) {
         console.error('[Device Export] Error opening modal:', error);
+        const contentArea = modal.querySelector('.modal-body');
         contentArea.innerHTML = `<div style="padding: 40px; color: red; text-align: center;">
             <strong>Error:</strong> ${error.message}
             <br><br>
-            <button onclick="deviceExportState.deviceExportModal.style.display = 'none';" class="btn-secondary">Close</button>
+            <button onclick="closeDeviceExportModal()" class="btn-secondary">Close</button>
         </div>`;
+        // Show modal with error message
+        modal.style.display = 'flex';
     }
 }
 

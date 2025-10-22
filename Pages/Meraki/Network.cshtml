@@ -88,8 +88,8 @@ else
         <table style="width: 100%; border-collapse: collapse;">
             <thead>
                 <tr style="background-color: #f5f5f5; border-bottom: 2px solid #ddd;">
-                    <th style="padding: 10px; text-align: center; width: 40px;">
-                        <input type="checkbox" id="selectAllDevices" onchange="toggleSelectAll()" title="Select all devices" />
+                    <th style="padding: 10px; text-align: center; width: 40px; cursor: pointer;" onclick="document.getElementById('selectAllDevices').click();" title="Select all devices">
+                        <input type="checkbox" id="selectAllDevices" onchange="toggleSelectAll()" title="Select all devices" onclick="event.stopPropagation();" />
                     </th>
                     <th style="padding: 10px; text-align: left;">Device Name</th>
                     <th style="padding: 10px; text-align: left;">Serial Number</th>
@@ -102,16 +102,17 @@ else
                 @foreach (var device in Model.Devices)
                 {
                     <tr style="border-bottom: 1px solid #ddd;">
-                        <td style="padding: 10px; text-align: center;">
+                        <td style="padding: 10px; text-align: center; cursor: pointer;" onclick="this.querySelector('.device-checkbox').click();">
                             <input type="checkbox"
                                    class="device-checkbox"
                                    data-device-id="@device.Id"
                                    data-device-name="@(device.Name ?? "Unnamed Device")"
                                    data-device-serial="@device.Serial"
                                    data-connection-id="@Model.Connection.Id"
-                                   onchange="onDeviceSelectionChanged()" />
+                                   onchange="onDeviceSelectionChanged()"
+                                   onclick="event.stopPropagation();" />
                         </td>
-                        <td style="padding: 10px;">
+                        <td style="padding: 10px; cursor: pointer;" onclick="this.parentElement.querySelector('.device-checkbox').click();">
                             <strong>@(device.Name ?? "Unnamed Device")</strong>
                         </td>
                         <td style="padding: 10px; font-family: monospace; font-size: 0.9em;">
