@@ -127,6 +127,12 @@ function createPreviewTemplate(templateJson, placeholders) {
             // For preview, we'll store the placeholder value in the data source
             // This will be used when rendering the preview
             objCopy.previewData = placeholders[binding] || PLACEHOLDER_VALUES[binding] || binding;
+
+            // Also populate properties.data for custom images so loadTemplateObjectsToCanvas can render them
+            if (binding.startsWith('customimage.') && placeholders[binding]) {
+                objCopy.properties.data = placeholders[binding];
+                console.log(`[createPreviewTemplate] Set properties.data for custom image: ${binding} (length: ${placeholders[binding].length})`);
+            }
         }
 
         // Replace text content ({{...}} patterns)
