@@ -22,6 +22,7 @@ public class QRStickersDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<TemplateDeviceModel> TemplateDeviceModels { get; set; } = null!;
     public DbSet<TemplateDeviceType> TemplateDeviceTypes { get; set; } = null!;
     public DbSet<ExportHistory> ExportHistory { get; set; } = null!;
+    public DbSet<UploadedImage> UploadedImages { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -238,5 +239,21 @@ public class QRStickersDbContext : IdentityDbContext<ApplicationUser>
 
         modelBuilder.Entity<ExportHistory>()
             .HasIndex(h => h.ConnectionId);
+
+        // Configure UploadedImage relationships
+        modelBuilder.Entity<UploadedImage>()
+            .HasOne(i => i.Connection)
+            .WithMany()
+            .HasForeignKey(i => i.ConnectionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<UploadedImage>()
+            .HasIndex(i => i.ConnectionId)
+            .HasDatabaseName("IX_UploadedImages_ConnectionId");
+
+        // Index on ConnectionId + Name for lookups (non-unique - names can be duplicated)
+        modelBuilder.Entity<UploadedImage>()
+            .HasIndex(i => new { i.ConnectionId, i.Name })
+            .HasDatabaseName("IX_UploadedImages_ConnectionId_Name");
     }
 }

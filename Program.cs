@@ -103,6 +103,9 @@ builder.Services.AddScoped<PdfExportService>();
 // Register Phase 5.6 QR code generation service
 builder.Services.AddScoped<QRCodeGenerationService>();
 
+// Register Phase 6.1 image upload validation service
+builder.Services.AddScoped<ImageUploadValidator>();
+
 // Add memory caching for template matching
 builder.Services.AddMemoryCache();
 
@@ -331,6 +334,185 @@ app.MapPost("/api/export/pdf/bulk", async (
         Console.WriteLine($"[PDF Export] Error: {ex.Message}");
         Console.WriteLine($"[PDF Export] Stack trace: {ex.StackTrace}");
         return Results.Json(new { error = ex.Message }, statusCode: 500);
+    }
+}).RequireAuthorization();
+
+// Image upload API endpoints (Phase 6.1)
+app.MapPost("/api/images/upload", async (
+    [FromBody] ImageUploadRequest request,
+    HttpContext httpContext,
+    ImageUploadValidator validator,
+    QRStickersDbContext db,
+    UserManager<ApplicationUser> userManager) =>
+{
+    try
+    {
+        var user = await userManager.GetUserAsync(httpContext.User);
+        if (user == null)
+            return Results.Unauthorized();
+
+        // Validate upload
+        var validationResult = await validator.ValidateUploadAsync(
+            request.ConnectionId,
+            request.Name,
+            request.DataUri,
+            request.WidthPx,
+            request.HeightPx,
+            user.Id);
+
+        if (!validationResult.IsValid)
+        {
+            return Results.BadRequest(new { success = false, error = validationResult.ErrorMessage });
+        }
+
+        // Create uploaded image entity
+        var uploadedImage = new UploadedImage
+        {
+            ConnectionId = request.ConnectionId,
+            Name = request.Name,
+            Description = request.Description,
+            DataUri = request.DataUri,
+            WidthPx = request.WidthPx,
+            HeightPx = request.HeightPx,
+            MimeType = validationResult.MimeType!,
+            FileSizeBytes = validationResult.FileSizeBytes,
+            IsDeleted = false,
+            UploadedAt = DateTime.UtcNow
+        };
+
+        db.UploadedImages.Add(uploadedImage);
+        await db.SaveChangesAsync();
+
+        return Results.Ok(new
+        {
+            success = true,
+            data = new
+            {
+                id = uploadedImage.Id,
+                name = uploadedImage.Name,
+                dataUri = uploadedImage.DataUri,
+                widthPx = uploadedImage.WidthPx,
+                heightPx = uploadedImage.HeightPx,
+                mimeType = uploadedImage.MimeType,
+                fileSizeBytes = uploadedImage.FileSizeBytes,
+                uploadedAt = uploadedImage.UploadedAt
+            }
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new { success = false, error = "Upload failed: " + ex.Message }, statusCode: 500);
+    }
+}).RequireAuthorization();
+
+app.MapGet("/api/images", async (
+    [FromQuery] int connectionId,
+    [FromQuery] bool includeDeleted,
+    HttpContext httpContext,
+    ImageUploadValidator validator,
+    QRStickersDbContext db,
+    UserManager<ApplicationUser> userManager) =>
+{
+    try
+    {
+        var user = await userManager.GetUserAsync(httpContext.User);
+        if (user == null)
+            return Results.Unauthorized();
+
+        // Verify user owns connection
+        var connection = await db.Connections
+            .FirstOrDefaultAsync(c => c.Id == connectionId && c.UserId == user.Id);
+
+        if (connection == null)
+            return Results.Forbid();
+
+        // Get images
+        var query = db.UploadedImages.Where(i => i.ConnectionId == connectionId);
+
+        if (!includeDeleted)
+            query = query.Where(i => !i.IsDeleted);
+
+        var images = await query
+            .OrderByDescending(i => i.UploadedAt)
+            .ToListAsync();
+
+        // Get quota info
+        var quota = await validator.GetQuotaInfoAsync(connectionId);
+
+        var response = new ImageListResponse
+        {
+            Images = images.Select(i => new ImageDto
+            {
+                Id = i.Id,
+                Name = i.Name,
+                Description = i.Description,
+                DataUri = i.DataUri,
+                WidthPx = i.WidthPx,
+                HeightPx = i.HeightPx,
+                MimeType = i.MimeType,
+                FileSizeBytes = i.FileSizeBytes,
+                IsDeleted = i.IsDeleted,
+                UploadedAt = i.UploadedAt,
+                LastUsedAt = i.LastUsedAt
+            }).ToList(),
+            Quota = new QuotaDto
+            {
+                ImagesUsed = quota.ImagesUsed,
+                ImagesLimit = quota.ImagesLimit,
+                StorageUsed = quota.StorageUsed,
+                StorageLimit = quota.StorageLimit
+            }
+        };
+
+        return Results.Ok(new { success = true, data = response });
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new { success = false, error = ex.Message }, statusCode: 500);
+    }
+}).RequireAuthorization();
+
+app.MapDelete("/api/images/{id}", async (
+    int id,
+    HttpContext httpContext,
+    QRStickersDbContext db,
+    UserManager<ApplicationUser> userManager) =>
+{
+    try
+    {
+        var user = await userManager.GetUserAsync(httpContext.User);
+        if (user == null)
+            return Results.Unauthorized();
+
+        // Find image
+        var image = await db.UploadedImages
+            .Include(i => i.Connection)
+            .FirstOrDefaultAsync(i => i.Id == id);
+
+        if (image == null)
+            return Results.NotFound(new { success = false, error = "Image not found" });
+
+        // Verify user owns the connection
+        if (image.Connection.UserId != user.Id)
+            return Results.Forbid();
+
+        // Soft delete: Replace DataUri with transparent 1×1 PNG
+        const string transparentPng = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+
+        image.DataUri = transparentPng;
+        image.IsDeleted = true;
+
+        await db.SaveChangesAsync();
+
+        return Results.Ok(new
+        {
+            success = true,
+            message = "Image deleted. Templates using this image will show a transparent placeholder."
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new { success = false, error = ex.Message }, statusCode: 500);
     }
 }).RequireAuthorization();
 
