@@ -72,7 +72,7 @@ public class TemplateMatchingService
             };
         }
 
-        // 2. Try device type match
+        // 2. Try device type match (using TemplateDeviceTypes mapping table)
         var deviceType = DeriveDeviceType(device.Model);
         var typeMatch = await _db.TemplateDeviceTypes
             .AsNoTracking()
@@ -92,6 +92,31 @@ public class TemplateMatchingService
                 Confidence = 0.8,
                 MatchedBy = deviceType
             };
+        }
+
+        // 2.5. Try ProductTypeFilter match (templates with matching product type filter)
+        var productType = device.ProductType?.ToLower();
+        if (!string.IsNullOrEmpty(productType))
+        {
+            var productTypeMatch = await _db.StickerTemplates
+                .AsNoTracking()
+                .Where(t => t.ConnectionId == device.ConnectionId)
+                .Where(t => t.ProductTypeFilter != null && t.ProductTypeFilter.ToLower() == productType)
+                .OrderByDescending(t => t.IsDefault) // Prioritize default templates for this product type
+                .ThenBy(t => t.Id)
+                .FirstOrDefaultAsync();
+
+            if (productTypeMatch != null)
+            {
+                _logger.LogInformation($"[Template] Found product type filter match: {productTypeMatch.Name} (productType: {productType})");
+                return new TemplateMatchResult
+                {
+                    Template = productTypeMatch,
+                    MatchReason = "type_match",
+                    Confidence = 0.75,
+                    MatchedBy = productType
+                };
+            }
         }
 
         // 3. Try user's default template (for this connection)

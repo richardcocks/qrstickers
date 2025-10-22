@@ -177,8 +177,7 @@ function renderDeviceExportModalUI() {
             <p><strong>Name:</strong> ${device.name || 'Unnamed'}</p>
             <p><strong>Serial:</strong> <code>${device.serial || 'N/A'}</code></p>
             <p><strong>Model:</strong> ${device.model || 'N/A'}</p>
-            <p><strong>IP Address:</strong> ${device.ipAddress || 'N/A'}</p>
-            <p><strong>Status:</strong> ${device.status || 'Unknown'}</p>
+            <p><strong>Product Type:</strong> ${device.productType || 'Unknown'}</p>
         </div>
     `;
 
@@ -343,8 +342,8 @@ function createDeviceDataMap(exportData) {
             name: device.name || 'Unnamed Device',
             mac: device.mac || '',
             model: device.model || '',
-            ipAddress: device.ipAddress || '',
-            ipaddress: device.ipAddress || '', // Lowercase alias
+            productType: device.productType || 'unknown',
+            producttype: device.productType || 'unknown', // Lowercase alias
             type: device.type || 'unknown',
             status: device.status || 'unknown',
             firmware: device.firmware || '',

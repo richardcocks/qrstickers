@@ -21,6 +21,8 @@ const PLACEHOLDER_VALUES = {
     'global.supportphone': '+1-555-0100'       // Support phone
 };
 
+// Note: MM_TO_PX_RATIO is defined globally in fabric-extensions.js (loaded before this file)
+
 /**
  * Extract all data binding patterns from template JSON
  * Returns an array of unique bindings found in the template
@@ -387,13 +389,23 @@ function createAndRenderPreviewCanvas(
     if (templateJson && templateJson.objects) {
         templateJson.objects.forEach(obj => {
             try {
-                // Scale object coordinates if exporting at different DPI
+                // Convert coordinates from millimeters to pixels, then scale for DPI
                 const scaledObj = JSON.parse(JSON.stringify(obj));
+
+                // Step 1: Convert positional/dimensional properties from mm to px
+                // (Template stores left/top/width/height in mm, but fontSize/strokeWidth in px)
+                scaledObj.left = (scaledObj.left || 0) * MM_TO_PX_RATIO;
+                scaledObj.top = (scaledObj.top || 0) * MM_TO_PX_RATIO;
+                scaledObj.width = (scaledObj.width || 50) * MM_TO_PX_RATIO;
+                scaledObj.height = (scaledObj.height || 50) * MM_TO_PX_RATIO;
+                // fontSize and strokeWidth are already in pixels, don't convert them
+
+                // Step 2: Apply DPI multiplier to ALL properties if exporting at higher resolution
                 if (multiplier !== 1) {
-                    scaledObj.left = (scaledObj.left || 0) * multiplier;
-                    scaledObj.top = (scaledObj.top || 0) * multiplier;
-                    scaledObj.width = (scaledObj.width || 50) * multiplier;
-                    scaledObj.height = (scaledObj.height || 50) * multiplier;
+                    scaledObj.left *= multiplier;
+                    scaledObj.top *= multiplier;
+                    scaledObj.width *= multiplier;
+                    scaledObj.height *= multiplier;
                     scaledObj.fontSize = (scaledObj.fontSize || 16) * multiplier;
                     scaledObj.strokeWidth = (scaledObj.strokeWidth || 1) * multiplier;
                 }
