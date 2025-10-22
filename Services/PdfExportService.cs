@@ -185,9 +185,11 @@ public class PdfExportService
         var usableWidth = pageSize.WidthMm - (2 * horizontalMarginMm);
         var usableHeight = pageSize.HeightMm - (2 * verticalMarginMm);
 
-        // Calculate grid dimensions
-        var cols = Math.Max(1, (int)Math.Floor(usableWidth / stickerWidth));
-        var rows = Math.Max(1, (int)Math.Floor(usableHeight / stickerHeight));
+        // Calculate grid dimensions with buffer for QuestPDF rounding (mm→points→mm)
+        // Add 2mm buffer to each sticker dimension to prevent floating-point edge cases
+        var bufferMm = 2f;
+        var cols = Math.Max(1, (int)Math.Floor(usableWidth / (stickerWidth + bufferMm)));
+        var rows = Math.Max(1, (int)Math.Floor(usableHeight / (stickerHeight + bufferMm)));
         var stickersPerPage = cols * rows;
 
         // Calculate spacing
@@ -242,11 +244,11 @@ public class PdfExportService
 
                                 if (shouldRotate)
                                 {
-                                    container.RotateRight().Image(imageBytes);
+                                    container.RotateRight().Image(imageBytes, ImageScaling.FitArea);
                                 }
                                 else
                                 {
-                                    container.Image(imageBytes);
+                                    container.Image(imageBytes, ImageScaling.FitArea);
                                 }
                             }
                             else
@@ -297,11 +299,11 @@ public class PdfExportService
 
             if (shouldRotate)
             {
-                container.RotateRight().Image(imageBytes);
+                container.RotateRight().Image(imageBytes, ImageScaling.FitArea);
             }
             else
             {
-                container.Image(imageBytes);
+                container.Image(imageBytes, ImageScaling.FitArea);
             }
         }
     }

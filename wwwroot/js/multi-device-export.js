@@ -392,10 +392,10 @@ function validateStickersForPageSize(exportDataList, pageSizeName) {
     const verticalMarginMm = 2;
     const horizontalMarginMm = 0;
     const tolerance = 2;
-    const maxWidth = pageSize.width - (2 * horizontalMarginMm) + tolerance;
-    const maxHeight = pageSize.height - (2 * verticalMarginMm) + tolerance;
+    const usableWidth = pageSize.width - (2 * horizontalMarginMm);
+    const usableHeight = pageSize.height - (2 * verticalMarginMm);
 
-    // Check each template
+    // Check each template (match server-side dual-orientation validation)
     for (const exportData of exportDataList) {
         const template = exportData.matchedTemplate;
         if (!template) continue;
@@ -403,15 +403,24 @@ function validateStickersForPageSize(exportDataList, pageSizeName) {
         const stickerWidth = template.pageWidth;
         const stickerHeight = template.pageHeight;
 
-        if (stickerWidth > maxWidth || stickerHeight > maxHeight) {
+        // Check if sticker fits in landscape orientation
+        const fitsLandscape = stickerWidth <= usableWidth + tolerance &&
+                             stickerHeight <= usableHeight + tolerance;
+
+        // Check if sticker fits in portrait orientation (rotated 90°)
+        const fitsPortrait = stickerHeight <= usableWidth + tolerance &&
+                            stickerWidth <= usableHeight + tolerance;
+
+        // Sticker must fit in at least one orientation
+        if (!fitsLandscape && !fitsPortrait) {
             const deviceName = exportData.device?.name || 'Unknown device';
             // Return object with separate fields to avoid HTML injection
             return {
                 stickerWidth: stickerWidth.toFixed(1),
                 stickerHeight: stickerHeight.toFixed(1),
                 pageName: pageSize.name,
-                maxWidth: maxWidth.toFixed(1),
-                maxHeight: maxHeight.toFixed(1),
+                usableWidth: usableWidth.toFixed(1),
+                usableHeight: usableHeight.toFixed(1),
                 deviceName: deviceName  // Will be escaped when displayed
             };
         }
@@ -444,8 +453,9 @@ async function exportBulkAsPdf(selected, exportDataList, dpi, background) {
                 <h3 style="color: #f44336; margin-bottom: 15px;">⚠ Page Size Error</h3>
                 <p style="margin-bottom: 20px; line-height: 1.6;">
                     Sticker size <strong>${validationError.stickerWidth}mm × ${validationError.stickerHeight}mm</strong> is too large for <strong>${validationError.pageName}</strong> page.<br><br>
-                    Available space: <strong>${validationError.maxWidth}mm × ${validationError.maxHeight}mm</strong> (no side margins, 2mm top/bottom margins, +2mm tolerance).<br><br>
+                    Usable area: <strong>${validationError.usableWidth}mm × ${validationError.usableHeight}mm</strong> (no side margins, 2mm top/bottom margins).<br><br>
                     Device: <em>${escapedDeviceName}</em><br><br>
+                    <em>Note: Both landscape and portrait (90° rotated) orientations were checked.</em><br><br>
                     <strong>Suggestion:</strong> Choose a larger page size (e.g., Letter or A4), or use a smaller sticker template.
                 </p>
                 <button onclick="closeBulkExportModal()" class="btn-primary" style="padding: 10px 20px;">
