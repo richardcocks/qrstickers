@@ -23,7 +23,7 @@ public class TemplateMatchingService
 
     /// <summary>
     /// Finds the best matching template for a device
-    /// Priority: 1) Model match, 2) Type match, 3) User default, 4) System default, 5) Any available
+    /// Priority: 1) Model match, 2) Type match, 3) User default, 4) System default, 5) Fallback
     /// </summary>
     public async Task<TemplateMatchResult> FindTemplateForDeviceAsync(
         CachedDevice device,
@@ -94,7 +94,25 @@ public class TemplateMatchingService
             };
         }
 
-        // 3. Try system default template
+        // 3. Try user's default template (for this connection)
+        var userDefaultTemplate = await _db.StickerTemplates
+            .AsNoTracking()
+            .Where(t => t.ConnectionId == device.ConnectionId && t.IsDefault)
+            .FirstOrDefaultAsync();
+
+        if (userDefaultTemplate != null)
+        {
+            _logger.LogInformation($"[Template] Using user default template: {userDefaultTemplate.Name}");
+            return new TemplateMatchResult
+            {
+                Template = userDefaultTemplate,
+                MatchReason = "user_default",
+                Confidence = 0.5,
+                MatchedBy = "user_default"
+            };
+        }
+
+        // 4. Try system default template
         var defaultTemplate = await _db.StickerTemplates
             .AsNoTracking()
             .Where(t => t.IsSystemTemplate && t.IsDefault)
@@ -112,7 +130,7 @@ public class TemplateMatchingService
             };
         }
 
-        // 4. Fallback to any available template
+        // 5. Fallback to any available template
         var anyTemplate = await _db.StickerTemplates
             .AsNoTracking()
             .FirstOrDefaultAsync();

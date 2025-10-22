@@ -337,7 +337,8 @@ else
                 <div class="template-actions">
                     @if (!template.IsSystemTemplate)
                     {
-                        <a href="/Templates/Designer?id=@template.Id" class="btn-small btn-edit">Edit</a>
+                        <a href="/Templates/Edit?id=@template.Id" class="btn-small btn-edit" title="Edit template name, description, and settings">Edit Details</a>
+                        <a href="/Templates/Designer?id=@template.Id" class="btn-small btn-edit" title="Edit template design and layout">Edit Design</a>
                     }
 
                     @if (Model.UserConnections.Count > 0)

@@ -131,6 +131,9 @@
     }
 
     <form method="post">
+        <!-- Hidden field to preserve clone source during POST -->
+        <input type="hidden" asp-for="CloneFromTemplateId" />
+
         <!-- Template Properties -->
         <div class="wizard-section">
             <h2>Template Properties</h2>

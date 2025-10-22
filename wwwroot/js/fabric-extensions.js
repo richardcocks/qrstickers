@@ -133,6 +133,13 @@ function createQRCode(options) {
 }
 
 /**
+ * Alias for createQRCode - used by export-preview.js
+ */
+function createQRCodePlaceholder(options) {
+    return createQRCode(options);
+}
+
+/**
  * Helper function to create a text object with data binding
  */
 function createBoundText(options) {
@@ -151,6 +158,13 @@ function createBoundText(options) {
     text.set('overflow', options.overflow || 'truncate');
 
     return text;
+}
+
+/**
+ * Alias for createBoundText - used by export-preview.js
+ */
+function createTextObject(options) {
+    return createBoundText(options);
 }
 
 /**

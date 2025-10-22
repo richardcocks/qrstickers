@@ -370,26 +370,74 @@ function createDeviceDataMap(exportData) {
 
 /**
  * Replaces all {{binding}} placeholders with actual device data
+ * Handles both text replacement and properties.dataSource lookups
  */
 function replacePlaceholdersInTemplate(templateObj, dataMap) {
-    if (Array.isArray(templateObj.objects)) {
-        templateObj.objects.forEach(obj => {
-            if (obj.type === 'text' && obj.text) {
-                obj.text = replacePlaceholders(obj.text, dataMap);
-            }
-            if (obj.type === 'i-text' && obj.text) {
-                obj.text = replacePlaceholders(obj.text, dataMap);
-            }
-        });
+    if (!Array.isArray(templateObj.objects)) {
+        return;
     }
+
+    templateObj.objects.forEach(obj => {
+        // Replace text content with placeholder patterns
+        if ((obj.type === 'text' || obj.type === 'i-text') && obj.text) {
+            obj.text = replacePlaceholders(obj.text, dataMap);
+        }
+
+        // Replace dataSource bindings for QR codes and other objects
+        if (obj.properties && obj.properties.dataSource) {
+            const dataSource = obj.properties.dataSource;
+            const value = resolveDataSource(dataSource, dataMap);
+            if (value !== null) {
+                obj.properties.data = value;
+            }
+        }
+
+        // Handle Fabric.js groups (which may have nested objects)
+        if (obj.objects && Array.isArray(obj.objects)) {
+            replacePlaceholdersInTemplate({ objects: obj.objects }, dataMap);
+        }
+    });
+}
+
+/**
+ * Resolves a dataSource binding (e.g., "device.serial") to its actual value
+ */
+function resolveDataSource(dataSource, dataMap) {
+    if (!dataSource) return null;
+
+    // Parse "entity.field" format (case-insensitive)
+    const parts = dataSource.split('.');
+    if (parts.length !== 2) return null;
+
+    const [entity, field] = parts;
+    const entityLower = entity.toLowerCase();
+    const fieldLower = field.toLowerCase();
+
+    // Try exact match first, then lowercase match
+    let value = dataMap[entity]?.[field];
+    if (value === undefined) {
+        value = dataMap[entityLower]?.[fieldLower];
+    }
+
+    return value !== undefined ? value : null;
 }
 
 /**
  * Replaces {{variable.field}} patterns with actual values
+ * Case-insensitive matching ({{device.Name}} matches device.name in data map)
  */
 function replacePlaceholders(text, dataMap) {
     return text.replace(/\{\{(\w+)\.(\w+)\}\}/g, (match, entity, field) => {
-        const value = dataMap[entity]?.[field];
+        // Convert to lowercase for case-insensitive lookup
+        const entityLower = entity.toLowerCase();
+        const fieldLower = field.toLowerCase();
+
+        // Try exact match first, then lowercase match
+        let value = dataMap[entity]?.[field];
+        if (value === undefined) {
+            value = dataMap[entityLower]?.[fieldLower];
+        }
+
         return value !== undefined ? String(value) : match;
     });
 }
