@@ -37,10 +37,16 @@ public class QRCodeGenerationService
             // Generate QR code data with error correction level Q (25% error correction)
             using var qrCodeData = _qrGenerator.CreateQrCode(content, QRCodeGenerator.ECCLevel.Q);
 
-            // Generate PNG bytes (pixels per module = sizePx / modules)
-            // Typical QR code has 25-40 modules, so 400px / 25 = 16 pixels per module
+            // Calculate pixels per module based on actual QR code module count
+            // QRCodeData.ModuleMatrix gives us the actual size (e.g., 49x49 for longer content)
+            var moduleCount = qrCodeData.ModuleMatrix.Count;
+            var pixelsPerModule = Math.Max(1, sizePx / moduleCount);
+
+            _logger?.LogDebug("[QR Generation] QR code has {ModuleCount} modules, using {PixelsPerModule} pixels/module for target {TargetSize}px",
+                moduleCount, pixelsPerModule, sizePx);
+
+            // Generate PNG bytes with calculated pixels per module
             using var qrCode = new PngByteQRCode(qrCodeData);
-            var pixelsPerModule = Math.Max(1, sizePx / 30); // Assume ~30 modules on average
             byte[] qrCodeImage = qrCode.GetGraphic(pixelsPerModule);
 
             // Convert to base64 data URI

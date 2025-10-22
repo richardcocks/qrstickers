@@ -1225,6 +1225,9 @@ function loadPreviewTemplateObjects(templateJson, canvas, scale) {
     console.log('[Preview.Load] Starting load, scale:', scale);
     const placeholders = generatePlaceholderMap(templateJson);
     console.log('[Preview.Load] Placeholders generated:', Object.keys(placeholders).length, 'entries');
+    console.log('[Preview.Load] Placeholder keys:', Object.keys(placeholders));
+    console.log('[Preview.Load] Has device.qrcode?', 'device.qrcode' in placeholders);
+    console.log('[Preview.Load] Has network.qrcode?', 'network.qrcode' in placeholders);
 
     let objectsCreated = 0;
     let objectsFailed = 0;
@@ -1237,6 +1240,12 @@ function loadPreviewTemplateObjects(templateJson, canvas, scale) {
 
             switch (obj.type) {
                 case 'qrcode':
+                    console.log('[Preview.Load] QR object details:', {
+                        hasProperties: !!obj.properties,
+                        properties: obj.properties,
+                        dataSource: obj.properties?.dataSource,
+                        dataSourceField: obj.dataSource
+                    });
                     fabricObject = createQRCode({
                         left: mmToPx(obj.left) * scale,
                         top: mmToPx(obj.top) * scale,
@@ -1301,9 +1310,63 @@ function loadPreviewTemplateObjects(templateJson, canvas, scale) {
                 if (obj.angle) {
                     fabricObject.set('angle', obj.angle);
                 }
-                canvas.add(fabricObject);
-                objectsCreated++;
-                console.log(`[Preview.Load] Object ${index} created successfully, type: ${obj.type}`);
+
+                let shouldAddToCanvas = true;
+
+                // Replace QR code placeholder with real image if we have QR data
+                console.log('[Preview.Load] About to check QR condition:', {
+                    type: obj.type,
+                    isQrcode: obj.type === 'qrcode',
+                    hasDataSource: !!obj.properties?.dataSource,
+                    condition: obj.type === 'qrcode' && obj.properties?.dataSource
+                });
+                if (obj.type === 'qrcode' && obj.properties?.dataSource) {
+                    const dataSource = obj.properties.dataSource.toLowerCase();
+                    console.log('[Preview.Load] QR code detected, dataSource:', dataSource);
+
+                    if (dataSource === 'device.qrcode' || dataSource === 'network.qrcode') {
+                        // Use placeholder value for QR code data
+                        const qrDataUri = placeholders[dataSource];
+                        console.log('[Preview.Load] QR data URI found:', !!qrDataUri, 'length:', qrDataUri?.length);
+
+                        if (qrDataUri) {
+                            console.log('[Preview.Load] Loading real QR image...');
+                            fabric.Image.fromURL(qrDataUri, function(img) {
+                                if (!img || !img.width) {
+                                    console.error('[Preview.Load] QR image loaded but has no dimensions');
+                                    return;
+                                }
+                                console.log('[Preview.Load] QR image loaded - dimensions:', img.width, 'x', img.height);
+
+                                img.set({
+                                    left: fabricObject.left,
+                                    top: fabricObject.top,
+                                    scaleX: fabricObject.width / img.width,
+                                    scaleY: fabricObject.height / img.height,
+                                    angle: fabricObject.angle || 0,
+                                    originX: fabricObject.originX || 'center',
+                                    originY: fabricObject.originY || 'center'
+                                });
+
+                                canvas.add(img);
+                                canvas.renderAll();
+                                console.log('[Preview.Load] QR image added to canvas successfully');
+                            }, function(error) {
+                                console.error('[Preview.Load] Error loading QR image:', error);
+                            }, { crossOrigin: 'anonymous' });
+
+                            shouldAddToCanvas = false;  // Don't add placeholder
+                            objectsCreated++;
+                            console.log(`[Preview.Load] Object ${index} queued for QR loading, type: ${obj.type}`);
+                        }
+                    }
+                }
+
+                if (shouldAddToCanvas) {
+                    canvas.add(fabricObject);
+                    objectsCreated++;
+                    console.log(`[Preview.Load] Object ${index} created successfully, type: ${obj.type}`);
+                }
             } else {
                 console.warn(`[Preview.Load] Object ${index} creation returned null/undefined, type: ${obj.type}`);
                 objectsFailed++;
@@ -1320,7 +1383,7 @@ function loadPreviewTemplateObjects(templateJson, canvas, scale) {
 /**
  * Download the export file
  */
-function downloadExport() {
+async function downloadExport() {
     try {
         // Get template JSON from current canvas
         const templateJson = canvasToTemplateJson(
@@ -1329,8 +1392,8 @@ function downloadExport() {
             parseFloat(document.getElementById('pageHeight').value)
         );
 
-        // Create export canvas (full resolution, not scaled)
-        const exportCanvas = createPreviewCanvas(
+        // Create export canvas (full resolution, not scaled) and wait for async images to load
+        const exportCanvas = await createPreviewCanvas(
             templateJson,
             parseFloat(document.getElementById('pageWidth').value),
             parseFloat(document.getElementById('pageHeight').value)

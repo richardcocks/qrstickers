@@ -21,7 +21,7 @@ const PLACEHOLDER_VALUES = {
     'global.supportphone': '+1-555-0100',       // Support phone
     // QR code data URIs (real scannable QR codes for preview)
     'device.qrcode': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAa0AAAGtAQAAAACNLRaaAAABp0lEQVR4nO3bu3HDMAyAYehSpNQIHiWj2aNlFI3g0oXP9BEEXxLzrMDkR5E7hPxUCTRM0hJ+EzeBwWAwGAwGg8H+CbtKiSVc5WzD70v8e6+DNgKD+WXNTH3GKQ6+6b/uMemmwWCOmb7nr4WJjjxkTayvDRhsEpYSiRWgCQw2KZOXNAiDTcgOXXVM4mxl/TQYzC8rYYv5KexXdg0YzDfrorLUYh8DBvPLLmIvvcgaLrEviazrS0YVAIP5Ys223SON75L0QBjMO9MKSF310iZlJgw2B7O9jrJtpzOt3y4jsRxgMN/M+pJwKzM3yU1KCGGTOGIJDOab2cwcmy3m2m9rEoYVAIO5YrZT17ciurLbM5oEBnPMtAJy99G99Kst8/npMJhr1hwSagUcriQ1TQoM5ph10V2oqxsfw8KBwXyx0Xn34cSwBgzml+1vIeUb+3lD76vPABjMCxu1IrqYl6QGDDYFs6+OzXm3fLAdDYO5Zrv1Ww+/v/ebFRjMAbOXO99s3t2u6zaqYTDHrERZzJu7ofl+0qcbHzCYA/bDgMFgMBgMBoPBwp9nTwEx5Yt/LG0pAAAAAElFTkSuQmCC',
-    'network.qrcode': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAn0AAAJ9AQAAAABoCPlgAAAD70lEQVR4nO3dMXLjMAxAUWZSuMwRfBQfbXM0H8VHSJkiY+4QBAhAtrxNGmE/mo0i+cmTAkOCILf1343vBggICAgICAgICAgICAgICLjAr7bibVy8997t4s+P35wX/btd7nax7gACApYE53Xv1zdLHK21i7zqvd9aO/Wrfuw2wCaP/bRzzwAgIGA5UDLHaYBfDznlPJ68yJN6x/LQ2ZMSICBgfbC1mUaurX30z5FthqEXMymNC8k2gICA/w3oYwy7aPLY3YYi09DHAAEBi4PzBx2K2GykhVKFjEvmpEVCs00GAAEBq4ErfALik5b9Cw9AQMCKYIpUnfDI5Y0nnwMEBKwIhlKFL3LI8kdKMDN0OvPZYrkTEBCwJCilClsOtWxzuY/ZiNQtTpqHxj+5EOpfAhAQsCA4M4eveMjNNBTJMV61MpQ/BggIWAv0kcQlPjmLmp5TPsZ7bVyiw5e1ZAIICFgSDL0Stshx0pwihoS+aq2F6Ktm8xUgIGBBUDLHbMF+eHLG6aHFSt9reShnG0BAwELg7aF0GXTvspyRFkrHL56WTAEBAQ8OeldVX0VNW9cQcCphXBJBa8YEBAQsCK6PaXViVjgljXhzdmjGjBehiwIQELAamLuu4+gjbN7yPZ+2WSPsBgUEBCwISqT9GTbGUDDlobD84edIAAICVgRDI5WMS1L/pZcqNhvC55cwABAQsCBoFc5tdULDdnaGPCSfGb9ZW8UBAQELgnoO5bbcGQ6IsHKnN2P6Z54ufwACAlYANcIih4Rt1vBY8xQ15lDEHwMEBKwFbvqx+2bS4sbj8bU2gwEEBKwJbtsjZraJd4LuMY+Wetk4AQgIeGAwnFu/c/RkOlrK3usbvp6MbQABAUuB4cTa2HIZ+rHTnXSWLSAgYEHQuiytCWLTj23LodKPHR6TGcze2iggIODhQR1jmLEGHNp1nV7lF2vJ5G'  // Network dashboard URL QR code
+    'network.qrcode': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAYgAAAGIAQAAAABzOEqLAAACEklEQVR4nO2XQY7EMAgE8/9PZ7WhG3CkHOYAp8pqMzamfGk1kOv+9bkgICAgICCCuOK5r+tZ31ePxEt7iBWiiRmUsv6DT17LgFggpFspltoqpAyIVSLUeqdISIhtIraibC45CmKTEKejekWr+a6JECOE+/3339fMADFA+NHZsTszIFYIi1S2Kt2egCcBiBWipbv1VP+Rqi9HQQwSClXuy0O6qjsKYo7QqxupucjfkRBrhAbiyNG5RgIvU0OIcSKaSjsx3NuORwOIDaJ1evcWt5lmNIgVotUuuyn9VcThQYhJQieaAELNs9dkw4FYIKyXnVT3eFYOS0GsEA1KtayoIhoNIDYIy1P9RpFqNK9yCDFJHHlStHq/zJUnENPE9cI1L1dxKwxigbBkoVvFVOFyNmjXQgwSWeaq0qXJTFhHiAXC41goqL1I1bo0HsQ40QqdTt19jlZ0eBBimtC/PSRfae8AxAbhZJW401bHfRALRDSb+kDxSf52L0GMExbIyqn5xCVxY99ADBPpm2YmpanaSVyIFaI3/hBKYqbN0lUQC4Ts9Ly9OJduPxAbhB83e+kWOYe4EBuEvxK1sYnUdcpUTXOISUJLa+VANRu1HIglwvo98ZzMVOgcSdtB7BDK1hAg7XJaPiocxAJhKHO9an6D2CBcyaq0WcqgZDeIHULHoVO/4TlKU0HsED89EBAQEBA3xP0HUHCq6tODNOAAAAAASUVORK5CYII='  // Network dashboard URL QR code
 };
 
 // Note: MM_TO_PX_RATIO is defined globally in fabric-extensions.js (loaded before this file)
@@ -146,8 +146,9 @@ function replacePlaceholders(text, placeholders) {
 
 /**
  * Create a preview canvas with template and placeholders
+ * Returns a promise that resolves when all async content (like QR images) is loaded
  */
-function createPreviewCanvas(templateJson, pageWidthMm, pageHeightMm) {
+async function createPreviewCanvas(templateJson, pageWidthMm, pageHeightMm) {
     // Generate placeholder map
     const placeholders = generatePlaceholderMap(templateJson);
 
@@ -169,18 +170,22 @@ function createPreviewCanvas(templateJson, pageWidthMm, pageHeightMm) {
         selection: false
     });
 
-    // Load template objects
-    loadTemplateObjectsToCanvas(previewTemplate, previewCanvas, placeholders);
+    // Load template objects and wait for any async images to load
+    const loadPromises = loadTemplateObjectsToCanvas(previewTemplate, previewCanvas, placeholders);
+    await Promise.all(loadPromises);
 
     return previewCanvas;
 }
 
 /**
  * Load template objects to canvas for preview
+ * Returns array of promises for any async image loads
  */
 function loadTemplateObjectsToCanvas(templateJson, canvas, placeholders) {
+    const loadPromises = [];
+
     if (!templateJson || !templateJson.objects) {
-        return;
+        return loadPromises;
     }
 
     templateJson.objects.forEach(obj => {
@@ -189,6 +194,13 @@ function loadTemplateObjectsToCanvas(templateJson, canvas, placeholders) {
         try {
             switch (obj.type) {
                 case 'qrcode':
+                    console.log('[QR Debug] Processing qrcode object:', {
+                        type: obj.type,
+                        hasProperties: !!obj.properties,
+                        dataSource: obj.properties?.dataSource,
+                        hasPreviewData: !!obj.previewData,
+                        previewData: obj.previewData ? obj.previewData.substring(0, 50) : null
+                    });
                     fabricObject = createQRCode({
                         left: mmToPx(obj.left),
                         top: mmToPx(obj.top),
@@ -252,39 +264,74 @@ function loadTemplateObjectsToCanvas(templateJson, canvas, placeholders) {
                     fabricObject.set('angle', obj.angle);
                 }
 
+                let shouldAddToCanvas = true;
+
                 // Replace QR code placeholder with real image if we have QR data
+                console.log('[QR Debug] Checking replacement condition:', {
+                    type: obj.type,
+                    isQrcode: obj.type === 'qrcode',
+                    hasProperties: !!obj.properties,
+                    hasDataSource: !!obj.properties?.dataSource,
+                    dataSource: obj.properties?.dataSource
+                });
                 if (obj.type === 'qrcode' && obj.properties?.dataSource) {
                     const dataSource = obj.properties.dataSource.toLowerCase();
                     if (dataSource === 'device.qrcode' || dataSource === 'network.qrcode') {
-                        // Use real QR code from properties.data (set by replacePlaceholdersInTemplate)
-                        // or fall back to PLACEHOLDER_VALUES for preview mode
-                        const qrDataUri = obj.properties.data || PLACEHOLDER_VALUES[dataSource];
+                        // Use real QR code from properties.data (export mode) or previewData (preview mode)
+                        // or fall back to PLACEHOLDER_VALUES
+                        const qrDataUri = obj.properties.data || obj.previewData || PLACEHOLDER_VALUES[dataSource];
                         console.log('[QR Render] DataSource:', obj.properties.dataSource,
-                                    'Has data:', !!obj.properties.data,
-                                    'Using fallback:', !obj.properties.data && !!PLACEHOLDER_VALUES[dataSource],
+                                    'Has properties.data:', !!obj.properties.data,
+                                    'Has previewData:', !!obj.previewData,
+                                    'Using fallback:', !obj.properties.data && !obj.previewData && !!PLACEHOLDER_VALUES[dataSource],
                                     'QR URI length:', qrDataUri ? qrDataUri.length : 0);
                         if (qrDataUri) {
-                            // Load real QR code image
-                            fabric.Image.fromURL(qrDataUri, function(img) {
-                                img.set({
-                                    left: fabricObject.left,
-                                    top: fabricObject.top,
-                                    scaleX: fabricObject.width / img.width,
-                                    scaleY: fabricObject.height / img.height,
-                                    angle: fabricObject.angle || 0
-                                });
-                                canvas.remove(fabricObject);
-                                canvas.add(img);
-                                canvas.renderAll();
-                                console.log('[QR Render] Successfully replaced placeholder with real QR image');
-                            }, null, { crossOrigin: 'anonymous' });
+                            console.log('[QR Render] Attempting to load QR image...');
+                            console.log('[QR Render] Data URI prefix:', qrDataUri.substring(0, 50));
+
+                            // Create promise for async QR image load
+                            const qrLoadPromise = new Promise((resolve, reject) => {
+                                fabric.Image.fromURL(qrDataUri, function(img) {
+                                    if (!img || !img.width) {
+                                        console.error('[QR Render] Image loaded but has no dimensions');
+                                        reject(new Error('QR image has no dimensions'));
+                                        return;
+                                    }
+                                    console.log('[QR Render] Image loaded - dimensions:', img.width, 'x', img.height);
+                                    console.log('[QR Render] Placeholder dimensions:', fabricObject.width, 'x', fabricObject.height);
+
+                                    img.set({
+                                        left: fabricObject.left,
+                                        top: fabricObject.top,
+                                        scaleX: fabricObject.width / img.width,
+                                        scaleY: fabricObject.height / img.height,
+                                        angle: fabricObject.angle || 0,
+                                        originX: fabricObject.originX || 'center',
+                                        originY: fabricObject.originY || 'center'
+                                    });
+                                    console.log('[QR Render] Image scaled - scaleX:', img.scaleX, 'scaleY:', img.scaleY);
+
+                                    canvas.add(img);
+                                    canvas.renderAll();
+                                    console.log('[QR Render] Successfully added QR image to canvas');
+                                    resolve();
+                                }, function(error) {
+                                    console.error('[QR Render] Error loading image:', error);
+                                    reject(error);
+                                }, { crossOrigin: 'anonymous' });
+                            });
+
+                            loadPromises.push(qrLoadPromise);
+                            shouldAddToCanvas = false;  // Don't add placeholder - loading real QR instead
                         } else {
                             console.warn('[QR Render] No QR data URI available for', dataSource);
                         }
                     }
                 }
 
-                canvas.add(fabricObject);
+                if (shouldAddToCanvas) {
+                    canvas.add(fabricObject);
+                }
             }
         } catch (error) {
             console.error(`Error loading object of type ${obj.type}:`, error);
@@ -292,6 +339,7 @@ function loadTemplateObjectsToCanvas(templateJson, canvas, placeholders) {
     });
 
     canvas.renderAll();
+    return loadPromises;
 }
 
 /**
