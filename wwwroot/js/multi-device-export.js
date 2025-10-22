@@ -356,6 +356,71 @@ function formatMatchReason(reason) {
 }
 
 /**
+ * HTML-escapes a string to prevent XSS attacks
+ */
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+/**
+ * Validates that stickers fit on selected page size
+ * Returns error object { message, deviceName } if validation fails, null if valid
+ */
+function validateStickersForPageSize(exportDataList, pageSizeName) {
+    if (!exportDataList || !exportDataList.length) {
+        return null;
+    }
+
+    // Page size definitions (in mm) - match server-side
+    const pageSizes = {
+        'A4': { width: 210, height: 297, name: 'A4' },
+        'A5': { width: 148, height: 210, name: 'A5' },
+        'A6': { width: 105, height: 148, name: 'A6' },
+        '4x6': { width: 101.6, height: 152.4, name: '4"×6"' },
+        'Letter': { width: 215.9, height: 279.4, name: 'US Letter' },
+        'Legal': { width: 215.9, height: 355.6, name: 'US Legal' }
+    };
+
+    const pageSize = pageSizes[pageSizeName];
+    if (!pageSize) {
+        return null; // Unknown page size, let server validate
+    }
+
+    // Calculate usable area (no horizontal margins, 2mm vertical margins, +2mm tolerance)
+    const verticalMarginMm = 2;
+    const horizontalMarginMm = 0;
+    const tolerance = 2;
+    const maxWidth = pageSize.width - (2 * horizontalMarginMm) + tolerance;
+    const maxHeight = pageSize.height - (2 * verticalMarginMm) + tolerance;
+
+    // Check each template
+    for (const exportData of exportDataList) {
+        const template = exportData.matchedTemplate;
+        if (!template) continue;
+
+        const stickerWidth = template.pageWidth;
+        const stickerHeight = template.pageHeight;
+
+        if (stickerWidth > maxWidth || stickerHeight > maxHeight) {
+            const deviceName = exportData.device?.name || 'Unknown device';
+            // Return object with separate fields to avoid HTML injection
+            return {
+                stickerWidth: stickerWidth.toFixed(1),
+                stickerHeight: stickerHeight.toFixed(1),
+                pageName: pageSize.name,
+                maxWidth: maxWidth.toFixed(1),
+                maxHeight: maxHeight.toFixed(1),
+                deviceName: deviceName  // Will be escaped when displayed
+            };
+        }
+    }
+
+    return null; // All stickers fit
+}
+
+/**
  * Exports devices as a multi-page PDF with grid layout (server-side rendering)
  */
 async function exportBulkAsPdf(selected, exportDataList, dpi, background) {
@@ -363,6 +428,34 @@ async function exportBulkAsPdf(selected, exportDataList, dpi, background) {
 
     const layout = document.querySelector('input[name="pdf-layout"]:checked')?.value || 'auto-fit';
     const pageSize = document.getElementById('pdfPageSize')?.value || 'A4';
+
+    // Validate stickers fit on selected page size
+    const validationError = validateStickersForPageSize(exportDataList, pageSize);
+    if (validationError) {
+        // Show error in modal instead of notification
+        const modal = bulkExportState.bulkExportModal;
+        const progressSection = modal.querySelector('#exportProgressSection');
+        progressSection.style.display = 'block';
+
+        // Build error message with HTML-escaped device name
+        const escapedDeviceName = escapeHtml(validationError.deviceName);
+        progressSection.innerHTML = `
+            <div style="padding: 20px; text-align: center;">
+                <h3 style="color: #f44336; margin-bottom: 15px;">⚠ Page Size Error</h3>
+                <p style="margin-bottom: 20px; line-height: 1.6;">
+                    Sticker size <strong>${validationError.stickerWidth}mm × ${validationError.stickerHeight}mm</strong> is too large for <strong>${validationError.pageName}</strong> page.<br><br>
+                    Available space: <strong>${validationError.maxWidth}mm × ${validationError.maxHeight}mm</strong> (no side margins, 2mm top/bottom margins, +2mm tolerance).<br><br>
+                    Device: <em>${escapedDeviceName}</em><br><br>
+                    <strong>Suggestion:</strong> Choose a larger page size (e.g., Letter or A4), or use a smaller sticker template.
+                </p>
+                <button onclick="closeBulkExportModal()" class="btn-primary" style="padding: 10px 20px;">
+                    Close and Change Page Size
+                </button>
+            </div>
+        `;
+        return;
+    }
+
     const images = [];
     const failedDevices = [];
     bulkExportState.exportCancelled = false;

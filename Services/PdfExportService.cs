@@ -52,13 +52,18 @@ public class PdfExportService
             // Get page size
             var pageSize = PageSizes.GetPageSize(request.PageSize);
 
+            // Validate that stickers fit on page
+            ValidateStickersFitPage(request.Images, pageSize, request.Layout);
+
             // Create PDF document
             var document = Document.Create(container =>
             {
                 container.Page(page =>
                 {
                     page.Size(pageSize.WidthMm, pageSize.HeightMm, Unit.Millimetre);
-                    page.Margin(10, Unit.Millimetre);
+                    // Label printing: no horizontal margins, 2mm vertical margins
+                    page.MarginVertical(2, Unit.Millimetre);
+                    page.MarginHorizontal(0, Unit.Millimetre);
 
                     page.Content().Column(column =>
                     {
@@ -82,6 +87,78 @@ public class PdfExportService
     }
 
     /// <summary>
+    /// Validates that all stickers can fit on the selected page size
+    /// </summary>
+    private void ValidateStickersFitPage(List<DeviceImageData> images, PageSize pageSize, string layout)
+    {
+        if (!images.Any())
+            return;
+
+        // Get page dimensions minus margins (label printing: no horizontal, 2mm vertical)
+        var verticalMarginMm = 2f;
+        var horizontalMarginMm = 0f;
+        var usableWidth = pageSize.WidthMm - (2 * horizontalMarginMm);
+        var usableHeight = pageSize.HeightMm - (2 * verticalMarginMm);
+
+        // Check each sticker
+        foreach (var image in images)
+        {
+            var stickerWidth = (float)image.WidthMm;
+            var stickerHeight = (float)image.HeightMm;
+
+            // Allow 2mm tolerance for near-fits (printer tolerance + rounding)
+            var tolerance = 2f;
+
+            // Check if sticker fits in landscape orientation
+            bool fitsLandscape = stickerWidth <= usableWidth + tolerance && stickerHeight <= usableHeight + tolerance;
+
+            // Check if sticker fits in portrait orientation (rotated 90°)
+            bool fitsPortrait = stickerHeight <= usableWidth + tolerance && stickerWidth <= usableHeight + tolerance;
+
+            // Sticker must fit in at least one orientation
+            if (!fitsLandscape && !fitsPortrait)
+            {
+                throw new InvalidOperationException(
+                    $"Sticker size ({stickerWidth:F1}mm × {stickerHeight:F1}mm) is too large for {GetPageSizeName(pageSize)} " +
+                    $"page (usable area: {usableWidth:F1}mm × {usableHeight:F1}mm, no side margins, 2mm top/bottom margins). " +
+                    $"Device: {image.DeviceName}. " +
+                    $"Tried both landscape and portrait (90° rotated) orientations. " +
+                    $"Please choose a larger page size (e.g., Letter or A4).");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets a friendly name for the page size
+    /// </summary>
+    private string GetPageSizeName(PageSize pageSize)
+    {
+        if (pageSize.WidthMm == 210 && pageSize.HeightMm == 297) return "A4";
+        if (pageSize.WidthMm == 148 && pageSize.HeightMm == 210) return "A5";
+        if (pageSize.WidthMm == 105 && pageSize.HeightMm == 148) return "A6";
+        if (Math.Abs(pageSize.WidthMm - 101.6f) < 1 && Math.Abs(pageSize.HeightMm - 152.4f) < 1) return "4\"×6\"";
+        if (Math.Abs(pageSize.WidthMm - 215.9f) < 1 && Math.Abs(pageSize.HeightMm - 279.4f) < 1) return "Letter";
+        if (Math.Abs(pageSize.WidthMm - 215.9f) < 1 && Math.Abs(pageSize.HeightMm - 355.6f) < 1) return "Legal";
+        return $"{pageSize.WidthMm:F1}mm × {pageSize.HeightMm:F1}mm";
+    }
+
+    /// <summary>
+    /// Checks if sticker should be rotated 90° to fit better on page
+    /// </summary>
+    private bool ShouldRotateSticker(float stickerWidth, float stickerHeight, PageSize pageSize)
+    {
+        var usableWidth = pageSize.WidthMm;
+        var usableHeight = pageSize.HeightMm - 4f; // Account for vertical margins
+
+        // Check if sticker doesn't fit in landscape but would fit in portrait
+        bool fitsLandscape = stickerWidth <= usableWidth && stickerHeight <= usableHeight;
+        bool fitsPortrait = stickerHeight <= usableWidth && stickerWidth <= usableHeight;
+
+        // Rotate if it doesn't fit landscape but does fit portrait
+        return !fitsLandscape && fitsPortrait;
+    }
+
+    /// <summary>
     /// Generate auto-fit grid layout (maximize stickers per page)
     /// </summary>
     private void GenerateAutoFitLayout(List<DeviceImageData> images, ColumnDescriptor column, PageSize pageSize)
@@ -90,24 +167,32 @@ public class PdfExportService
             return;
 
         // Get sticker dimensions from first image (assume all same size)
-        var stickerWidth = images[0].WidthMm;
-        var stickerHeight = images[0].HeightMm;
+        var stickerWidth = (float)images[0].WidthMm;
+        var stickerHeight = (float)images[0].HeightMm;
+
+        // Check if we should rotate stickers 90° for better fit
+        var shouldRotate = ShouldRotateSticker(stickerWidth, stickerHeight, pageSize);
+        if (shouldRotate)
+        {
+            // Swap dimensions for rotated stickers
+            (stickerWidth, stickerHeight) = (stickerHeight, stickerWidth);
+            Console.WriteLine($"[PDF Export] Rotating stickers 90° for better fit on {GetPageSizeName(pageSize)}");
+        }
 
         // Calculate usable area (page minus margins)
-        var marginMm = 10f;
-        var usableWidth = pageSize.WidthMm - (2 * marginMm);
-        var usableHeight = pageSize.HeightMm - (2 * marginMm);
+        var verticalMarginMm = 2f;  // Top/bottom margins
+        var horizontalMarginMm = 0f;  // No left/right margins (full width)
+        var usableWidth = pageSize.WidthMm - (2 * horizontalMarginMm);
+        var usableHeight = pageSize.HeightMm - (2 * verticalMarginMm);
 
         // Calculate grid dimensions
         var cols = Math.Max(1, (int)Math.Floor(usableWidth / stickerWidth));
         var rows = Math.Max(1, (int)Math.Floor(usableHeight / stickerHeight));
         var stickersPerPage = cols * rows;
 
-        // Calculate spacing to center grid on page
-        var totalGridWidth = cols * stickerWidth;
-        var totalGridHeight = rows * stickerHeight;
-        var horizontalSpacing = (usableWidth - totalGridWidth) / (cols + 1);
-        var verticalSpacing = (usableHeight - totalGridHeight) / (rows + 1);
+        // Calculate spacing
+        var gapX = cols > 1 ? (usableWidth - (cols * stickerWidth)) / (cols - 1) : 0;
+        var gapY = rows > 1 ? (usableHeight - (rows * stickerHeight)) / (rows - 1) : 0;
 
         // Group images into pages
         var pageGroups = images
@@ -123,34 +208,50 @@ public class PdfExportService
 
             if (pageIndex > 0)
             {
-                // Add page break (new page)
                 column.Item().PageBreak();
             }
 
-            // Create grid for this page
+            // Create grid for this page using simple column/row layout
             column.Item().Column(pageColumn =>
             {
                 for (int row = 0; row < rows; row++)
                 {
+                    if (row > 0)
+                    {
+                        pageColumn.Item().Height(gapY, Unit.Millimetre);
+                    }
+
                     pageColumn.Item().Row(rowContainer =>
                     {
-                        rowContainer.Spacing((float)verticalSpacing, Unit.Millimetre);
-
                         for (int col = 0; col < cols; col++)
                         {
                             var imageIndex = row * cols + col;
+
+                            if (col > 0)
+                            {
+                                rowContainer.ConstantItem(gapX, Unit.Millimetre);
+                            }
+
                             if (imageIndex < pageImages.Count)
                             {
                                 var imageData = pageImages[imageIndex];
-                                rowContainer.RelativeItem().Width((float)stickerWidth, Unit.Millimetre)
-                                    .Height((float)stickerHeight, Unit.Millimetre)
-                                    .PaddingHorizontal((float)horizontalSpacing / 2, Unit.Millimetre)
-                                    .Image(Convert.FromBase64String(imageData.ImageBase64));
+                                var imageBytes = Convert.FromBase64String(imageData.ImageBase64);
+
+                                var container = rowContainer.ConstantItem(stickerWidth, Unit.Millimetre)
+                                    .Height(stickerHeight, Unit.Millimetre);
+
+                                if (shouldRotate)
+                                {
+                                    container.RotateRight().Image(imageBytes);
+                                }
+                                else
+                                {
+                                    container.Image(imageBytes);
+                                }
                             }
                             else
                             {
-                                // Empty cell
-                                rowContainer.RelativeItem().Width((float)stickerWidth, Unit.Millimetre);
+                                rowContainer.ConstantItem(stickerWidth, Unit.Millimetre);
                             }
                         }
                     });
@@ -170,17 +271,38 @@ public class PdfExportService
 
             if (i > 0)
             {
-                // Add page break (new page)
                 column.Item().PageBreak();
             }
 
+            // Convert base64 to bytes
+            var imageBytes = Convert.FromBase64String(imageData.ImageBase64);
+
+            // Check if we should rotate this sticker
+            var stickerWidth = (float)imageData.WidthMm;
+            var stickerHeight = (float)imageData.HeightMm;
+            var shouldRotate = ShouldRotateSticker(stickerWidth, stickerHeight, pageSize);
+
+            if (shouldRotate)
+            {
+                // Swap dimensions for rotated sticker
+                (stickerWidth, stickerHeight) = (stickerHeight, stickerWidth);
+            }
+
             // Center sticker on page
-            column.Item()
+            var container = column.Item()
                 .AlignCenter()
                 .AlignMiddle()
-                .Width((float)imageData.WidthMm, Unit.Millimetre)
-                .Height((float)imageData.HeightMm, Unit.Millimetre)
-                .Image(Convert.FromBase64String(imageData.ImageBase64));
+                .Width(stickerWidth, Unit.Millimetre)
+                .Height(stickerHeight, Unit.Millimetre);
+
+            if (shouldRotate)
+            {
+                container.RotateRight().Image(imageBytes);
+            }
+            else
+            {
+                container.Image(imageBytes);
+            }
         }
     }
 }
