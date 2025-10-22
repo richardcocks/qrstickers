@@ -895,7 +895,7 @@ input[type="color"].form-control {
 }
 
 /* Responsive design for device export modal */
-@media (max-width: 900px) {
+@media (max-width: 1000px) {
     .device-export-modal .modal-content {
         width: 95%;
         margin: 5vh auto;

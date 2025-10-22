@@ -54,6 +54,19 @@ public class SyncStatusModel : PageModel
         {
             _logger.LogInformation("Manual sync triggered for connection {ConnectionId}", connection.Id);
 
+            // Reset sync status BEFORE starting background task to prevent redirect
+            var existingStatus = await _db.SyncStatuses.FirstOrDefaultAsync(s => s.ConnectionId == connection.Id);
+            if (existingStatus != null)
+            {
+                existingStatus.Status = SyncState.InProgress;
+                existingStatus.LastSyncStartedAt = DateTime.UtcNow;
+                existingStatus.CurrentStep = "Starting sync...";
+                existingStatus.CurrentStepNumber = 0;
+                existingStatus.TotalSteps = 3;
+                existingStatus.ErrorMessage = null;
+                await _db.SaveChangesAsync();
+            }
+
             // Trigger background sync (fire and forget)
             var connId = connection.Id;
             _ = Task.Run(async () =>

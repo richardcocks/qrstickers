@@ -110,7 +110,7 @@ function createDeviceExportModal() {
     modal.className = 'modal device-export-modal';
     modal.id = 'deviceExportModal';
     modal.innerHTML = `
-        <div class="modal-content" style="max-width: 900px;">
+        <div class="modal-content" style="max-width: 1000px;">
             <div class="modal-header">
                 <h2 id="modalTitle">Export Device Sticker</h2>
                 <button class="modal-close-btn" onclick="closeDeviceExportModal()">✕</button>
@@ -227,6 +227,9 @@ function renderDeviceExportModalUI() {
                         300 DPI (Print)
                     </label>
                 </div>
+                <p style="font-size: 11px; color: #666; margin-top: 8px; font-style: italic;">
+                    Note: Preview is shown at 96 DPI. Selected DPI applies to exported file.
+                </p>
 
                 <label><strong>Background:</strong></label>
                 <div class="radio-group">
