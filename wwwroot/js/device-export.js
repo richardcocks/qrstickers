@@ -340,7 +340,8 @@ function createDeviceDataMap(exportData) {
     const tags = device.tags || [];
     const tagsStr = tags.join(', ');
 
-    return {
+    // Build base data map
+    const dataMap = {
         device: {
             id: device.id,
             serial: device.serial || '',
@@ -379,6 +380,22 @@ function createDeviceDataMap(exportData) {
         },
         global: exportData.globalVariables || {}
     };
+
+    // Add custom images with lowercase binding keys
+    // Format: customimage.image_42 → image data URI
+    if (exportData.uploadedImages && exportData.uploadedImages.length > 0) {
+        console.log('[Device Export] Adding', exportData.uploadedImages.length, 'custom images to data map');
+
+        exportData.uploadedImages.forEach(image => {
+            const bindingKey = `customimage.image_${image.id}`;
+            // Add to root level for easy lookup
+            dataMap[bindingKey] = image.dataUri;
+
+            console.log(`[Device Export] Mapped ${bindingKey} → data URI (${image.name})`);
+        });
+    }
+
+    return dataMap;
 }
 
 /**
@@ -426,7 +443,14 @@ function resolveDataSource(dataSource, dataMap) {
     const entityLower = entity.toLowerCase();
     const fieldLower = field.toLowerCase();
 
-    // Try exact match first, then lowercase match
+    // Check for custom images first (special case: customImage.Image_42)
+    // These are stored at root level with lowercase keys: customimage.image_42
+    const customImageKey = `${entityLower}.${fieldLower}`;
+    if (dataMap[customImageKey] !== undefined) {
+        return dataMap[customImageKey];
+    }
+
+    // Try exact match first, then lowercase match for regular entities
     let value = dataMap[entity]?.[field];
     if (value === undefined) {
         value = dataMap[entityLower]?.[fieldLower];

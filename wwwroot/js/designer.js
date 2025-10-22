@@ -12,15 +12,18 @@ let currentZoom = 1;
 let stickerBoundary = null; // Reference to the boundary rectangle
 let boundaryLeft = 0; // Boundary position
 let boundaryTop = 0;
+let uploadedImages = []; // Uploaded custom images for this connection
 
 /**
  * Initialize the designer
  */
-function initDesigner(templateData, editMode, systemTemplate) {
+function initDesigner(templateData, editMode, systemTemplate, images) {
     currentTemplate = templateData;
     isEditMode = editMode;
     isSystemTemplate = systemTemplate;
+    uploadedImages = images || [];
     console.log(templateData);
+    console.log('[Designer] Loaded', uploadedImages.length, 'uploaded images');
     // Initialize Fabric.js canvas
     initCanvas(templateData.pageWidth, templateData.pageHeight);
 
@@ -372,14 +375,9 @@ function addElementToCanvas(elementType) {
             break;
 
         case 'image':
-            element = createImagePlaceholder({
-                left: centerX - 50,
-                top: centerY - 50,
-                width: 100,
-                height: 100,
-                dataSource: 'connection.CompanyLogoUrl'
-            });
-            break;
+            // Open custom image selector modal instead of adding directly
+            openCustomImageSelector({ x: centerX, y: centerY });
+            return; // Don't add element yet
 
         case 'rectangle':
             element = createRectangle({
@@ -442,14 +440,9 @@ function addElementToCanvasAtPosition(elementType, x, y) {
             break;
 
         case 'image':
-            element = createImagePlaceholder({
-                left: x - 50,
-                top: y - 50,
-                width: 100,
-                height: 100,
-                dataSource: 'connection.CompanyLogoUrl'
-            });
-            break;
+            // Open custom image selector modal instead of adding directly
+            openCustomImageSelector({ x: x, y: y });
+            return; // Don't add element yet
 
         case 'rectangle':
             element = createRectangle({
@@ -760,8 +753,41 @@ function updatePropertyInspector() {
         document.getElementById('textColor').value = activeObject.fill || '#000000';
     } else if (objectType === 'image') {
         document.getElementById('imageProperties').style.display = 'flex';
-        document.getElementById('imageDataSource').value = activeObject.get('dataSource') || '';
-        document.getElementById('imageUrl').value = activeObject.get('src') || '';
+
+        // Check if this is a custom image
+        const customImageId = activeObject.get('customImageId');
+        const customImageName = activeObject.get('customImageName');
+
+        if (customImageId) {
+            // Custom image - show custom info
+            document.getElementById('imageDataSource').value = activeObject.get('dataSource') || '';
+            document.getElementById('imageUrl').value = '(Custom Image)';
+            document.getElementById('imageUrl').disabled = true;
+
+            // Show custom image info
+            const customImageInfo = document.getElementById('customImageInfo');
+            if (customImageInfo) {
+                customImageInfo.style.display = 'block';
+                customImageInfo.innerHTML = `
+                    <div style="padding: 10px; background: #f0f0f0; border-radius: 4px; margin: 10px 0;">
+                        <p style="margin: 5px 0;"><strong>Custom Image:</strong> ${customImageName}</p>
+                        <p style="margin: 5px 0; font-size: 11px;"><code>${activeObject.get('dataSource')}</code></p>
+                        <button type="button" class="btn-primary" style="margin-top: 10px; padding: 5px 10px; font-size: 12px;" onclick="replaceCustomImage()">Replace Image</button>
+                    </div>
+                `;
+            }
+        } else {
+            // Regular image
+            document.getElementById('imageDataSource').value = activeObject.get('dataSource') || '';
+            document.getElementById('imageUrl').value = activeObject.get('src') || '';
+            document.getElementById('imageUrl').disabled = false;
+
+            // Hide custom image info
+            const customImageInfo = document.getElementById('customImageInfo');
+            if (customImageInfo) {
+                customImageInfo.style.display = 'none';
+            }
+        }
     } else if (objectType === 'rect') {
         document.getElementById('rectangleProperties').style.display = 'flex';
         document.getElementById('rectFill').value = activeObject.fill || '#ffffff';
@@ -895,14 +921,58 @@ function loadTemplateDesign(templateJsonString) {
                     break;
 
                 case 'image':
-                    fabricObject = createImagePlaceholder({
-                        left: mmToPx(obj.left) + boundaryLeft,
-                        top: mmToPx(obj.top) + boundaryTop,
-                        width: mmToPx(obj.width || 50),
-                        height: mmToPx(obj.height || 50),
-                        dataSource: obj.properties?.dataSource || '',
-                        src: obj.src || ''
-                    });
+                    // Check if this is a custom image
+                    if (obj.properties?.customImageId) {
+                        // Load custom image from uploaded images
+                        const customImageData = uploadedImages.find(img => img.id === obj.properties.customImageId);
+                        if (customImageData) {
+                            // Create fabric.Image from data URI (async, so handle differently)
+                            fabric.Image.fromURL(customImageData.dataUri, function(img) {
+                                const left = mmToPx(obj.left) + boundaryLeft;
+                                const top = mmToPx(obj.top) + boundaryTop;
+                                const width = mmToPx(obj.width || 50);
+                                const height = mmToPx(obj.height || 50);
+
+                                img.set({
+                                    left: left,
+                                    top: top,
+                                    scaleX: width / img.width,
+                                    scaleY: height / img.height,
+                                    angle: obj.angle || 0
+                                });
+
+                                // Restore custom properties
+                                img.set('customImageId', obj.properties.customImageId);
+                                img.set('customImageName', obj.properties.customImageName);
+                                img.set('dataSource', obj.properties.dataSource);
+                                img.set('type', 'image');
+
+                                canvas.add(img);
+                                canvas.renderAll();
+                            }, { crossOrigin: 'anonymous' });
+                            fabricObject = null; // Skip adding placeholder
+                        } else {
+                            // Image not found, use placeholder
+                            fabricObject = createImagePlaceholder({
+                                left: mmToPx(obj.left) + boundaryLeft,
+                                top: mmToPx(obj.top) + boundaryTop,
+                                width: mmToPx(obj.width || 50),
+                                height: mmToPx(obj.height || 50),
+                                dataSource: obj.properties?.dataSource || '',
+                                src: obj.src || ''
+                            });
+                        }
+                    } else {
+                        // Regular image placeholder
+                        fabricObject = createImagePlaceholder({
+                            left: mmToPx(obj.left) + boundaryLeft,
+                            top: mmToPx(obj.top) + boundaryTop,
+                            width: mmToPx(obj.width || 50),
+                            height: mmToPx(obj.height || 50),
+                            dataSource: obj.properties?.dataSource || '',
+                            src: obj.src || ''
+                        });
+                    }
                     break;
 
                 case 'rect':
@@ -979,6 +1049,184 @@ function updateZoomDisplay() {
  */
 function updateStatus(message) {
     document.getElementById('statusText').textContent = message;
+}
+
+/**
+ * Custom Image Selector Modal
+ */
+
+let customImageSelectorModal = null;
+let customImageSelectorPosition = null;
+
+/**
+ * Open custom image selector modal
+ */
+function openCustomImageSelector(position) {
+    customImageSelectorPosition = position;
+
+    // Check if there are any uploaded images
+    if (!uploadedImages || uploadedImages.length === 0) {
+        alert('No custom images uploaded yet.\n\nPlease upload images from the Connections page → Manage Images');
+        return;
+    }
+
+    // Create modal if doesn't exist
+    if (!customImageSelectorModal) {
+        createCustomImageSelectorModal();
+    }
+
+    // Populate modal with images
+    renderCustomImageGrid();
+
+    // Show modal
+    customImageSelectorModal.style.display = 'flex';
+    updateStatus('Select a custom image');
+}
+
+/**
+ * Create custom image selector modal HTML
+ */
+function createCustomImageSelectorModal() {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.id = 'customImageSelectorModal';
+    modal.style.cssText = 'display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center;';
+
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 800px; max-height: 80vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h3>Select Custom Image</h3>
+                <button class="modal-close" onclick="closeCustomImageSelector()">&times;</button>
+            </div>
+            <div class="modal-body" style="flex-direction: column;">
+                <div id="customImageGrid" class="custom-image-grid"></div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeCustomImageSelector()" class="btn-secondary">Cancel</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    customImageSelectorModal = modal;
+
+    // Close on overlay click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeCustomImageSelector();
+        }
+    });
+}
+
+/**
+ * Render grid of uploaded images
+ */
+function renderCustomImageGrid() {
+    const grid = document.getElementById('customImageGrid');
+    if (!grid) return;
+
+    grid.innerHTML = uploadedImages.map(img => `
+        <div class="custom-image-card" style="border: 1px solid #ddd; padding: 15px; margin: 10px; display: inline-block; width: 200px; text-align: center; cursor: pointer; border-radius: 4px;" onclick="selectCustomImage(${img.id})">
+            <div style="width: 150px; height: 150px; margin: 0 auto; display: flex; align-items: center; justify-content: center; background: #f5f5f5; border: 1px solid #ccc;">
+                <img src="${img.dataUri}" style="max-width: 100%; max-height: 100%; object-fit: contain;" alt="${img.name}" />
+            </div>
+            <h4 style="margin: 10px 0 5px 0; font-size: 14px; font-weight: bold;">${img.name}</h4>
+            <code style="font-size: 11px; color: #666; display: block; margin: 5px 0;">{{customImage.Image_${img.id}}}</code>
+            <p style="font-size: 11px; color: #999; margin: 5px 0;">${img.widthPx} × ${img.heightPx} px</p>
+            <button class="btn-primary" style="margin-top: 10px; padding: 5px 15px; font-size: 12px;">Select</button>
+        </div>
+    `).join('');
+}
+
+/**
+ * Select a custom image and add to canvas
+ */
+function selectCustomImage(imageId) {
+    const imageData = uploadedImages.find(img => img.id === imageId);
+    if (!imageData) {
+        console.error('[Designer] Image not found:', imageId);
+        return;
+    }
+
+    // Close modal
+    closeCustomImageSelector();
+
+    // Add to canvas at stored position
+    addCustomImageToCanvas(imageData, customImageSelectorPosition);
+}
+
+/**
+ * Add custom image to canvas with validation
+ */
+function addCustomImageToCanvas(imageData, position) {
+    // Check 4-image limit
+    const existingCustomImages = canvas.getObjects().filter(obj =>
+        obj.get('customImageId') !== undefined
+    );
+
+    if (existingCustomImages.length >= 4) {
+        alert('Maximum 4 custom images per template.\n\nPlease remove an existing custom image before adding another.');
+        return;
+    }
+
+    // Create image object using fabric.Image.fromURL for real image
+    fabric.Image.fromURL(imageData.dataUri, function(img) {
+        // Scale image to reasonable size (max 100px)
+        const maxSize = 100;
+        const scale = Math.min(maxSize / img.width, maxSize / img.height);
+
+        img.set({
+            left: position.x - (img.width * scale) / 2,
+            top: position.y - (img.height * scale) / 2,
+            scaleX: scale,
+            scaleY: scale
+        });
+
+        // Add custom properties for data binding
+        img.set('customImageId', imageData.id);
+        img.set('customImageName', imageData.name);
+        img.set('dataSource', `customImage.Image_${imageData.id}`);
+        img.set('type', 'image'); // Ensure type is 'image'
+
+        // Add to canvas
+        canvas.add(img);
+        canvas.setActiveObject(img);
+        canvas.renderAll();
+
+        updateStatus(`Added custom image: ${imageData.name}`);
+    }, { crossOrigin: 'anonymous' });
+}
+
+/**
+ * Close custom image selector modal
+ */
+function closeCustomImageSelector() {
+    if (customImageSelectorModal) {
+        customImageSelectorModal.style.display = 'none';
+    }
+    updateStatus('Ready');
+}
+
+/**
+ * Replace selected custom image with another one
+ */
+function replaceCustomImage() {
+    const activeObject = canvas.getActiveObject();
+    if (!activeObject || !activeObject.get('customImageId')) {
+        return;
+    }
+
+    // Store current position and size
+    const currentLeft = activeObject.left;
+    const currentTop = activeObject.top;
+    const currentScaleX = activeObject.scaleX;
+    const currentScaleY = activeObject.scaleY;
+
+    // Remove current image
+    canvas.remove(activeObject);
+
+    // Open selector at current position
+    openCustomImageSelector({ x: currentLeft, y: currentTop });
 }
 
 /**

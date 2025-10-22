@@ -223,6 +223,14 @@ app.MapGet("/api/export/device/{deviceId}", async (
                     type = exportData.Connection.GetType().Name
                 },
                 globalVariables = exportData.GlobalVariables,
+                uploadedImages = exportData.UploadedImages.Select(img => new
+                {
+                    id = img.Id,
+                    name = img.Name,
+                    dataUri = img.DataUri,
+                    widthPx = img.WidthPx,
+                    heightPx = img.HeightPx
+                }).ToList(),
                 matchedTemplate = new
                 {
                     id = templateMatch.Template.Id,

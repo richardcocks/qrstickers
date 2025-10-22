@@ -288,6 +288,9 @@
 
                 <!-- Image Properties -->
                 <div id="imageProperties" class="property-panel" style="display: none;">
+                    <div id="customImageInfo" style="display: none;">
+                        <!-- Custom image info populated by JavaScript -->
+                    </div>
                     <div class="property-group">
                         <label>Image Source</label>
                         <select id="imageDataSource" class="form-control">
@@ -491,11 +494,12 @@
         // Initialize designer with template data
         (function() {
             const templateData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Template, JsonSerializerOptions.Web));
+            const uploadedImages = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.UploadedImages, JsonSerializerOptions.Web));
             const editMode = @Model.IsEditMode.ToString().ToLower();
             const systemTemplate = @Model.IsSystemTemplate.ToString().ToLower();
 
             document.addEventListener('DOMContentLoaded', function() {
-                initDesigner(templateData, editMode, systemTemplate);
+                initDesigner(templateData, editMode, systemTemplate, uploadedImages);
             });
         })();
     </script>

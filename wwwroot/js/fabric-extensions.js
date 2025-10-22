@@ -316,7 +316,9 @@ function canvasToTemplateJson(canvas, pageWidth, pageHeight) {
             baseObj.properties = {
                 dataSource: obj.dataSource || obj.get('dataSource') || '',
                 aspectRatio: obj.aspectRatio || obj.get('aspectRatio') || 'contain',
-                placeholder: true
+                placeholder: true,
+                customImageId: obj.customImageId || obj.get('customImageId'),
+                customImageName: obj.customImageName || obj.get('customImageName')
             };
         } else if (obj.type === 'rect') {
             baseObj.fill = obj.fill;

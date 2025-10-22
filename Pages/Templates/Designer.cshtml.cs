@@ -23,6 +23,7 @@ public class DesignerModel : PageModel
 
     public List<Connection> UserConnections { get; set; } = new();
     public List<GlobalVariable> GlobalVariables { get; set; } = new();
+    public List<UploadedImage> UploadedImages { get; set; } = new();
     public bool IsEditMode { get; set; }
     public bool IsSystemTemplate { get; set; }
 
@@ -76,6 +77,12 @@ public class DesignerModel : PageModel
                     .Where(v => v.ConnectionId == template.ConnectionId.Value)
                     .OrderBy(v => v.VariableName)
                     .ToListAsync();
+
+                // Load uploaded images for this connection
+                UploadedImages = await _db.UploadedImages
+                    .Where(i => i.ConnectionId == template.ConnectionId.Value && !i.IsDeleted)
+                    .OrderBy(i => i.Name)
+                    .ToListAsync();
             }
         }
         else
@@ -102,6 +109,12 @@ public class DesignerModel : PageModel
                 GlobalVariables = await _db.GlobalVariables
                     .Where(v => v.ConnectionId == connectionId.Value)
                     .OrderBy(v => v.VariableName)
+                    .ToListAsync();
+
+                // Load uploaded images for this connection
+                UploadedImages = await _db.UploadedImages
+                    .Where(i => i.ConnectionId == connectionId.Value && !i.IsDeleted)
+                    .OrderBy(i => i.Name)
                     .ToListAsync();
             }
         }
@@ -137,6 +150,37 @@ public class DesignerModel : PageModel
         if (string.IsNullOrWhiteSpace(Template.TemplateJson))
         {
             ModelState.AddModelError("", "Template design cannot be empty.");
+            return Page();
+        }
+
+        // Validate custom image limit (max 4 per template)
+        try
+        {
+            var templateJson = System.Text.Json.JsonDocument.Parse(Template.TemplateJson);
+            if (templateJson.RootElement.TryGetProperty("objects", out var objects) && objects.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                int customImageCount = 0;
+                foreach (var obj in objects.EnumerateArray())
+                {
+                    if (obj.TryGetProperty("properties", out var properties) &&
+                        properties.TryGetProperty("customImageId", out var customImageId) &&
+                        customImageId.ValueKind != System.Text.Json.JsonValueKind.Null)
+                    {
+                        customImageCount++;
+                    }
+                }
+
+                if (customImageCount > 4)
+                {
+                    ModelState.AddModelError("", $"Template cannot contain more than 4 custom images. Found: {customImageCount}");
+                    return Page();
+                }
+            }
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            _logger.LogWarning("Invalid template JSON format: {Error}", ex.Message);
+            ModelState.AddModelError("", "Invalid template format.");
             return Page();
         }
 

@@ -81,6 +81,14 @@ public class DeviceExportHelper
         // Retrieve global variables for this connection
         var globalVariables = await GetGlobalVariablesAsync(connectionId);
 
+        // Retrieve uploaded images for this connection
+        var uploadedImages = await _db.UploadedImages
+            .AsNoTracking()
+            .Where(i => i.ConnectionId == connectionId && !i.IsDeleted)
+            .ToListAsync();
+
+        _logger.LogDebug($"[Export] Retrieved {uploadedImages.Count} uploaded images for connection {connectionId}");
+
         // Build the export context
         var context = new DeviceExportContext
         {
@@ -88,7 +96,8 @@ public class DeviceExportHelper
             Network = network,
             Organization = organization,
             Connection = connection,
-            GlobalVariables = globalVariables
+            GlobalVariables = globalVariables,
+            UploadedImages = uploadedImages
         };
 
         _logger.LogInformation($"[Export] Successfully retrieved export data for device {device.Name} ({device.Serial})");
@@ -110,6 +119,30 @@ public class DeviceExportHelper
 
         _logger.LogDebug($"[Export] Retrieved {variables.Count} global variables for connection {connectionId}");
         return variables;
+    }
+
+    /// <summary>
+    /// Tracks usage of custom images (updates LastUsedAt timestamp)
+    /// Call this after determining which images are referenced in the template
+    /// </summary>
+    public async Task TrackImageUsageAsync(int[] imageIds)
+    {
+        if (imageIds == null || imageIds.Length == 0)
+            return;
+
+        _logger.LogDebug($"[Export] Tracking usage for {imageIds.Length} images");
+
+        var images = await _db.UploadedImages
+            .Where(i => imageIds.Contains(i.Id))
+            .ToListAsync();
+
+        foreach (var image in images)
+        {
+            image.LastUsedAt = DateTime.UtcNow;
+        }
+
+        await _db.SaveChangesAsync();
+        _logger.LogDebug($"[Export] Updated LastUsedAt for {images.Count} images");
     }
 
     /// <summary>
@@ -158,6 +191,12 @@ public class DeviceExportHelper
         // Retrieve global variables once
         var globalVariables = await GetGlobalVariablesAsync(connectionId);
 
+        // Retrieve uploaded images once
+        var uploadedImages = await _db.UploadedImages
+            .AsNoTracking()
+            .Where(i => i.ConnectionId == connectionId && !i.IsDeleted)
+            .ToListAsync();
+
         // Retrieve all organizations for this connection
         var organizationIds = devices
             .Where(d => d.Network != null)
@@ -182,7 +221,8 @@ public class DeviceExportHelper
                 Network = device.Network,
                 Organization = organization,
                 Connection = connection,
-                GlobalVariables = globalVariables
+                GlobalVariables = globalVariables,
+                UploadedImages = uploadedImages
             };
         }).ToList();
 
@@ -220,6 +260,11 @@ public class DeviceExportContext
     /// Global variables for the connection (for global.* bindings)
     /// </summary>
     public required Dictionary<string, string> GlobalVariables { get; set; }
+
+    /// <summary>
+    /// Uploaded images for the connection (for customImage.* bindings)
+    /// </summary>
+    public List<UploadedImage> UploadedImages { get; set; } = new();
 
     /// <summary>
     /// The matched/selected template (set by template matching service)
