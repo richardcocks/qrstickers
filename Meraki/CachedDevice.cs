@@ -28,6 +28,12 @@ public class CachedDevice
     public string Serial { get; set; } = null!;
 
     /// <summary>
+    /// QR code data URI (generated from Serial during sync)
+    /// Format: data:image/png;base64,...
+    /// </summary>
+    public string? QRCodeDataUri { get; set; }
+
+    /// <summary>
     /// Device name
     /// </summary>
     public string? Name { get; set; }

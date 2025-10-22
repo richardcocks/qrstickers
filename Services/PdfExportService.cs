@@ -244,11 +244,11 @@ public class PdfExportService
 
                                 if (shouldRotate)
                                 {
-                                    container.RotateRight().Image(imageBytes, ImageScaling.FitArea);
+                                    container.RotateRight().Image(imageBytes).FitArea();
                                 }
                                 else
                                 {
-                                    container.Image(imageBytes, ImageScaling.FitArea);
+                                    container.Image(imageBytes).FitArea();
                                 }
                             }
                             else
@@ -299,11 +299,11 @@ public class PdfExportService
 
             if (shouldRotate)
             {
-                container.RotateRight().Image(imageBytes, ImageScaling.FitArea);
+                container.RotateRight().Image(imageBytes).FitArea();
             }
             else
             {
-                container.Image(imageBytes, ImageScaling.FitArea);
+                container.Image(imageBytes).FitArea();
             }
         }
     }
