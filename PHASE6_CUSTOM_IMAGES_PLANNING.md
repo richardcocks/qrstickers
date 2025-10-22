@@ -1,9 +1,10 @@
 # Phase 6: Custom Image Upload System
 
-**Status:** 📋 Planning
-**Date:** 2025-10-22
+**Status:** 🚧 Phase 6.1 Complete, Phase 6.2 Pending
+**Date Started:** 2025-10-22
+**Date Phase 6.1 Completed:** 2025-10-22
 **Epic:** Phase 6 Custom Assets
-**Related:** Phase 5.7 (QR Code System), Phase 5 (Device Export)
+**Related:** Phase 5.7 (QR Code System), Phase 5 (Device Export), PHASE6.1_IMPLEMENTATION_NOTES.md
 
 ---
 
@@ -19,6 +20,51 @@ Phase 6 introduces a custom image upload system that allows users to upload logo
 - 🗑️ **Safe Deletion** - Transparent placeholder fallback when images deleted
 - 💾 **Data URI Storage** - Consistent with QR code architecture
 - 🎯 **Designer Integration** - Seamless drag-and-drop in template designer
+
+---
+
+## ⚠️ Architectural Change: ID-Based Binding (Phase 6.1)
+
+**Decision Date:** 2025-10-22 (During Phase 6.1 implementation)
+**Changed By:** User feedback during testing
+**Impact:** Improves UX, simplifies validation, provides stable template references
+
+### Original Design (Name-Based Binding)
+
+**Pattern:** `{{customImage.CompanyLogo}}`
+- Name must match `^[A-Za-z0-9_-]+$` (alphanumeric + underscore/dash only)
+- Name must be unique within connection
+- Renaming image breaks templates
+- Restrictive UX (no spaces, no unicode, no emojis)
+
+**Rationale:** Template binding uses JavaScript dot notation property access.
+
+### New Design (ID-Based Binding) ✅ **IMPLEMENTED**
+
+**Pattern:** `{{customImage.Image_42}}` (uses database auto-increment ID)
+
+**Benefits:**
+- ✅ Name can contain ANY characters (spaces, unicode, emojis: "Company Logo 🏢")
+- ✅ No uniqueness constraint (multiple images can share display names)
+- ✅ Renaming doesn't break templates (ID is stable)
+- ✅ Simpler validation (only max length check)
+- ✅ Better UX (name is purely for human identification)
+- ✅ Auto-increment guarantees uniqueness
+
+**Changes Required:**
+1. Remove regex validation `^[A-Za-z0-9_-]+$` from client and server
+2. Remove name uniqueness check from server validation
+3. Remove `.IsUnique()` from `ConnectionId + Name` database index
+4. Update UI to show binding key: `{{customImage.Image_42}}`
+5. Phase 6.2 will map `customimage.image_42` → uploaded image data URI
+
+**Migration Impact:**
+```bash
+# New migration removes unique constraint on name index
+dotnet ef migrations add RemoveImageNameUniqueConstraint
+```
+
+**See:** `PHASE6.1_IMPLEMENTATION_NOTES.md` for full implementation details.
 
 ---
 
@@ -255,9 +301,9 @@ modelBuilder.Entity<UploadedImage>()
     .HasIndex(i => i.ConnectionId)
     .HasDatabaseName("IX_UploadedImages_ConnectionId");
 
+// Index on ConnectionId + Name for lookups (non-unique - names can be duplicated)
 modelBuilder.Entity<UploadedImage>()
     .HasIndex(i => new { i.ConnectionId, i.Name })
-    .IsUnique()
     .HasDatabaseName("IX_UploadedImages_ConnectionId_Name");
 
 // Foreign key with cascade delete
@@ -586,24 +632,34 @@ public async Task<IActionResult> SaveTemplate(SaveTemplateRequest request)
 
 ---
 
-### 4. Data Binding Convention
+### 4. Data Binding Convention ✅ **UPDATED: ID-Based**
 
-**Pattern:** `customImage.{ImageName}` (normalized to lowercase)
+**Pattern:** `customImage.Image_{ID}` (uses database auto-increment ID)
 
 **Examples:**
-- `{{customImage.CompanyLogo}}` → User uploaded "CompanyLogo"
-- `{{customImage.DeptIconIT}}` → User uploaded "DeptIconIT"
-- `{{customImage.FloorPlanB2}}` → User uploaded "FloorPlanB2"
+- `{{customImage.Image_42}}` → Image with ID 42, display name "Company Logo 🏢"
+- `{{customImage.Image_15}}` → Image with ID 15, display name "部門アイコン"
+- `{{customImage.Image_8}}` → Image with ID 8, display name "Floor Plan - B2"
 
 **Comparison with QR Codes:**
 - QR codes: `device.qrcode`, `network.qrcode`, `organization.qrcode` (entity data)
-- Custom images: `customImage.CompanyLogo`, `customImage.DeptIcon` (connection assets)
+- Custom images: `customImage.Image_42`, `customImage.Image_15` (connection assets by ID)
 
-**Export Preview Mapping:**
+**Export Preview Mapping (Phase 6.2):**
 ```javascript
 // In device-export.js createDeviceDataMap()
-deviceDataMap['customimage.companylogo'] = uploadedImages['CompanyLogo'].dataUri;
-deviceDataMap['customimage.depticonit'] = uploadedImages['DeptIconIT'].dataUri;
+for (const image of uploadedImages) {
+    const bindingKey = `customimage.image_${image.id}`;  // e.g., "customimage.image_42"
+    deviceDataMap[bindingKey] = image.dataUri;
+}
+```
+
+**UI Display:**
+Each image in the gallery shows its binding key:
+```
+Company Logo 🏢
+{{customImage.Image_42}}    ← Binding key (copy to use in templates)
+800 × 600 px
 ```
 
 ---
@@ -969,27 +1025,34 @@ public async Task<IActionResult> UploadImage(...)
 
 ## Implementation Phases
 
-### Phase 6.1: Core Image Upload (MVP)
-**Status:** 📋 Planned
-**Effort:** 6-8 hours
+### Phase 6.1: Core Image Upload (MVP) ✅ **COMPLETE**
+**Status:** ✅ Complete
+**Date Completed:** 2025-10-22
+**Actual Effort:** ~5.5 hours implementation + 1 hour bug fixes/refinements
 **Priority:** High
 
-**Deliverables:**
+**Deliverables (All Complete):**
 1. ✅ Database migration: `UploadedImages` table with indexes
 2. ✅ API endpoints: Upload, List, Delete
 3. ✅ Image management page: `/Images/Index?connectionId={id}`
 4. ✅ Upload modal with validation
 5. ✅ Client-side + server-side validation (size, MIME, dimensions, quota)
 6. ✅ Transparent placeholder on deletion
-7. ✅ Unit tests for validation logic
-8. ✅ Documentation: API specs and usage guide
+7. ✅ ID-based binding implementation (`{{customImage.Image_42}}`)
+8. ✅ Navigation links from Connections pages
+9. ✅ Bug fixes (4 issues fixed during testing)
+10. ✅ UX improvements (error scroll, flexible naming)
+11. ✅ Documentation: `PHASE6.1_IMPLEMENTATION_NOTES.md`
 
-**Success Criteria:**
-- User can upload PNG logo (500 KB, 800×600 px)
-- Upload fails if dimensions > 900×900 px
-- Upload fails if connection has 25 images already
-- Deleting image replaces with transparent placeholder
-- Image list shows quota usage
+**Success Criteria (All Met):**
+- ✅ User can upload PNG logo (500 KB, 800×600 px)
+- ✅ Upload fails if dimensions > 900×900 px
+- ✅ Upload fails if connection has 25 images already
+- ✅ Deleting image replaces with transparent placeholder
+- ✅ Image list shows quota usage
+- ✅ Names can contain any characters (spaces, unicode, emojis)
+- ✅ Modal centered on screen
+- ✅ Errors scroll into view
 
 ---
 

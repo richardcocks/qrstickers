@@ -30,23 +30,12 @@ function resetUploadForm() {
     document.getElementById('uploadForm').reset();
     document.getElementById('previewContainer').style.display = 'none';
     document.getElementById('uploadError').style.display = 'none';
-    document.getElementById('uploadSuccess').style.display = 'none';
-    document.getElementById('namePreview').textContent = 'ImageName';
 }
 
 // ===================== FILE SELECTION & PREVIEW =====================
 
-// Update name preview as user types
+// Handle file selection
 document.addEventListener('DOMContentLoaded', function() {
-    const imageNameInput = document.getElementById('imageName');
-    if (imageNameInput) {
-        imageNameInput.addEventListener('input', function() {
-            const namePreview = document.getElementById('namePreview');
-            namePreview.textContent = this.value || 'ImageName';
-        });
-    }
-
-    // Handle file selection
     const imageFileInput = document.getElementById('imageFile');
     if (imageFileInput) {
         imageFileInput.addEventListener('change', handleFileSelect);
@@ -147,7 +136,6 @@ function validateUpload() {
 
 async function uploadImage() {
     hideError();
-    hideSuccess();
 
     // Validate
     const validation = validateUpload();
@@ -193,12 +181,14 @@ async function uploadImage() {
             return;
         }
 
-        showSuccess('Image uploaded successfully! Refreshing page...');
+        // Close modal and show top notification
+        hideUploadModal();
+        showNotification('✓ Image uploaded successfully', 'success');
 
-        // Reload page after 1 second
+        // Reload page after brief delay to see notification
         setTimeout(() => {
             window.location.reload();
-        }, 1000);
+        }, 1500);
 
     } catch (error) {
         showError('Upload failed: ' + error.message);
@@ -254,14 +244,34 @@ function hideError() {
     document.getElementById('uploadError').style.display = 'none';
 }
 
-function showSuccess(message) {
-    const successDiv = document.getElementById('uploadSuccess');
-    successDiv.textContent = message;
-    successDiv.style.display = 'block';
-}
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 15px 20px;
+        background: ${type === 'success' ? '#4CAF50' : '#f44336'};
+        color: white;
+        border-radius: 4px;
+        z-index: 10000;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        min-width: 300px;
+        text-align: center;
+        animation: slideDown 0.3s ease-in-out;
+    `;
 
-function hideSuccess() {
-    document.getElementById('uploadSuccess').style.display = 'none';
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+        notification.style.animation = 'fadeOut 0.3s ease-in-out';
+        setTimeout(() => {
+            notification.remove();
+        }, 300);
+    }, 3000);
 }
 
 // Close modals on Escape key
