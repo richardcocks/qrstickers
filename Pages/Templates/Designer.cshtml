@@ -203,12 +203,23 @@
                         <label>Data Source</label>
                         <select id="qrDataSource" class="form-control">
                             <option value="">Select data source...</option>
-                            <option value="device.Serial">Device Serial</option>
-                            <option value="device.Name">Device Name</option>
-                            <option value="network.Name">Network Name</option>
-                            @foreach (var gv in Model.GlobalVariables)
+                            <optgroup label="QR Code Images (Generated)">
+                                <option value="device.QRCode">Device QR Code (Serial)</option>
+                                <option value="network.QRCode">Network QR Code (URL)</option>
+                            </optgroup>
+                            <optgroup label="Text Content">
+                                <option value="device.Serial">Device Serial</option>
+                                <option value="device.Name">Device Name</option>
+                                <option value="network.Name">Network Name</option>
+                            </optgroup>
+                            @if (Model.GlobalVariables.Any())
                             {
-                                <option value="global.@gv.VariableName">@gv.VariableName (@gv.Description)</option>
+                                <optgroup label="Global Variables">
+                                    @foreach (var gv in Model.GlobalVariables)
+                                    {
+                                        <option value="global.@gv.VariableName">@gv.VariableName (@gv.Description)</option>
+                                    }
+                                </optgroup>
                             }
                         </select>
                     </div>

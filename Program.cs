@@ -100,6 +100,9 @@ builder.Services.AddScoped<TemplateMatchingService>();
 // Register Phase 5.5 PDF export service
 builder.Services.AddScoped<PdfExportService>();
 
+// Register Phase 5.6 QR code generation service
+builder.Services.AddScoped<QRCodeGenerationService>();
+
 // Add memory caching for template matching
 builder.Services.AddMemoryCache();
 
@@ -191,14 +194,16 @@ app.MapGet("/api/export/device/{deviceId}", async (
                     model = exportData.Device.Model,
                     productType = exportData.Device.ProductType,
                     networkId = exportData.Device.NetworkId,
-                    connectionId = exportData.Device.ConnectionId
+                    connectionId = exportData.Device.ConnectionId,
+                    qrCode = exportData.Device.QRCodeDataUri
                 },
                 network = exportData.Network != null ? new
                 {
                     id = exportData.Network.Id,
                     networkId = exportData.Network.NetworkId,
                     name = exportData.Network.Name,
-                    organizationId = exportData.Network.OrganizationId
+                    organizationId = exportData.Network.OrganizationId,
+                    qrCode = exportData.Network.QRCodeDataUri
                 } : null,
                 connection = new
                 {

@@ -352,12 +352,14 @@ function createDeviceDataMap(exportData) {
             tags: tags,
             tags_str: tagsStr,
             networkId: device.networkId,
-            connectionId: device.connectionId
+            connectionId: device.connectionId,
+            qrcode: device.qrCode || null // QR code data URI
         },
         network: exportData.network ? {
             id: exportData.network.id,
             name: exportData.network.name || '',
-            organizationId: exportData.network.organizationId
+            organizationId: exportData.network.organizationId,
+            qrcode: exportData.network.qrCode || null // QR code data URI
         } : null,
         connection: {
             id: exportData.connection.id,
