@@ -583,9 +583,9 @@ function createAndRenderPreviewCanvas(
 }
 
 /**
- * Export canvas as PNG with specified DPI (updated for Phase 5 device export)
+ * Export canvas as PNG with device context (Phase 5 device export)
  */
-function exportPNG(canvas, pageWidthMm, pageHeightMm, deviceIdentifier = 'device') {
+function exportPNGForDevice(canvas, pageWidthMm, pageHeightMm, deviceIdentifier = 'device') {
     try {
         const dpi = parseInt(document.querySelector('input[name="export-dpi"]:checked')?.value || '96') || 96;
         const background = document.querySelector('input[name="export-background"]:checked')?.value || 'white';
@@ -621,9 +621,9 @@ function exportPNG(canvas, pageWidthMm, pageHeightMm, deviceIdentifier = 'device
 }
 
 /**
- * Export canvas as SVG (updated for Phase 5 device export)
+ * Export canvas as SVG with device context (Phase 5 device export)
  */
-function exportSVG(canvas, pageWidthMm, pageHeightMm, deviceIdentifier = 'device') {
+function exportSVGForDevice(canvas, pageWidthMm, pageHeightMm, deviceIdentifier = 'device') {
     try {
         console.log(`[Export] Exporting SVG`);
 

@@ -483,9 +483,9 @@ async function downloadDeviceExport() {
 
         // Export based on format
         if (format === 'png') {
-            exportPNG(exportCanvas, template.pageWidth, template.pageHeight, device.serial || 'device');
+            exportPNGForDevice(exportCanvas, template.pageWidth, template.pageHeight, device.serial || 'device');
         } else if (format === 'svg') {
-            exportSVG(exportCanvas, template.pageWidth, template.pageHeight, device.serial || 'device');
+            exportSVGForDevice(exportCanvas, template.pageWidth, template.pageHeight, device.serial || 'device');
         }
 
         // Log export to history (async, non-blocking)
