@@ -729,17 +729,20 @@ function updatePropertyInspector() {
             document.getElementById('imageUrl').value = '(Custom Image)';
             document.getElementById('imageUrl').disabled = true;
 
-            // Show custom image info
+            // Show custom image info (use textContent for XSS prevention)
             const customImageInfo = document.getElementById('customImageInfo');
             if (customImageInfo) {
                 customImageInfo.style.display = 'block';
                 customImageInfo.innerHTML = `
                     <div style="padding: 10px; background: #f0f0f0; border-radius: 4px; margin: 10px 0;">
-                        <p style="margin: 5px 0;"><strong>Custom Image:</strong> ${customImageName}</p>
-                        <p style="margin: 5px 0; font-size: 11px;"><code>${activeObject.get('dataSource')}</code></p>
+                        <p style="margin: 5px 0;"><strong>Custom Image:</strong> <span data-field="image-name"></span></p>
+                        <p style="margin: 5px 0; font-size: 11px;"><code data-field="data-source"></code></p>
                         <button type="button" class="btn-primary" style="margin-top: 10px; padding: 5px 10px; font-size: 12px;" onclick="replaceCustomImage()">Replace Image</button>
                     </div>
                 `;
+                // Populate with textContent (safe, like Razor's @Model.Property)
+                customImageInfo.querySelector('[data-field="image-name"]').textContent = customImageName;
+                customImageInfo.querySelector('[data-field="data-source"]').textContent = activeObject.get('dataSource');
             }
         } else {
             // Regular image
@@ -1085,21 +1088,45 @@ function createCustomImageSelectorModal() {
 /**
  * Render grid of uploaded images
  */
+/**
+ * Renders custom image grid
+ * Uses textContent for user-controlled data to prevent XSS
+ */
 function renderCustomImageGrid() {
     const grid = document.getElementById('customImageGrid');
     if (!grid) return;
 
-    grid.innerHTML = uploadedImages.map(img => `
-        <div class="custom-image-card" style="border: 1px solid #ddd; padding: 15px; margin: 10px; display: inline-block; width: 200px; text-align: center; cursor: pointer; border-radius: 4px;" onclick="selectCustomImage(${img.id})">
+    // Clear existing content
+    grid.innerHTML = '';
+
+    uploadedImages.forEach(img => {
+        const card = document.createElement('div');
+        card.className = 'custom-image-card';
+        card.style.cssText = 'border: 1px solid #ddd; padding: 15px; margin: 10px; display: inline-block; width: 200px; text-align: center; cursor: pointer; border-radius: 4px;';
+        card.onclick = () => selectCustomImage(img.id);
+
+        // Build structure (static HTML, safe)
+        card.innerHTML = `
             <div style="width: 150px; height: 150px; margin: 0 auto; display: flex; align-items: center; justify-content: center; background: #f5f5f5; border: 1px solid #ccc;">
-                <img src="${img.dataUri}" style="max-width: 100%; max-height: 100%; object-fit: contain;" alt="${img.name}" />
+                <img data-field="image-preview" style="max-width: 100%; max-height: 100%; object-fit: contain;" alt="" />
             </div>
-            <h4 style="margin: 10px 0 5px 0; font-size: 14px; font-weight: bold;">${img.name}</h4>
-            <code style="font-size: 11px; color: #666; display: block; margin: 5px 0;">{{customImage.Image_${img.id}}}</code>
-            <p style="font-size: 11px; color: #999; margin: 5px 0;">${img.widthPx} × ${img.heightPx} px</p>
+            <h4 style="margin: 10px 0 5px 0; font-size: 14px; font-weight: bold;" data-field="image-name"></h4>
+            <code style="font-size: 11px; color: #666; display: block; margin: 5px 0;" data-field="binding-key"></code>
+            <p style="font-size: 11px; color: #999; margin: 5px 0;" data-field="dimensions"></p>
             <button class="btn-primary" style="margin-top: 10px; padding: 5px 15px; font-size: 12px;">Select</button>
-        </div>
-    `).join('');
+        `;
+
+        // Populate user data with textContent/properties (safe, like Razor)
+        const imgElement = card.querySelector('[data-field="image-preview"]');
+        imgElement.src = img.dataUri; // Note: dataUri validated server-side
+        imgElement.alt = img.name; // Setting alt via property assignment is safe
+
+        card.querySelector('[data-field="image-name"]').textContent = img.name;
+        card.querySelector('[data-field="binding-key"]').textContent = `{{customImage.Image_${img.id}}}`;
+        card.querySelector('[data-field="dimensions"]').textContent = `${img.widthPx} × ${img.heightPx} px`;
+
+        grid.appendChild(card);
+    });
 }
 
 /**

@@ -162,28 +162,36 @@ function renderDeviceExportModalUI() {
         </div>
     `;
 
-    // Device Information Section
+    // Device Information Section (use textContent for XSS prevention)
     const deviceInfo = modal.querySelector('#deviceInfo');
     deviceInfo.innerHTML = `
         <h3>Device Information</h3>
         <div class="info-box">
-            <p><strong>Name:</strong> ${device.name || 'Unnamed'}</p>
-            <p><strong>Serial:</strong> <code>${device.serial || 'N/A'}</code></p>
-            <p><strong>Model:</strong> ${device.model || 'N/A'}</p>
-            <p><strong>Product Type:</strong> ${device.productType || 'Unknown'}</p>
+            <p><strong>Name:</strong> <span data-field="device-name"></span></p>
+            <p><strong>Serial:</strong> <code data-field="device-serial"></code></p>
+            <p><strong>Model:</strong> <span data-field="device-model"></span></p>
+            <p><strong>Product Type:</strong> <span data-field="device-type"></span></p>
         </div>
     `;
+    // Populate with textContent (safe, like Razor's @Model.Property)
+    deviceInfo.querySelector('[data-field="device-name"]').textContent = device.name || 'Unnamed';
+    deviceInfo.querySelector('[data-field="device-serial"]').textContent = device.serial || 'N/A';
+    deviceInfo.querySelector('[data-field="device-model"]').textContent = device.model || 'N/A';
+    deviceInfo.querySelector('[data-field="device-type"]').textContent = device.productType || 'Unknown';
 
-    // Template Information Section
+    // Template Information Section (use textContent for XSS prevention)
     const templateInfo = modal.querySelector('#templateInfo');
     templateInfo.innerHTML = `
         <h3>Template</h3>
         <div class="info-box">
-            <p><strong>Matched Template:</strong> ${template.name}</p>
-            <p><strong>Match Reason:</strong> <span class="match-badge match-${template.matchReason}">${formatMatchReason(template.matchReason)}</span></p>
+            <p><strong>Matched Template:</strong> <span data-field="template-name"></span></p>
+            <p><strong>Match Reason:</strong> <span class="match-badge match-${template.matchReason}" data-field="match-reason"></span></p>
             <p><strong>Confidence:</strong> ${Math.round(template.confidence * 100)}%</p>
         </div>
     `;
+    // Populate with textContent (safe, like Razor's @Model.Property)
+    templateInfo.querySelector('[data-field="template-name"]').textContent = template.name;
+    templateInfo.querySelector('[data-field="match-reason"]').textContent = formatMatchReason(template.matchReason);
 
     // Export Settings Section
     const exportSettings = modal.querySelector('#exportSettings');

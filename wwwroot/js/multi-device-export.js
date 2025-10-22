@@ -202,9 +202,7 @@ function renderBulkExportModalContent() {
     modalBody.innerHTML = `
         <div class="selected-devices-section" style="margin-bottom: 20px;">
             <h3>Selected Devices</h3>
-            <div id="deviceListContainer" class="device-list">
-                ${renderDeviceList(selected, exportData)}
-            </div>
+            <div id="deviceListContainer" class="device-list"></div>
         </div>
 
         <div class="export-options-section">
@@ -284,6 +282,10 @@ function renderBulkExportModalContent() {
         </div>
     `;
 
+    // Populate device list with safe DOM manipulation
+    const deviceListContainer = modalBody.querySelector('#deviceListContainer');
+    deviceListContainer.appendChild(renderDeviceList(selected, exportData));
+
     // Ensure Start Export button is visible (in case it was hidden from previous export)
     const startExportBtn = modal.querySelector('.btn-start-export');
     if (startExportBtn) {
@@ -293,35 +295,49 @@ function renderBulkExportModalContent() {
 
 /**
  * Renders device list cards
+ * Uses textContent for user data to prevent XSS (consistent with Razor)
  */
 function renderDeviceList(devices, exportDataList) {
-    return devices.map((device, index) => {
+    const fragment = document.createDocumentFragment();
+
+    devices.forEach((device, index) => {
         const exportData = exportDataList[index];
         const template = exportData?.matchedTemplate;
         const matchReason = template?.matchReason || 'unknown';
         const confidence = template?.confidence ? Math.round(template.confidence * 100) : 0;
 
-        return `
-            <div class="device-card" style="padding: 12px; margin-bottom: 10px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <strong>${device.name}</strong>
-                        <div style="font-size: 0.85em; color: #666; margin-top: 4px;">
-                            <code>${device.serial}</code>
-                        </div>
+        // Create card structure (static HTML, safe)
+        const card = document.createElement('div');
+        card.className = 'device-card';
+        card.style.cssText = 'padding: 12px; margin-bottom: 10px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px;';
+
+        card.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <strong data-field="device-name"></strong>
+                    <div style="font-size: 0.85em; color: #666; margin-top: 4px;">
+                        <code data-field="device-serial"></code>
                     </div>
-                    <div style="text-align: right; font-size: 0.85em;">
-                        <div style="color: #666;">Template: ${template?.name || 'Unknown'}</div>
-                        <div style="margin-top: 4px;">
-                            <span class="match-badge match-${matchReason}" style="padding: 2px 8px; border-radius: 3px; font-size: 0.8em; background: ${getMatchBadgeColor(matchReason)}; color: white;">
-                                ${formatMatchReason(matchReason)} (${confidence}%)
-                            </span>
-                        </div>
+                </div>
+                <div style="text-align: right; font-size: 0.85em;">
+                    <div style="color: #666;">Template: <span data-field="template-name"></span></div>
+                    <div style="margin-top: 4px;">
+                        <span class="match-badge match-${matchReason}" style="padding: 2px 8px; border-radius: 3px; font-size: 0.8em; background: ${getMatchBadgeColor(matchReason)}; color: white;" data-field="match-info"></span>
                     </div>
                 </div>
             </div>
         `;
-    }).join('');
+
+        // Populate user data with textContent (safe, like Razor's @Model.Property)
+        card.querySelector('[data-field="device-name"]').textContent = device.name;
+        card.querySelector('[data-field="device-serial"]').textContent = device.serial;
+        card.querySelector('[data-field="template-name"]').textContent = template?.name || 'Unknown';
+        card.querySelector('[data-field="match-info"]').textContent = `${formatMatchReason(matchReason)} (${confidence}%)`;
+
+        fragment.appendChild(card);
+    });
+
+    return fragment;
 }
 
 /**
@@ -665,8 +681,8 @@ async function renderDeviceToBlob(template, deviceDataMap, format, options) {
     // Create temporary canvas
     const tempCanvas = document.createElement('canvas');
 
-    // Render using export-preview.js functions
-    const fabricCanvas = createAndRenderPreviewCanvas(
+    // Render using export-preview.js functions (async, returns Promise)
+    const fabricCanvas = await createAndRenderPreviewCanvas(
         tempCanvas,
         mergedTemplate,
         template.pageWidth,
