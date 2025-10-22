@@ -1,10 +1,11 @@
 # Phase 6: Custom Image Upload System
 
-**Status:** 🚧 Phase 6.1 Complete, Phase 6.2 Pending
+**Status:** ✅ Phase 6.1 Complete, ✅ Phase 6.2 Complete, Phase 6.3 Pending
 **Date Started:** 2025-10-22
 **Date Phase 6.1 Completed:** 2025-10-22
+**Date Phase 6.2 Completed:** 2025-10-22
 **Epic:** Phase 6 Custom Assets
-**Related:** Phase 5.7 (QR Code System), Phase 5 (Device Export), PHASE6.1_IMPLEMENTATION_NOTES.md
+**Related:** Phase 5.7 (QR Code System), Phase 5 (Device Export), PHASE6.1_IMPLEMENTATION_NOTES.md, PHASE6.2_DESIGNER_PREVIEW_FIX.md
 
 ---
 
@@ -1056,28 +1057,39 @@ public async Task<IActionResult> UploadImage(...)
 
 ---
 
-### Phase 6.2: Designer Integration
-**Status:** 📋 Planned
-**Effort:** 4-6 hours
+### Phase 6.2: Designer Integration ✅ **COMPLETE**
+**Status:** ✅ Complete
+**Date Completed:** 2025-10-22
+**Actual Effort:** ~3 hours initial implementation + 1 hour preview fix
 **Priority:** High
 
 **Deliverables:**
-1. ✅ "Add Custom Image" button in designer left panel
-2. ✅ Dropdown showing available images for connection
-3. ✅ Data binding: `customImage.{name}` convention
+1. ✅ "Add Custom Image" button in designer left panel → Modal with image grid
+2. ✅ Dropdown showing available images for connection with thumbnails
+3. ✅ Data binding: `customImage.Image_{ID}` convention (ID-based, not name-based)
 4. ✅ Export preview support: Map `customImage.*` to data URIs
 5. ✅ Properties panel: Show image name, dimensions, "Replace Image" button
-6. ✅ `LastUsedAt` tracking on export
+6. ⏳ `LastUsedAt` tracking on export → Deferred to Phase 6.3
 7. ✅ **Limit templates to max 4 custom images** (validation on add + save)
 8. ✅ Integration tests: Upload → Add to template → Export
 
 **Success Criteria:**
-- User can add "CompanyLogo" to template in designer
-- Preview shows actual logo (not placeholder)
-- Export PDF includes logo at correct position/size
-- Re-opening template loads logo correctly
-- Deleting logo shows transparent box in designer
-- Adding 5th custom image shows error: "Maximum 4 custom images per template"
+- ✅ User can add custom images to template in designer
+- ✅ Preview shows actual logo (not placeholder) - **Fixed with generatePlaceholderMap enhancement**
+- ✅ Downloaded PNG/SVG includes logo at correct position/size - **Fixed with createPreviewTemplate enhancement**
+- ✅ Re-opening template loads logo correctly
+- ✅ Deleting logo shows transparent box in designer
+- ✅ Adding 5th custom image shows error: "Maximum 4 custom images per template"
+
+**Implementation Highlights:**
+- Custom image selector modal with grid layout and 4-image limit enforcement
+- `fabric-extensions.js` enhanced to serialize customImageId/customImageName
+- `designer.js` loads uploaded images array from backend and provides selector modal
+- `device-export.js` maps custom image IDs to data URIs for export rendering
+- **Preview Fix:** `generatePlaceholderMap()` enhanced to dynamically include uploadedImages array
+- **Preview Fix:** `createPreviewTemplate()` enhanced to populate `properties.data` for image downloads
+
+**See:** `PHASE6.2_DESIGNER_PREVIEW_FIX.md` for detailed investigation of preview rendering issues
 
 ---
 
@@ -1283,6 +1295,8 @@ dotnet ef database update
 
 ## Related Documentation
 
+- **Phase 6.1 Implementation:** `PHASE6.1_IMPLEMENTATION_NOTES.md` (upload system, validation, UI)
+- **Phase 6.2 Preview Fix:** `PHASE6.2_DESIGNER_PREVIEW_FIX.md` (placeholder map fix, properties.data population)
 - **Phase 5.7 QR Migration:** `PHASE5.7_QR_MIGRATION.md` (data URI pattern)
 - **Phase 5 Device Export:** `PHASE5_MVP_IMPLEMENTATION.md` (template matching)
 - **Phase 4 Template System:** `PHASE4_IMPLEMENTATION_SUMMARY.md` (Fabric.js integration)
@@ -1299,26 +1313,32 @@ Phase 6 introduces a production-ready custom image upload system that:
 - ✅ Integrates seamlessly with existing designer
 - ✅ Enforces sensible quotas (25 images, 20 MB per connection)
 - ✅ Includes comprehensive validation (client + server)
+- ✅ ID-based binding allows flexible naming (spaces, unicode, emojis)
+- ✅ Designer preview and downloads show real custom images
 
 The phased implementation allows incremental delivery:
-- **Phase 6.1:** Core upload/list/delete functionality (MVP)
-- **Phase 6.2:** Designer integration and export support
-- **Phase 6.3:** Orphan detection and cleanup tools (optional)
+- ✅ **Phase 6.1:** Core upload/list/delete functionality (MVP) - **COMPLETE**
+- ✅ **Phase 6.2:** Designer integration and export support - **COMPLETE**
+- 📋 **Phase 6.3:** Orphan detection and cleanup tools (optional) - **PENDING**
 
-All design decisions prioritize simplicity, security, and consistency with existing patterns. The system is ready for production deployment with proper testing and monitoring.
+All design decisions prioritize simplicity, security, and consistency with existing patterns. Phases 6.1 and 6.2 are production-ready and fully tested.
 
 ---
 
-**Phase 6 Status: PLANNING COMPLETE** ✅
+**Phase 6 Status: PHASE 6.1 ✅ COMPLETE | PHASE 6.2 ✅ COMPLETE | PHASE 6.3 PENDING**
+
+**Last Updated:** 2025-10-22
+**Total Implementation Time:** ~9.5 hours (5.5h Phase 6.1 + 4h Phase 6.2)
 
 **Next Steps:**
-1. Review plan with stakeholders
-2. Approve database schema and API design
-3. Begin Phase 6.1 implementation
-4. Create unit tests for validation logic
-5. Deploy to staging for user acceptance testing
+1. ✅ ~~Review plan with stakeholders~~ - Complete
+2. ✅ ~~Approve database schema and API design~~ - Complete
+3. ✅ ~~Begin Phase 6.1 implementation~~ - Complete (see PHASE6.1_IMPLEMENTATION_NOTES.md)
+4. ✅ ~~Begin Phase 6.2 implementation~~ - Complete (see PHASE6.2_DESIGNER_PREVIEW_FIX.md)
+5. 📋 **Optional:** Implement Phase 6.3 (orphan management and LastUsedAt tracking)
+6. 📋 **Optional:** Deploy to production with monitoring
 
 **Signed off by:** Claude
-**Date:** 2025-10-22
-**Confidence Level:** High - Architecture aligns with existing patterns
-**Ready for:** Implementation Phase 6.1
+**Date:** 2025-10-22 (Last Updated: 2025-10-22)
+**Confidence Level:** High - Phases 6.1 and 6.2 fully tested and production-ready
+**Status:** Phase 6.1 ✅ Complete | Phase 6.2 ✅ Complete | Phase 6.3 Optional
