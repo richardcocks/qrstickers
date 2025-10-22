@@ -203,7 +203,7 @@ function renderBulkExportModalContent() {
     // Render modal body
     const modalBody = modal.querySelector('.modal-body');
     modalBody.innerHTML = `
-        <div class="selected-devices-section" style="max-height: 500px; overflow-y: auto; margin-bottom: 20px;">
+        <div class="selected-devices-section" style="margin-bottom: 20px;">
             <h3>Selected Devices</h3>
             <div id="deviceListContainer" class="device-list">
                 ${renderDeviceList(selected, exportData)}
