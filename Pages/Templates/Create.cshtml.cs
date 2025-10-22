@@ -46,7 +46,6 @@ public class CreateModel : PageModel
     public int? CloneFromTemplateId { get; set; }
 
     public List<Connection> UserConnections { get; set; } = new();
-    public List<StickerTemplate> SystemTemplates { get; set; } = new();
 
     public async Task<IActionResult> OnGetAsync(int? cloneFrom)
     {
@@ -67,11 +66,6 @@ public class CreateModel : PageModel
             return RedirectToPage("/Connections/Index");
         }
 
-        SystemTemplates = await _db.StickerTemplates
-            .Where(t => t.IsSystemTemplate)
-            .OrderBy(t => t.Name)
-            .ToListAsync();
-
         // Pre-select connection if user only has one
         if (UserConnections.Count == 1)
         {
@@ -82,16 +76,32 @@ public class CreateModel : PageModel
         if (cloneFrom.HasValue)
         {
             CloneFromTemplateId = cloneFrom;
-            var sourceTemplate = await _db.StickerTemplates.FindAsync(cloneFrom.Value);
-            if (sourceTemplate != null)
+            var sourceTemplate = await _db.StickerTemplates
+                .Include(t => t.Connection)
+                .FirstOrDefaultAsync(t => t.Id == cloneFrom.Value);
+
+            if (sourceTemplate == null)
             {
-                Name = $"{sourceTemplate.Name} (Copy)";
-                Description = sourceTemplate.Description;
-                PageWidth = sourceTemplate.PageWidth;
-                PageHeight = sourceTemplate.PageHeight;
-                ProductTypeFilter = sourceTemplate.ProductTypeFilter;
-                IsRackMount = sourceTemplate.IsRackMount;
+                return NotFound();
             }
+
+            // Authorization check: verify user can access this template
+            if (sourceTemplate.ConnectionId.HasValue)
+            {
+                // User template - must belong to this user's connection
+                if (sourceTemplate.Connection?.UserId != userId)
+                {
+                    return Forbid();
+                }
+            }
+            // System templates are accessible to all authenticated users
+
+            Name = $"{sourceTemplate.Name} (Copy)";
+            Description = sourceTemplate.Description;
+            PageWidth = sourceTemplate.PageWidth;
+            PageHeight = sourceTemplate.PageHeight;
+            ProductTypeFilter = sourceTemplate.ProductTypeFilter;
+            IsRackMount = sourceTemplate.IsRackMount;
         }
 
         return Page();
@@ -115,9 +125,6 @@ public class CreateModel : PageModel
             UserConnections = await _db.Connections
                 .Where(c => c.UserId == userId)
                 .ToListAsync();
-            SystemTemplates = await _db.StickerTemplates
-                .Where(t => t.IsSystemTemplate)
-                .ToListAsync();
             return Page();
         }
 
@@ -137,9 +144,6 @@ public class CreateModel : PageModel
             UserConnections = await _db.Connections
                 .Where(c => c.UserId == userId)
                 .ToListAsync();
-            SystemTemplates = await _db.StickerTemplates
-                .Where(t => t.IsSystemTemplate)
-                .ToListAsync();
             return Page();
         }
 
@@ -149,13 +153,27 @@ public class CreateModel : PageModel
         {
             // Clone from existing template
             var sourceTemplate = await _db.StickerTemplates
-                .FindAsync(CloneFromTemplateId.Value);
+                .Include(t => t.Connection)
+                .FirstOrDefaultAsync(t => t.Id == CloneFromTemplateId.Value);
 
             if (sourceTemplate == null)
             {
                 TempData["ErrorMessage"] = "Source template not found.";
                 return RedirectToPage("/Templates/Index");
             }
+
+            // Authorization check: verify user can access this template
+            if (sourceTemplate.ConnectionId.HasValue)
+            {
+                // User template - must belong to this user's connection
+                if (sourceTemplate.Connection?.UserId != userId)
+                {
+                    _logger.LogWarning("User {UserId} attempted unauthorized clone of template {TemplateId}",
+                        userId, CloneFromTemplateId.Value);
+                    return Forbid();
+                }
+            }
+            // System templates are accessible to all authenticated users
 
             newTemplate = new StickerTemplate
             {

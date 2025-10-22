@@ -259,10 +259,12 @@
             </select>
         </div>
 
-        <div class="checkbox-group">
-            <input type="checkbox" id="systemTemplates" name="systemTemplates" value="true"
-                   checked="@(Model.ShowSystemTemplates ?? true)" />
-            <label for="systemTemplates">Show System Templates</label>
+        <div class="filter-group">
+            <label>Templates:</label>
+            <select name="systemTemplates" onchange="this.form.submit()">
+                <option value="true" selected="@(Model.ShowSystemTemplates == true)">All (System + User)</option>
+                <option value="false" selected="@(Model.ShowSystemTemplates == false)">User Only</option>
+            </select>
         </div>
 
         <button type="submit" class="btn btn-secondary">Search</button>
@@ -340,18 +342,7 @@ else
 
                     @if (Model.UserConnections.Count > 0)
                     {
-                        @if (Model.UserConnections.Count == 1)
-                        {
-                            <form method="post" asp-page="/Templates/Clone" style="display: inline;">
-                                <input type="hidden" name="templateId" value="@template.Id" />
-                                <input type="hidden" name="connectionId" value="@Model.UserConnections[0].Id" />
-                                <button type="submit" class="btn-small btn-clone">Clone</button>
-                            </form>
-                        }
-                        else
-                        {
-                            <a href="/Templates/Create?cloneFrom=@template.Id" class="btn-small btn-clone">Clone</a>
-                        }
+                        <a href="/Templates/Create?cloneFrom=@template.Id" class="btn-small btn-clone">Clone</a>
                     }
 
                     @if (!template.IsSystemTemplate)
@@ -363,25 +354,3 @@ else
         }
     </div>
 }
-<script>
-     // Handle checkbox change with proper value submission
-     document.getElementById('systemTemplates').addEventListener('change', function() {
-         // Remove any existing hidden field for systemTemplates to avoid duplicates
-         var existingHidden = this.form.querySelector('input[name="systemTemplates"][type="hidden"]');
-         if (existingHidden) {
-             existingHidden.remove();
-         }
-
-         // If checkbox is unchecked, add a hidden field with 'false'
-         if (!this.checked) {
-             var hidden = document.createElement('input');
-             hidden.type = 'hidden';
-             hidden.name = 'systemTemplates';
-             hidden.value = 'false';
-             this.form.appendChild(hidden);
-         }
-
-         // Submit the form
-         this.form.submit();
-     });
- </script>

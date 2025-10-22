@@ -95,7 +95,7 @@ public class IndexModel : PageModel
         SelectedConnectionId = connectionId;
         ProductTypeFilter = productType;
         IsRackMount = rackMount;
-        ShowSystemTemplates = systemTemplates ?? true;
+        ShowSystemTemplates = systemTemplates ?? true; // Default to true (show system templates)
         SearchQuery = search;
 
         return Page();
