@@ -528,6 +528,62 @@ dotnet ef migrations add AddUploadedImagesTable
 - "Replace Image" button → reopens dropdown
 - Standard Fabric.js transforms (move, scale, rotate)
 
+**Validation (Max 4 Custom Images):**
+
+Templates are limited to **4 custom images** to:
+- Prevent cluttered, unprofessional designs
+- Avoid performance issues with Fabric.js rendering
+- Enforce focused sticker design (100mm × 50mm has limited space)
+
+**Client-Side Validation (JavaScript):**
+```javascript
+// Before adding image to canvas
+function addCustomImageToCanvas(imageData) {
+    const canvas = fabricCanvas; // Current Fabric.js canvas
+
+    // Count existing custom images
+    const customImageCount = canvas.getObjects().filter(obj =>
+        obj.type === 'image' &&
+        obj.properties?.dataSource?.startsWith('customImage.')
+    ).length;
+
+    if (customImageCount >= 4) {
+        showNotification('Maximum 4 custom images per template', 'error');
+        return;
+    }
+
+    // Add image to canvas...
+    fabric.Image.fromURL(imageData.dataUri, function(img) {
+        img.set({
+            properties: {
+                dataSource: `customImage.${imageData.name}`
+            }
+        });
+        canvas.add(img);
+    });
+}
+```
+
+**Server-Side Validation (C#):**
+```csharp
+// On template save
+public async Task<IActionResult> SaveTemplate(SaveTemplateRequest request)
+{
+    // Parse TemplateJson
+    var templateJson = JsonSerializer.Deserialize<TemplateData>(request.TemplateJson);
+
+    // Count custom images
+    var customImageCount = templateJson.Objects
+        .Count(obj => obj.Type == "image" &&
+                     obj.Properties?.DataSource?.StartsWith("customImage.") == true);
+
+    if (customImageCount > 4)
+        return BadRequest("Template cannot contain more than 4 custom images");
+
+    // Save template...
+}
+```
+
 ---
 
 ### 4. Data Binding Convention
@@ -949,7 +1005,8 @@ public async Task<IActionResult> UploadImage(...)
 4. ✅ Export preview support: Map `customImage.*` to data URIs
 5. ✅ Properties panel: Show image name, dimensions, "Replace Image" button
 6. ✅ `LastUsedAt` tracking on export
-7. ✅ Integration tests: Upload → Add to template → Export
+7. ✅ **Limit templates to max 4 custom images** (validation on add + save)
+8. ✅ Integration tests: Upload → Add to template → Export
 
 **Success Criteria:**
 - User can add "CompanyLogo" to template in designer
@@ -957,6 +1014,7 @@ public async Task<IActionResult> UploadImage(...)
 - Export PDF includes logo at correct position/size
 - Re-opening template loads logo correctly
 - Deleting logo shows transparent box in designer
+- Adding 5th custom image shows error: "Maximum 4 custom images per template"
 
 ---
 
@@ -989,6 +1047,7 @@ public async Task<IActionResult> UploadImage(...)
 - ✅ MIME type validation (pass: PNG/JPEG, fail: GIF/BMP)
 - ✅ Name validation (pass: "CompanyLogo", fail: "Company Logo!@#")
 - ✅ Quota enforcement (pass: 24 images, fail: 25 images)
+- ✅ Template image limit (pass: 4 images, fail: 5 images)
 
 **Data URI Handling:**
 - ✅ Base64 encoding/decoding
@@ -1030,6 +1089,8 @@ public async Task<IActionResult> UploadImage(...)
 - [ ] Open designer → Click "Add Custom Image"
 - [ ] Select uploaded logo → Appears on canvas
 - [ ] Move/scale logo → Saves correctly
+- [ ] Add 4 custom images to template (success)
+- [ ] Try to add 5th custom image → Error: "Maximum 4 custom images per template"
 - [ ] Export device → PDF includes logo
 - [ ] Re-open template → Logo loads correctly
 - [ ] Delete logo from Images page → Designer shows transparent box
@@ -1045,8 +1106,8 @@ public async Task<IActionResult> UploadImage(...)
 | **Users upload copyrighted images** | Medium | Legal | Terms of service disclaimer + user responsibility |
 | **Accidental deletion breaks templates** | High | Medium | Transparent placeholder fallback + "Last Used" warnings |
 | **Base64 overhead (33% size increase)** | Low | Low | Acceptable (2 MB file → 2.7 MB in DB) |
-| **Performance: Loading 25 images in UI** | Medium | Low | Lazy-load thumbnails, paginate if >25 images |
-| **Fabric.js rendering 10+ images** | Low | Medium | Test with stress test (10 high-res images in one template) |
+| **Image management page loads slowly** | Low | Low | Grid layout with 25 thumbnails (150×150px each) - trivial performance |
+| **Template canvas cluttered with images** | Low | Low | **Limit templates to max 4 custom images** - enforces professional design, prevents performance issues |
 | **Orphaned images accumulate** | Medium | Low | Phase 6.3 adds "Last Used" tracking + cleanup UI |
 
 ---
