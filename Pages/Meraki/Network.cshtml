@@ -88,6 +88,9 @@ else
         <table style="width: 100%; border-collapse: collapse;">
             <thead>
                 <tr style="background-color: #f5f5f5; border-bottom: 2px solid #ddd;">
+                    <th style="padding: 10px; text-align: center; width: 40px;">
+                        <input type="checkbox" id="selectAllDevices" onchange="toggleSelectAll()" title="Select all devices" />
+                    </th>
                     <th style="padding: 10px; text-align: left;">Device Name</th>
                     <th style="padding: 10px; text-align: left;">Serial Number</th>
                     <th style="padding: 10px; text-align: left;">Model</th>
@@ -99,6 +102,15 @@ else
                 @foreach (var device in Model.Devices)
                 {
                     <tr style="border-bottom: 1px solid #ddd;">
+                        <td style="padding: 10px; text-align: center;">
+                            <input type="checkbox"
+                                   class="device-checkbox"
+                                   data-device-id="@device.Id"
+                                   data-device-name="@(device.Name ?? "Unnamed Device")"
+                                   data-device-serial="@device.Serial"
+                                   data-connection-id="@Model.Connection.Id"
+                                   onchange="onDeviceSelectionChanged()" />
+                        </td>
                         <td style="padding: 10px;">
                             <strong>@(device.Name ?? "Unnamed Device")</strong>
                         </td>
@@ -127,6 +139,18 @@ else
                 }
             </tbody>
         </table>
+
+        <!-- Bulk Export Actions -->
+        <div class="bulk-actions" style="margin-top: 20px; padding: 15px; background-color: #f9f9f9; border-radius: 4px; border: 1px solid #ddd;">
+            <button id="bulkExportBtn"
+                    class="btn-primary"
+                    onclick="openBulkExportModal()"
+                    disabled
+                    style="padding: 10px 20px; background-color: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1em; opacity: 0.5;">
+                📦 Export Selected (0)
+            </button>
+            <span id="selectionSummary" style="margin-left: 15px; color: #666; font-size: 0.9em;"></span>
+        </div>
     }
 }
 
@@ -141,10 +165,14 @@ else
     <!-- Fabric.js CDN (required for canvas rendering) -->
     <script src="https://cdn.jsdelivr.net/npm/fabric@5.3.0/dist/fabric.min.js"></script>
 
+    <!-- JSZip library (required for bulk export ZIP generation) -->
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+
     <!-- Fabric.js helper extensions (QR code, text, image placeholders) -->
     <script src="~/js/fabric-extensions.js"></script>
 
     <!-- Export functionality -->
     <script src="~/js/export-preview.js"></script>
     <script src="~/js/device-export.js"></script>
+    <script src="~/js/multi-device-export.js"></script>
 }

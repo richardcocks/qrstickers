@@ -911,3 +911,226 @@ input[type="color"].form-control {
         min-height: 300px;
     }
 }
+
+/* ========================================
+   BULK EXPORT STYLES (Phase 5.3)
+   ======================================== */
+
+/* Bulk export modal */
+.bulk-export-modal .modal-content {
+    max-width: 900px;
+}
+
+.bulk-export-body {
+    padding: 20px;
+}
+
+/* Device list styles */
+.selected-devices-section {
+    margin-bottom: 25px;
+}
+
+.selected-devices-section h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #333;
+    font-size: 1.2em;
+}
+
+.device-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.device-card {
+    padding: 12px;
+    margin-bottom: 10px;
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.device-card:hover {
+    background: #f0f0f0;
+    border-color: #ccc;
+}
+
+/* Match badges */
+.match-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 0.8em;
+    font-weight: 600;
+    color: white;
+}
+
+.match-badge.match-model_match {
+    background-color: #4CAF50;
+}
+
+.match-badge.match-type_match {
+    background-color: #2196F3;
+}
+
+.match-badge.match-user_default {
+    background-color: #FF9800;
+}
+
+.match-badge.match-system_default {
+    background-color: #9E9E9E;
+}
+
+.match-badge.match-fallback {
+    background-color: #f44336;
+}
+
+/* Export options section */
+.export-options-section {
+    padding: 20px;
+    background: #f5f5f5;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.export-options-section h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #333;
+    font-size: 1.2em;
+}
+
+.form-section {
+    margin-bottom: 15px;
+}
+
+.form-section label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #555;
+}
+
+.radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.radio-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+    border-radius: 4px;
+}
+
+.radio-label:hover {
+    background: #f0f0f0;
+}
+
+.radio-label input[type="radio"] {
+    cursor: pointer;
+}
+
+/* Progress section */
+.progress-section {
+    padding: 25px;
+    background: #f5f5f5;
+    border-radius: 8px;
+    margin-top: 20px;
+}
+
+.progress-section h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #333;
+    text-align: center;
+}
+
+.progress-bar-container {
+    width: 100%;
+    height: 30px;
+    background: #e0e0e0;
+    border-radius: 15px;
+    overflow: hidden;
+    margin: 20px 0;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4CAF50, #45a049);
+    transition: width 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 0.9em;
+}
+
+#progressText {
+    text-align: center;
+    color: #555;
+    font-size: 14px;
+    margin: 15px 0;
+    min-height: 20px;
+}
+
+#cancelExportBtn {
+    display: block;
+    margin: 20px auto 0;
+    padding: 8px 20px;
+}
+
+/* Bulk actions container */
+.bulk-actions {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #f9f9f9;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+}
+
+.bulk-actions button {
+    transition: all 0.3s;
+}
+
+.bulk-actions button:not(:disabled):hover {
+    background-color: #1976D2;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.bulk-actions button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+#selectionSummary {
+    margin-left: 15px;
+    color: #666;
+    font-size: 0.9em;
+    font-weight: 500;
+}
+
+/* Responsive design for bulk export */
+@media (max-width: 900px) {
+    .bulk-export-modal .modal-content {
+        width: 95%;
+        margin: 5vh auto;
+    }
+
+    .device-list {
+        max-height: 200px;
+    }
+
+    .radio-group {
+        flex-direction: column;
+    }
+}
