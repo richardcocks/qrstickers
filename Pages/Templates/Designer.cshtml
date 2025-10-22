@@ -115,6 +115,7 @@
 
         <div class="toolbar-section">
             <a href="/Templates" class="btn btn-secondary" style="margin-right: 10px;">← Back to Templates</a>
+            <button type="button" id="btnExport" class="btn btn-primary" style="margin-right: 10px;">📥 Export</button>
             <button type="button" id="btnSave" class="btn btn-primary">Save Template</button>
             <span id="saveStatus" class="save-status-tick">✓</span>
         </div>
@@ -373,6 +374,82 @@
         <span class="statusbar-divider">|</span>
         <span id="selectedInfo">No selection</span>
     </div>
+
+    <!-- Export Modal -->
+    <div id="exportModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Export Template Preview</h3>
+                <button type="button" class="modal-close" id="btnCloseModal">&times;</button>
+            </div>
+
+            <div class="modal-body">
+                <div class="export-controls">
+                    <!-- Format Selection -->
+                    <div class="control-group">
+                        <label class="control-label">Format:</label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="exportFormat" value="png" checked />
+                                <span>PNG (raster image, better for sharing)</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="exportFormat" value="svg" />
+                                <span>SVG (vector, editable in design tools)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- PNG-Specific Options -->
+                    <div id="pngOptions" class="control-group">
+                        <label class="control-label">Resolution (DPI):</label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="pngDpi" value="96" checked />
+                                <span>96 DPI (web resolution, fast)</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="pngDpi" value="150" />
+                                <span>150 DPI (medium quality)</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="pngDpi" value="300" />
+                                <span>300 DPI (print quality, larger file)</span>
+                            </label>
+                        </div>
+
+                        <label class="control-label" style="margin-top: 15px;">Background:</label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="pngBackground" value="white" checked />
+                                <span>White</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="pngBackground" value="transparent" />
+                                <span>Transparent (PNG with alpha channel)</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Preview Pane -->
+                <div class="preview-section">
+                    <label class="control-label">Preview:</label>
+                    <div class="preview-container" id="previewContainer">
+                        <canvas id="previewCanvas" style="border: 1px solid #ccc; background: white;"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="btnCancelExport">Cancel</button>
+                <button type="button" class="btn btn-primary" id="btnDownload">Download</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Overlay -->
+    <div id="exportModalOverlay" class="modal-overlay" style="display: none;"></div>
 </div>
 
 <!-- Hidden Form for Saving -->
@@ -395,6 +472,7 @@
 
     <!-- Designer Scripts -->
     <script src="~/js/fabric-extensions.js"></script>
+    <script src="~/js/export-preview.js"></script>
     <script src="~/js/designer.js"></script>
 
     <script>

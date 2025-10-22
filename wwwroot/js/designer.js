@@ -41,6 +41,9 @@ function initDesigner(templateData, editMode, systemTemplate) {
     // Initialize canvas event listeners
     initCanvasEvents();
 
+    // Initialize export modal
+    initExportModal();
+
     // Auto-save to localStorage
     setInterval(autoSaveToLocalStorage, 30000); // Every 30 seconds
 
@@ -976,4 +979,377 @@ function updateZoomDisplay() {
  */
 function updateStatus(message) {
     document.getElementById('statusText').textContent = message;
+}
+
+/**
+ * Export Modal Integration
+ */
+
+let exportModal = null;
+let previewCanvas = null;
+let currentExportFormat = 'png';
+let currentExportOptions = {
+    dpi: 96,
+    background: 'white'
+};
+
+/**
+ * Initialize export modal handlers
+ */
+function initExportModal() {
+    // Open modal button
+    document.getElementById('btnExport').addEventListener('click', openExportModal);
+
+    // Close modal buttons
+    document.getElementById('btnCloseModal').addEventListener('click', closeExportModal);
+    document.getElementById('btnCancelExport').addEventListener('click', closeExportModal);
+
+    // Modal overlay click to close
+    document.getElementById('exportModalOverlay').addEventListener('click', closeExportModal);
+
+    // Format selection change
+    document.querySelectorAll('input[name="exportFormat"]').forEach(input => {
+        input.addEventListener('change', function() {
+            currentExportFormat = this.value;
+            updateExportOptions();
+            updatePreviewDisplay();
+        });
+    });
+
+    // PNG DPI selection
+    document.querySelectorAll('input[name="pngDpi"]').forEach(input => {
+        input.addEventListener('change', function() {
+            currentExportOptions.dpi = parseInt(this.value);
+            updatePreviewDisplay();
+        });
+    });
+
+    // PNG background selection
+    document.querySelectorAll('input[name="pngBackground"]').forEach(input => {
+        input.addEventListener('change', function() {
+            currentExportOptions.background = this.value;
+            updatePreviewDisplay();
+        });
+    });
+
+    // Download button
+    document.getElementById('btnDownload').addEventListener('click', downloadExport);
+}
+
+/**
+ * Open export modal
+ */
+function openExportModal() {
+    // Show modal and overlay
+    const modal = document.getElementById('exportModal');
+    const overlay = document.getElementById('exportModalOverlay');
+
+    modal.style.display = 'flex';
+    overlay.style.display = 'block';
+
+    // Generate initial preview
+    updatePreviewDisplay();
+
+    updateStatus('Export modal opened');
+}
+
+/**
+ * Close export modal
+ */
+function closeExportModal() {
+    const modal = document.getElementById('exportModal');
+    const overlay = document.getElementById('exportModalOverlay');
+
+    modal.style.display = 'none';
+    overlay.style.display = 'none';
+
+    // Clean up preview canvas if exists
+    if (previewCanvas) {
+        previewCanvas.dispose();
+        previewCanvas = null;
+    }
+
+    updateStatus('Export modal closed');
+}
+
+/**
+ * Update PNG options visibility
+ */
+function updateExportOptions() {
+    const pngOptions = document.getElementById('pngOptions');
+
+    if (currentExportFormat === 'png') {
+        pngOptions.style.display = 'flex';
+    } else {
+        pngOptions.style.display = 'none';
+    }
+}
+
+/**
+ * Update preview display based on current options
+ */
+function updatePreviewDisplay() {
+    try {
+        // Get template JSON from current canvas
+        const templateJson = canvasToTemplateJson(
+            canvas,
+            parseFloat(document.getElementById('pageWidth').value),
+            parseFloat(document.getElementById('pageHeight').value)
+        );
+
+        console.log('[Preview] Starting preview update', {
+            hasTemplateJson: !!templateJson,
+            objectCount: templateJson?.objects?.length || 0
+        });
+
+        // Create preview canvas
+        const previewElement = document.getElementById('previewCanvas');
+        if (!previewElement) {
+            console.error('[Preview] Canvas element not found');
+            return;
+        }
+
+        console.log('[Preview] Canvas element found:', previewElement.id);
+
+        // Dispose of existing preview canvas
+        if (previewCanvas) {
+            console.log('[Preview] Disposing existing preview canvas');
+            previewCanvas.dispose();
+            previewCanvas = null;
+        }
+
+        // Calculate preview dimensions (scale down for display)
+        const templateWidth = currentTemplate.pageWidth;
+        const templateHeight = currentTemplate.pageHeight;
+        const maxPreviewWidth = 400;
+        const maxPreviewHeight = 300;
+
+        let previewWidth = mmToPx(templateWidth);
+        let previewHeight = mmToPx(templateHeight);
+
+        console.log('[Preview] Original template size:', { templateWidth, templateHeight, previewWidth: Math.round(previewWidth), previewHeight: Math.round(previewHeight) });
+
+        // Scale down if too large
+        const widthScale = maxPreviewWidth / previewWidth;
+        const heightScale = maxPreviewHeight / previewHeight;
+        const scale = Math.min(widthScale, heightScale, 1);
+
+        previewWidth = Math.round(previewWidth * scale);
+        previewHeight = Math.round(previewHeight * scale);
+
+        console.log('[Preview] Calculated dimensions:', { previewWidth, previewHeight, scale });
+
+        if (scale <= 0 || isNaN(scale)) {
+            console.error('[Preview] Invalid scale calculated:', scale);
+            updateStatus('Error: Invalid preview dimensions');
+            return;
+        }
+
+        // Create Fabric.js canvas for preview using canvas ID
+        // Let Fabric.js handle all dimension setting via constructor
+        previewCanvas = new fabric.Canvas('previewCanvas', {
+            width: previewWidth,
+            height: previewHeight,
+            backgroundColor: currentExportOptions.background === 'white' ? 'white' : 'rgba(0,0,0,0)',
+            selection: false,
+            renderOnAddRemove: false
+        });
+
+        // Ensure canvas and wrapper dimensions are correctly set
+        previewCanvas.setDimensions({
+            width: previewWidth,
+            height: previewHeight
+        }, {
+            cssOnly: false,
+            backstoreOnly: false
+        });
+
+        // Hide the upper canvas (Fabric.js creates this for interactions)
+        // Fabric.js may set inline styles that override CSS, so we must hide it with JavaScript
+        if (previewCanvas.upperCanvasEl) {
+            previewCanvas.upperCanvasEl.style.display = 'none';
+            previewCanvas.upperCanvasEl.style.visibility = 'hidden';
+            previewCanvas.upperCanvasEl.style.pointerEvents = 'none';
+            console.log('[Preview] Upper canvas hidden with inline styles');
+        }
+
+        console.log('[Preview] Fabric.js canvas created:', {
+            canvasWidth: previewCanvas.getWidth(),
+            canvasHeight: previewCanvas.getHeight(),
+            wrapperElement: previewCanvas.wrapperEl?.className || 'no wrapper',
+            upperCanvasHidden: previewCanvas.upperCanvasEl?.style.display === 'none'
+        });
+
+        // Load template objects with scaling
+        if (templateJson && templateJson.objects && templateJson.objects.length > 0) {
+            console.log('[Preview] Loading', templateJson.objects.length, 'objects');
+            loadPreviewTemplateObjects(templateJson, previewCanvas, scale);
+            const loadedObjects = previewCanvas.getObjects();
+            console.log('[Preview] Objects loaded on canvas:', loadedObjects.length);
+        } else {
+            console.log('[Preview] No objects to load');
+        }
+
+        // Render preview
+        previewCanvas.renderAll();
+        console.log('[Preview] Canvas rendered');
+
+        // Update preview container background to show transparency visually
+        const previewContainer = document.getElementById('previewContainer');
+        if (currentExportOptions.background === 'transparent') {
+            previewContainer.classList.add('transparent-bg');
+            console.log('[Preview] Transparent background activated - checkerboard visible');
+        } else {
+            previewContainer.classList.remove('transparent-bg');
+            console.log('[Preview] White background activated');
+        }
+
+        console.log('[Preview] Updated:', { format: currentExportFormat, dpi: currentExportOptions.dpi, bg: currentExportOptions.background });
+        updateStatus('Preview updated');
+    } catch (error) {
+        console.error('[Preview] Error updating preview:', error);
+        console.error('[Preview] Error stack:', error.stack);
+        updateStatus('Error generating preview');
+    }
+}
+
+/**
+ * Load template objects to preview canvas with scaling
+ */
+function loadPreviewTemplateObjects(templateJson, canvas, scale) {
+    if (!templateJson || !templateJson.objects) {
+        console.log('[Preview.Load] No objects in template');
+        return;
+    }
+
+    console.log('[Preview.Load] Starting load, scale:', scale);
+    const placeholders = generatePlaceholderMap(templateJson);
+    console.log('[Preview.Load] Placeholders generated:', Object.keys(placeholders).length, 'entries');
+
+    let objectsCreated = 0;
+    let objectsFailed = 0;
+
+    templateJson.objects.forEach((obj, index) => {
+        let fabricObject;
+
+        try {
+            console.log(`[Preview.Load] Object ${index}: type=${obj.type}, pos=(${obj.left},${obj.top}), size=(${obj.width},${obj.height})`);
+
+            switch (obj.type) {
+                case 'qrcode':
+                    fabricObject = createQRCode({
+                        left: mmToPx(obj.left) * scale,
+                        top: mmToPx(obj.top) * scale,
+                        width: mmToPx(obj.width || 30) * scale,
+                        height: mmToPx(obj.height || 30) * scale,
+                        dataSource: obj.properties?.dataSource || 'device.Serial'
+                    });
+                    break;
+
+                case 'text':
+                case 'i-text':
+                    const originalText = obj.text || '';
+                    const replacedText = replacePlaceholders(originalText, placeholders);
+                    fabricObject = createBoundText({
+                        left: mmToPx(obj.left) * scale,
+                        top: mmToPx(obj.top) * scale,
+                        text: replacedText,
+                        dataSource: obj.properties?.dataSource || '',
+                        fontFamily: obj.fontFamily || 'Arial',
+                        fontSize: (obj.fontSize || 16) * scale,
+                        fontWeight: obj.fontWeight || 'normal',
+                        fill: obj.fill || '#000000'
+                    });
+                    break;
+
+                case 'image':
+                    fabricObject = createImagePlaceholder({
+                        left: mmToPx(obj.left) * scale,
+                        top: mmToPx(obj.top) * scale,
+                        width: mmToPx(obj.width || 50) * scale,
+                        height: mmToPx(obj.height || 50) * scale,
+                        dataSource: obj.properties?.dataSource || '',
+                        src: obj.src || ''
+                    });
+                    break;
+
+                case 'rect':
+                    fabricObject = createRectangle({
+                        left: mmToPx(obj.left) * scale,
+                        top: mmToPx(obj.top) * scale,
+                        width: mmToPx(obj.width || 50) * scale,
+                        height: mmToPx(obj.height || 50) * scale,
+                        fill: obj.fill || 'transparent',
+                        stroke: obj.stroke || '#000000',
+                        strokeWidth: obj.strokeWidth || 1
+                    });
+                    break;
+
+                case 'line':
+                    fabricObject = createLine({
+                        x1: mmToPx(obj.left) * scale,
+                        y1: mmToPx(obj.top) * scale,
+                        x2: (mmToPx(obj.left) + mmToPx(obj.width || 50)) * scale,
+                        y2: mmToPx(obj.top) * scale,
+                        stroke: obj.stroke || '#000000',
+                        strokeWidth: obj.strokeWidth || 1
+                    });
+                    break;
+            }
+
+            if (fabricObject) {
+                if (obj.angle) {
+                    fabricObject.set('angle', obj.angle);
+                }
+                canvas.add(fabricObject);
+                objectsCreated++;
+                console.log(`[Preview.Load] Object ${index} created successfully, type: ${obj.type}`);
+            } else {
+                console.warn(`[Preview.Load] Object ${index} creation returned null/undefined, type: ${obj.type}`);
+                objectsFailed++;
+            }
+        } catch (error) {
+            console.error(`[Preview.Load] Error creating object ${index} (type ${obj.type}):`, error);
+            objectsFailed++;
+        }
+    });
+
+    console.log('[Preview.Load] Loading complete. Created:', objectsCreated, 'Failed:', objectsFailed);
+}
+
+/**
+ * Download the export file
+ */
+function downloadExport() {
+    try {
+        // Get template JSON from current canvas
+        const templateJson = canvasToTemplateJson(
+            canvas,
+            parseFloat(document.getElementById('pageWidth').value),
+            parseFloat(document.getElementById('pageHeight').value)
+        );
+
+        // Create export canvas (full resolution, not scaled)
+        const exportCanvas = createPreviewCanvas(
+            templateJson,
+            parseFloat(document.getElementById('pageWidth').value),
+            parseFloat(document.getElementById('pageHeight').value)
+        );
+
+        if (currentExportFormat === 'png') {
+            exportPNG(exportCanvas, currentExportOptions.dpi, currentExportOptions.background);
+        } else if (currentExportFormat === 'svg') {
+            exportSVG(exportCanvas);
+        }
+
+        // Clean up
+        exportCanvas.dispose();
+
+        // Keep modal open for multiple exports
+        updateStatus(`${currentExportFormat.toUpperCase()} exported successfully`);
+    } catch (error) {
+        console.error('Export error:', error);
+        updateStatus('Error during export');
+        alert('Error during export: ' + error.message);
+    }
 }

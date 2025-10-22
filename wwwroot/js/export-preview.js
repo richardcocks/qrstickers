@@ -1,0 +1,345 @@
+/**
+ * QR Sticker Export & Preview Engine
+ * Client-side placeholder generation and export functionality
+ */
+
+/**
+ * Realistic placeholder values for all data binding types
+ */
+const PLACEHOLDER_VALUES = {
+    'device.serial': 'MS-1234-ABCD-5678',      // Cisco Meraki format
+    'device.name': 'Example Switch',            // Descriptive name
+    'device.mac': '00:1A:2B:3C:4D:5E',        // Valid MAC format
+    'device.model': 'MS225-48FP',              // Actual Meraki model
+    'device.ipaddress': '192.168.1.10',        // Valid IP
+    'device.tags': 'production, datacenter',   // Comma-separated
+    'connection.name': 'Main Office',          // Business location
+    'connection.displayname': 'HQ Network',    // User-friendly name
+    'connection.companylogourl': 'https://example.com/logo.png',  // Logo URL
+    'network.name': 'Production Network',       // Network name
+    'global.supporturl': 'support.example.com',  // Support website
+    'global.supportphone': '+1-555-0100'       // Support phone
+};
+
+/**
+ * Extract all data binding patterns from template JSON
+ * Returns an array of unique bindings found in the template
+ */
+function extractDataBindings(templateJson) {
+    const bindings = new Set();
+
+    if (!templateJson || !templateJson.objects) {
+        return Array.from(bindings);
+    }
+
+    templateJson.objects.forEach(obj => {
+        // QR code data source
+        if (obj.properties && obj.properties.dataSource) {
+            const binding = obj.properties.dataSource.toLowerCase();
+            bindings.add(binding);
+        }
+
+        // Text content (extract {{...}} patterns)
+        if (obj.text) {
+            const pattern = /\{\{([^}]+)\}\}/g;
+            let match;
+            while ((match = pattern.exec(obj.text)) !== null) {
+                const binding = match[1].toLowerCase();
+                bindings.add(binding);
+            }
+        }
+
+        // Image data source
+        if (obj.type === 'image' && obj.properties && obj.properties.dataSource) {
+            const binding = obj.properties.dataSource.toLowerCase();
+            bindings.add(binding);
+        }
+    });
+
+    return Array.from(bindings);
+}
+
+/**
+ * Generate placeholder map for all detected bindings
+ */
+function generatePlaceholderMap(templateJson) {
+    const bindings = extractDataBindings(templateJson);
+    const placeholders = {};
+
+    bindings.forEach(binding => {
+        // Direct lookup in PLACEHOLDER_VALUES
+        if (PLACEHOLDER_VALUES[binding]) {
+            placeholders[binding] = PLACEHOLDER_VALUES[binding];
+        } else {
+            // Generate a generic placeholder for unknown bindings
+            placeholders[binding] = generateGenericPlaceholder(binding);
+        }
+    });
+
+    return placeholders;
+}
+
+/**
+ * Generate a generic placeholder for unknown data sources
+ */
+function generateGenericPlaceholder(binding) {
+    const parts = binding.split('.');
+    if (parts.length === 2) {
+        const [category, field] = parts;
+        return `[${category}.${field}]`;
+    }
+    return `[${binding}]`;
+}
+
+/**
+ * Replace data bindings in template JSON with placeholder values
+ */
+function createPreviewTemplate(templateJson, placeholders) {
+    // Deep clone the template to avoid mutating the original
+    const previewTemplate = JSON.parse(JSON.stringify(templateJson));
+
+    if (!previewTemplate.objects) {
+        return previewTemplate;
+    }
+
+    previewTemplate.objects = previewTemplate.objects.map(obj => {
+        const objCopy = JSON.parse(JSON.stringify(obj));
+
+        // Replace QR code data source
+        if (objCopy.properties && objCopy.properties.dataSource) {
+            const binding = objCopy.properties.dataSource.toLowerCase();
+            // For preview, we'll store the placeholder value in the data source
+            // This will be used when rendering the preview
+            objCopy.previewData = placeholders[binding] || PLACEHOLDER_VALUES[binding] || binding;
+        }
+
+        // Replace text content ({{...}} patterns)
+        if (objCopy.text) {
+            objCopy.text = replacePlaceholders(objCopy.text, placeholders);
+        }
+
+        return objCopy;
+    });
+
+    return previewTemplate;
+}
+
+/**
+ * Replace {{variable}} patterns in text with placeholder values
+ */
+function replacePlaceholders(text, placeholders) {
+    let result = text;
+    const pattern = /\{\{([^}]+)\}\}/g;
+
+    result = result.replace(pattern, (match, binding) => {
+        const normalizedBinding = binding.toLowerCase().trim();
+        return placeholders[normalizedBinding] || match;
+    });
+
+    return result;
+}
+
+/**
+ * Create a preview canvas with template and placeholders
+ */
+function createPreviewCanvas(templateJson, pageWidthMm, pageHeightMm) {
+    // Generate placeholder map
+    const placeholders = generatePlaceholderMap(templateJson);
+
+    // Create preview template with replaced data
+    const previewTemplate = createPreviewTemplate(templateJson, placeholders);
+
+    // Create a hidden canvas for rendering
+    const hiddenCanvas = document.createElement('canvas');
+    const stickerWidth = mmToPx(pageWidthMm);
+    const stickerHeight = mmToPx(pageHeightMm);
+
+    hiddenCanvas.width = stickerWidth;
+    hiddenCanvas.height = stickerHeight;
+
+    const previewCanvas = new fabric.Canvas(hiddenCanvas, {
+        width: stickerWidth,
+        height: stickerHeight,
+        backgroundColor: 'white',
+        selection: false
+    });
+
+    // Load template objects
+    loadTemplateObjectsToCanvas(previewTemplate, previewCanvas, placeholders);
+
+    return previewCanvas;
+}
+
+/**
+ * Load template objects to canvas for preview
+ */
+function loadTemplateObjectsToCanvas(templateJson, canvas, placeholders) {
+    if (!templateJson || !templateJson.objects) {
+        return;
+    }
+
+    templateJson.objects.forEach(obj => {
+        let fabricObject;
+
+        try {
+            switch (obj.type) {
+                case 'qrcode':
+                    fabricObject = createQRCode({
+                        left: mmToPx(obj.left),
+                        top: mmToPx(obj.top),
+                        width: mmToPx(obj.width || 30),
+                        height: mmToPx(obj.height || 30),
+                        dataSource: obj.properties?.dataSource || 'device.Serial'
+                    });
+                    break;
+
+                case 'text':
+                case 'i-text':
+                    fabricObject = createBoundText({
+                        left: mmToPx(obj.left),
+                        top: mmToPx(obj.top),
+                        text: obj.text || '',
+                        dataSource: obj.properties?.dataSource || '',
+                        fontFamily: obj.fontFamily || 'Arial',
+                        fontSize: obj.fontSize || 16,
+                        fontWeight: obj.fontWeight || 'normal',
+                        fill: obj.fill || '#000000'
+                    });
+                    break;
+
+                case 'image':
+                    fabricObject = createImagePlaceholder({
+                        left: mmToPx(obj.left),
+                        top: mmToPx(obj.top),
+                        width: mmToPx(obj.width || 50),
+                        height: mmToPx(obj.height || 50),
+                        dataSource: obj.properties?.dataSource || '',
+                        src: obj.src || ''
+                    });
+                    break;
+
+                case 'rect':
+                    fabricObject = createRectangle({
+                        left: mmToPx(obj.left),
+                        top: mmToPx(obj.top),
+                        width: mmToPx(obj.width || 50),
+                        height: mmToPx(obj.height || 50),
+                        fill: obj.fill || 'transparent',
+                        stroke: obj.stroke || '#000000',
+                        strokeWidth: obj.strokeWidth || 1
+                    });
+                    break;
+
+                case 'line':
+                    fabricObject = createLine({
+                        x1: mmToPx(obj.left),
+                        y1: mmToPx(obj.top),
+                        x2: mmToPx(obj.left) + mmToPx(obj.width || 50),
+                        y2: mmToPx(obj.top),
+                        stroke: obj.stroke || '#000000',
+                        strokeWidth: obj.strokeWidth || 1
+                    });
+                    break;
+            }
+
+            if (fabricObject) {
+                if (obj.angle) {
+                    fabricObject.set('angle', obj.angle);
+                }
+                canvas.add(fabricObject);
+            }
+        } catch (error) {
+            console.error(`Error loading object of type ${obj.type}:`, error);
+        }
+    });
+
+    canvas.renderAll();
+}
+
+/**
+ * Export canvas as PNG with specified DPI
+ */
+function exportPNG(canvas, dpi, backgroundColor = 'white') {
+    try {
+        // Calculate multiplier based on DPI (96 DPI = 1x, 150 DPI = 1.56x, 300 DPI = 3.125x)
+        const multiplier = dpi / 96;
+
+        // Export options
+        const options = {
+            format: 'png',
+            multiplier: multiplier,
+            enableRetinaScaling: false,
+            backgroundColor: backgroundColor === 'transparent' ? 'rgba(0,0,0,0)' : '#ffffff'
+        };
+
+        // Get data URL
+        const dataUrl = canvas.toDataURL(options);
+
+        // Download file
+        downloadFile(dataUrl, 'template-preview.png', 'image/png');
+
+        updateStatus(`PNG exported at ${dpi} DPI`);
+    } catch (error) {
+        console.error('PNG export error:', error);
+        alert('Error exporting PNG: ' + error.message);
+    }
+}
+
+/**
+ * Export canvas as SVG
+ */
+function exportSVG(canvas) {
+    try {
+        // Export as SVG string
+        const svgString = canvas.toSVG();
+
+        // Create blob from SVG string
+        const blob = new Blob([svgString], { type: 'image/svg+xml' });
+        const url = URL.createObjectURL(blob);
+
+        // Download file
+        downloadFile(url, 'template-preview.svg', 'image/svg+xml');
+
+        // Clean up object URL
+        URL.revokeObjectURL(url);
+
+        updateStatus('SVG exported successfully');
+    } catch (error) {
+        console.error('SVG export error:', error);
+        alert('Error exporting SVG: ' + error.message);
+    }
+}
+
+/**
+ * Trigger file download
+ */
+function downloadFile(dataUrl, fileName, mimeType) {
+    try {
+        const link = document.createElement('a');
+        link.href = dataUrl;
+        link.download = fileName;
+        link.type = mimeType;
+
+        // Ensure link is added to DOM (required in some browsers)
+        document.body.appendChild(link);
+
+        // Trigger download
+        link.click();
+
+        // Clean up
+        document.body.removeChild(link);
+    } catch (error) {
+        console.error('Download error:', error);
+        alert('Error downloading file: ' + error.message);
+    }
+}
+
+/**
+ * Update status bar message
+ */
+function updateStatus(message) {
+    const statusEl = document.getElementById('statusText');
+    if (statusEl) {
+        statusEl.textContent = message;
+    }
+}
