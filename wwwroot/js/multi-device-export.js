@@ -217,21 +217,49 @@ function renderBulkExportModalContent() {
                 <label><strong>Output Format:</strong></label>
                 <div class="radio-group">
                     <label class="radio-label">
-                        <input type="radio" name="bulk-format" value="zip-png" checked>
+                        <input type="radio" name="bulk-format" value="zip-png" checked onchange="toggleBulkFormatOptions()">
                         Individual PNG Files (ZIP)
                     </label>
                     <label class="radio-label">
-                        <input type="radio" name="bulk-format" value="zip-svg">
+                        <input type="radio" name="bulk-format" value="zip-svg" onchange="toggleBulkFormatOptions()">
                         Individual SVG Files (ZIP)
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="bulk-format" value="pdf" onchange="toggleBulkFormatOptions()">
+                        Multi-Device PDF (Grid Layout)
                     </label>
                 </div>
 
-                <div id="pngOptionsB bulk">
+                <div id="pngOptionsBulk" style="margin-top: 15px;">
                     <label><strong>PNG DPI:</strong></label>
                     <select id="bulkDpi" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 200px;">
                         <option value="96">96 DPI (Web)</option>
                         <option value="150">150 DPI (Medium)</option>
                         <option value="300" selected>300 DPI (Print)</option>
+                    </select>
+                </div>
+
+                <div id="pdfOptionsBulk" style="margin-top: 15px; display: none;">
+                    <label><strong>PDF Layout:</strong></label>
+                    <div class="radio-group">
+                        <label class="radio-label">
+                            <input type="radio" name="pdf-layout" value="auto-fit" checked>
+                            Auto-fit (maximize per page)
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="pdf-layout" value="one-per-page">
+                            One sticker per page
+                        </label>
+                    </div>
+
+                    <label style="margin-top: 10px; display: block;"><strong>Page Size:</strong></label>
+                    <select id="pdfPageSize" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 200px;">
+                        <option value="A4" selected>A4 (210mm × 297mm)</option>
+                        <option value="A5">A5 (148mm × 210mm)</option>
+                        <option value="A6">A6 (105mm × 148mm)</option>
+                        <option value="4x6">4" × 6" (Packing Label)</option>
+                        <option value="Letter">US Letter (8.5" × 11")</option>
+                        <option value="Legal">US Legal (8.5" × 14")</option>
                     </select>
                 </div>
 
@@ -328,6 +356,116 @@ function formatMatchReason(reason) {
 }
 
 /**
+ * Exports devices as a multi-page PDF with grid layout (server-side rendering)
+ */
+async function exportBulkAsPdf(selected, exportDataList, dpi, background) {
+    console.log('[PDF Export] Starting PDF export');
+
+    const layout = document.querySelector('input[name="pdf-layout"]:checked')?.value || 'auto-fit';
+    const pageSize = document.getElementById('pdfPageSize')?.value || 'A4';
+    const images = [];
+    const failedDevices = [];
+    bulkExportState.exportCancelled = false;
+
+    // Render each device to PNG base64
+    for (let i = 0; i < selected.length; i++) {
+        if (bulkExportState.exportCancelled) {
+            console.log('[PDF Export] Export cancelled by user');
+            break;
+        }
+
+        const device = selected[i];
+        const exportData = exportDataList[i];
+
+        updateProgress(i + 1, selected.length, device.name);
+
+        try {
+            // Create device data map
+            const deviceDataMap = createDeviceDataMap(exportData);
+
+            // Render device to blob (PNG only for PDF)
+            const blob = await renderDeviceToBlob(
+                exportData.matchedTemplate,
+                deviceDataMap,
+                'png',
+                { dpi, background }
+            );
+
+            // Convert blob to base64
+            const base64 = await blobToBase64(blob);
+
+            // Collect image data
+            images.push({
+                imageBase64: base64.split(',')[1], // Remove "data:image/png;base64," prefix
+                widthMm: exportData.matchedTemplate.pageWidth,
+                heightMm: exportData.matchedTemplate.pageHeight,
+                deviceName: device.name,
+                deviceSerial: device.serial
+            });
+
+            console.log(`[PDF Export] Rendered ${i + 1}/${selected.length}: ${device.name}`);
+
+        } catch (error) {
+            console.error(`[PDF Export] Failed to render device ${device.name}:`, error);
+            failedDevices.push({ device: device.name, error: error.message });
+        }
+
+        // Add small delay for progress visibility
+        await new Promise(resolve => setTimeout(resolve, 50));
+    }
+
+    // Send to server for PDF generation
+    if (!bulkExportState.exportCancelled && images.length > 0) {
+        try {
+            console.log(`[PDF Export] Sending ${images.length} images to server for PDF generation...`);
+            updateProgress(selected.length, selected.length, 'Generating PDF on server...');
+
+            const response = await fetch('/api/export/pdf/bulk', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    images: images,
+                    layout: layout,
+                    pageSize: pageSize
+                })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || `Server error: ${response.status}`);
+            }
+
+            // Download PDF
+            const pdfBlob = await response.blob();
+            const filename = response.headers.get('Content-Disposition')?.match(/filename="(.+)"/)?.[1] || `devices-${images.length}-${Date.now()}.pdf`;
+            downloadBlob(pdfBlob, filename);
+
+            showCompletionSummary(images.length, failedDevices);
+
+        } catch (error) {
+            console.error('[PDF Export] Error generating PDF:', error);
+            showNotification('Error generating PDF: ' + error.message, 'error');
+        }
+    }
+
+    closeBulkExportModal();
+}
+
+/**
+ * Converts a Blob to base64 string
+ */
+function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+}
+
+/**
  * Starts the bulk export process
  */
 async function startBulkExport() {
@@ -346,7 +484,14 @@ async function startBulkExport() {
     modal.querySelector('#exportProgressSection').style.display = 'block';
     modal.querySelector('.btn-start-export').style.display = 'none';
 
-    // Initialize ZIP
+    // Branch based on format
+    if (format === 'pdf') {
+        // PDF export - send to server for PDF generation
+        await exportBulkAsPdf(selected, exportDataList, dpi, background);
+        return;
+    }
+
+    // ZIP export (PNG or SVG)
     const zip = new JSZip();
     const exportedFiles = [];
     const failedDevices = [];
@@ -526,6 +671,25 @@ function showCompletionSummary(successCount, failed) {
         failed.forEach(f => {
             console.warn(`  • ${f.device}: ${f.error}`);
         });
+    }
+}
+
+/**
+ * Toggles format-specific options visibility based on selected format
+ */
+function toggleBulkFormatOptions() {
+    const format = document.querySelector('input[name="bulk-format"]:checked')?.value;
+    const pngOptions = document.getElementById('pngOptionsBulk');
+    const pdfOptions = document.getElementById('pdfOptionsBulk');
+
+    if (format === 'pdf') {
+        // Show PDF options, hide PNG options
+        if (pngOptions) pngOptions.style.display = 'none';
+        if (pdfOptions) pdfOptions.style.display = 'block';
+    } else {
+        // Show PNG options (for both zip-png and zip-svg), hide PDF options
+        if (pngOptions) pngOptions.style.display = (format === 'zip-png') ? 'block' : 'none';
+        if (pdfOptions) pdfOptions.style.display = 'none';
     }
 }
 

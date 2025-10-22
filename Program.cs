@@ -9,10 +9,15 @@ using QRStickers;
 using QRStickers.Meraki;
 using QRStickers.Data;
 using QRStickers.Services;
+using QRStickers.Models;
+using QuestPDF.Infrastructure;
 
 // ===================== APPLICATION SETUP =====================
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Configure QuestPDF license (Community License for open-source projects)
+QuestPDF.Settings.License = LicenseType.Community;
 
 // Configure logging explicitly for Azure
 builder.Logging.ClearProviders();
@@ -88,6 +93,9 @@ builder.Services.AddScoped<TemplateService>();
 // Register Phase 5 device export services
 builder.Services.AddScoped<DeviceExportHelper>();
 builder.Services.AddScoped<TemplateMatchingService>();
+
+// Register Phase 5.5 PDF export service
+builder.Services.AddScoped<PdfExportService>();
 
 // Add memory caching for template matching
 builder.Services.AddMemoryCache();
@@ -269,6 +277,43 @@ app.MapGet("/api/templates/match", async (
     catch (ArgumentException)
     {
         return Results.NotFound();
+    }
+}).RequireAuthorization();
+
+// Bulk PDF export endpoint (Phase 5.5)
+app.MapPost("/api/export/pdf/bulk", async (
+    [FromBody] PdfExportRequest request,
+    HttpContext httpContext,
+    PdfExportService pdfService,
+    UserManager<ApplicationUser> userManager) =>
+{
+    try
+    {
+        var user = await userManager.GetUserAsync(httpContext.User);
+        if (user == null)
+            return Results.Unauthorized();
+
+        // Validate request
+        if (request.Images == null || !request.Images.Any())
+            return Results.BadRequest(new { error = "No images provided" });
+
+        if (request.Images.Count > 100)
+            return Results.BadRequest(new { error = "Maximum 100 devices per PDF export" });
+
+        // Generate PDF
+        var pdfBytes = await pdfService.GenerateBulkPdfAsync(request);
+
+        // Generate filename
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var filename = $"devices-{request.Images.Count}-{timestamp}.pdf";
+
+        // Return PDF file
+        return Results.File(pdfBytes, "application/pdf", filename);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[PDF Export] Error: {ex.Message}");
+        return Results.StatusCode(500);
     }
 }).RequireAuthorization();
 

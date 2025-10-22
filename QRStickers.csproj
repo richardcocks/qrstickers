@@ -22,6 +22,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging.AzureAppServices" Version="9.0.10" />
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="9.0.0" />
     <PackageReference Include="QRCoder" Version="1.7.0" />
+    <PackageReference Include="QuestPDF" Version="2025.7.3" />
   </ItemGroup>
 
 </Project>
