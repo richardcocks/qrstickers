@@ -22,8 +22,6 @@ function initDesigner(templateData, editMode, systemTemplate, images) {
     isEditMode = editMode;
     isSystemTemplate = systemTemplate;
     uploadedImages = images || [];
-    console.log(templateData);
-    console.log('[Designer] Loaded', uploadedImages.length, 'uploaded images');
     // Initialize Fabric.js canvas
     initCanvas(templateData.pageWidth, templateData.pageHeight);
 
@@ -61,14 +59,9 @@ function initCanvas(pageWidthMm, pageHeightMm) {
     const stickerWidth = mmToPx(pageWidthMm);
     const stickerHeight = mmToPx(pageHeightMm);
 
-    console.log('initCanvas - Sticker dimensions:', pageWidthMm, 'mm x', pageHeightMm, 'mm');
-    console.log('initCanvas - Sticker in pixels:', stickerWidth, 'px x', stickerHeight, 'px');
-
     // Make canvas larger than sticker (3x or minimum 800x600)
     const canvasWidth = Math.max(stickerWidth * 3, 800);
     const canvasHeight = Math.max(stickerHeight * 3, 600);
-
-    console.log('initCanvas - Canvas size:', canvasWidth, 'px x', canvasHeight, 'px');
 
     canvas = new fabric.Canvas('designCanvas', {
         width: canvasWidth,
@@ -76,19 +69,6 @@ function initCanvas(pageWidthMm, pageHeightMm) {
         backgroundColor: 'transparent', // Transparent so wrapper's grid shows through
         selection: true,
         preserveObjectStacking: true
-    });
-
-    // Verify canvas element dimensions
-    const canvasElement = document.getElementById('designCanvas');
-    console.log('Canvas element dimensions:', {
-        canvasWidth: canvas.getWidth(),
-        canvasHeight: canvas.getHeight(),
-        domWidth: canvasElement.width,
-        domHeight: canvasElement.height,
-        styleWidth: canvasElement.style.width,
-        styleHeight: canvasElement.style.height,
-        offsetWidth: canvasElement.offsetWidth,
-        offsetHeight: canvasElement.offsetHeight
     });
 
     // Enable object controls
@@ -117,24 +97,9 @@ function initCanvas(pageWidthMm, pageHeightMm) {
         name: 'stickerBoundary'
     });
 
-    console.log('Boundary position:', boundaryLeft, ',', boundaryTop);
-    console.log('Boundary size:', stickerWidth, 'x', stickerHeight);
-
     // Add boundary to canvas
     canvas.add(stickerBoundary);
     canvas.sendToBack(stickerBoundary); // Ensure it's behind all objects
-
-    // Verify boundary was added
-    console.log('Boundary added to canvas. Total objects:', canvas.getObjects().length);
-    console.log('Boundary object:', {
-        left: stickerBoundary.left,
-        top: stickerBoundary.top,
-        width: stickerBoundary.width,
-        height: stickerBoundary.height,
-        stroke: stickerBoundary.stroke,
-        strokeWidth: stickerBoundary.strokeWidth,
-        visible: stickerBoundary.visible
-    });
 
     // Sync input fields with actual sticker dimensions
     document.getElementById('pageWidth').value = pageWidthMm;
@@ -1032,7 +997,6 @@ function autoSaveToLocalStorage() {
     );
 
     localStorage.setItem('qrstickers_autosave', JSON.stringify(templateJson));
-    console.log('Auto-saved to localStorage');
 }
 
 /**
@@ -1345,11 +1309,6 @@ function updatePreviewDisplay() {
             parseFloat(document.getElementById('pageHeight').value)
         );
 
-        console.log('[Preview] Starting preview update', {
-            hasTemplateJson: !!templateJson,
-            objectCount: templateJson?.objects?.length || 0
-        });
-
         // Create preview canvas
         const previewElement = document.getElementById('previewCanvas');
         if (!previewElement) {
@@ -1357,11 +1316,8 @@ function updatePreviewDisplay() {
             return;
         }
 
-        console.log('[Preview] Canvas element found:', previewElement.id);
-
         // Dispose of existing preview canvas
         if (previewCanvas) {
-            console.log('[Preview] Disposing existing preview canvas');
             previewCanvas.dispose();
             previewCanvas = null;
         }
@@ -1375,8 +1331,6 @@ function updatePreviewDisplay() {
         let previewWidth = mmToPx(templateWidth);
         let previewHeight = mmToPx(templateHeight);
 
-        console.log('[Preview] Original template size:', { templateWidth, templateHeight, previewWidth: Math.round(previewWidth), previewHeight: Math.round(previewHeight) });
-
         // Scale down if too large
         const widthScale = maxPreviewWidth / previewWidth;
         const heightScale = maxPreviewHeight / previewHeight;
@@ -1384,8 +1338,6 @@ function updatePreviewDisplay() {
 
         previewWidth = Math.round(previewWidth * scale);
         previewHeight = Math.round(previewHeight * scale);
-
-        console.log('[Preview] Calculated dimensions:', { previewWidth, previewHeight, scale });
 
         if (scale <= 0 || isNaN(scale)) {
             console.error('[Preview] Invalid scale calculated:', scale);
@@ -1418,41 +1370,23 @@ function updatePreviewDisplay() {
             previewCanvas.upperCanvasEl.style.display = 'none';
             previewCanvas.upperCanvasEl.style.visibility = 'hidden';
             previewCanvas.upperCanvasEl.style.pointerEvents = 'none';
-            console.log('[Preview] Upper canvas hidden with inline styles');
         }
-
-        console.log('[Preview] Fabric.js canvas created:', {
-            canvasWidth: previewCanvas.getWidth(),
-            canvasHeight: previewCanvas.getHeight(),
-            wrapperElement: previewCanvas.wrapperEl?.className || 'no wrapper',
-            upperCanvasHidden: previewCanvas.upperCanvasEl?.style.display === 'none'
-        });
 
         // Load template objects with scaling
         if (templateJson && templateJson.objects && templateJson.objects.length > 0) {
-            console.log('[Preview] Loading', templateJson.objects.length, 'objects');
             loadPreviewTemplateObjects(templateJson, previewCanvas, scale);
-            const loadedObjects = previewCanvas.getObjects();
-            console.log('[Preview] Objects loaded on canvas:', loadedObjects.length);
-        } else {
-            console.log('[Preview] No objects to load');
         }
 
         // Render preview
         previewCanvas.renderAll();
-        console.log('[Preview] Canvas rendered');
 
         // Update preview container background to show transparency visually
         const previewContainer = document.getElementById('previewContainer');
         if (currentExportOptions.background === 'transparent') {
             previewContainer.classList.add('transparent-bg');
-            console.log('[Preview] Transparent background activated - checkerboard visible');
         } else {
             previewContainer.classList.remove('transparent-bg');
-            console.log('[Preview] White background activated');
         }
-
-        console.log('[Preview] Updated:', { format: currentExportFormat, dpi: currentExportOptions.dpi, bg: currentExportOptions.background });
         updateStatus('Preview updated');
     } catch (error) {
         console.error('[Preview] Error updating preview:', error);
@@ -1466,34 +1400,18 @@ function updatePreviewDisplay() {
  */
 function loadPreviewTemplateObjects(templateJson, canvas, scale) {
     if (!templateJson || !templateJson.objects) {
-        console.log('[Preview.Load] No objects in template');
         return;
     }
 
-    console.log('[Preview.Load] Starting load, scale:', scale);
     const placeholders = generatePlaceholderMap(templateJson, uploadedImages);
-    console.log('[Preview.Load] Placeholders generated:', Object.keys(placeholders).length, 'entries');
-    console.log('[Preview.Load] Placeholder keys:', Object.keys(placeholders));
-    console.log('[Preview.Load] Has device.qrcode?', 'device.qrcode' in placeholders);
-    console.log('[Preview.Load] Has network.qrcode?', 'network.qrcode' in placeholders);
-
-    let objectsCreated = 0;
-    let objectsFailed = 0;
 
     templateJson.objects.forEach((obj, index) => {
         let fabricObject;
 
         try {
-            console.log(`[Preview.Load] Object ${index}: type=${obj.type}, pos=(${obj.left},${obj.top}), size=(${obj.width},${obj.height})`);
 
             switch (obj.type) {
                 case 'qrcode':
-                    console.log('[Preview.Load] QR object details:', {
-                        hasProperties: !!obj.properties,
-                        properties: obj.properties,
-                        dataSource: obj.properties?.dataSource,
-                        dataSourceField: obj.dataSource
-                    });
                     fabricObject = createQRCode({
                         left: mmToPx(obj.left) * scale,
                         top: mmToPx(obj.top) * scale,
@@ -1562,29 +1480,19 @@ function loadPreviewTemplateObjects(templateJson, canvas, scale) {
                 let shouldAddToCanvas = true;
 
                 // Replace QR code placeholder with real image if we have QR data
-                console.log('[Preview.Load] About to check QR condition:', {
-                    type: obj.type,
-                    isQrcode: obj.type === 'qrcode',
-                    hasDataSource: !!obj.properties?.dataSource,
-                    condition: obj.type === 'qrcode' && obj.properties?.dataSource
-                });
                 if (obj.type === 'qrcode' && obj.properties?.dataSource) {
                     const dataSource = obj.properties.dataSource.toLowerCase();
-                    console.log('[Preview.Load] QR code detected, dataSource:', dataSource);
 
                     if (dataSource === 'device.qrcode' || dataSource === 'network.qrcode') {
                         // Use placeholder value for QR code data
                         const qrDataUri = placeholders[dataSource];
-                        console.log('[Preview.Load] QR data URI found:', !!qrDataUri, 'length:', qrDataUri?.length);
 
                         if (qrDataUri) {
-                            console.log('[Preview.Load] Loading real QR image...');
                             fabric.Image.fromURL(qrDataUri, function(img) {
                                 if (!img || !img.width) {
                                     console.error('[Preview.Load] QR image loaded but has no dimensions');
                                     return;
                                 }
-                                console.log('[Preview.Load] QR image loaded - dimensions:', img.width, 'x', img.height);
 
                                 img.set({
                                     left: fabricObject.left,
@@ -1598,14 +1506,11 @@ function loadPreviewTemplateObjects(templateJson, canvas, scale) {
 
                                 canvas.add(img);
                                 canvas.renderAll();
-                                console.log('[Preview.Load] QR image added to canvas successfully');
                             }, function(error) {
                                 console.error('[Preview.Load] Error loading QR image:', error);
                             }, { crossOrigin: 'anonymous' });
 
                             shouldAddToCanvas = false;  // Don't add placeholder
-                            objectsCreated++;
-                            console.log(`[Preview.Load] Object ${index} queued for QR loading, type: ${obj.type}`);
                         }
                     }
                 }
@@ -1613,21 +1518,17 @@ function loadPreviewTemplateObjects(templateJson, canvas, scale) {
                 // Replace image placeholder with real custom image if we have image data in placeholders
                 if (obj.type === 'image' && obj.properties?.dataSource) {
                     const dataSource = obj.properties.dataSource.toLowerCase();
-                    console.log('[Preview.Load] Image detected, dataSource:', dataSource);
 
                     // Check if this is a custom image with placeholder data
                     if (dataSource.startsWith('customimage.')) {
                         const imageDataUri = placeholders[dataSource];
-                        console.log('[Preview.Load] Custom image data URI found:', !!imageDataUri, 'length:', imageDataUri?.length);
 
                         if (imageDataUri) {
-                            console.log('[Preview.Load] Loading real custom image...');
                             fabric.Image.fromURL(imageDataUri, function(img) {
                                 if (!img || !img.width) {
                                     console.error('[Preview.Load] Custom image loaded but has no dimensions');
                                     return;
                                 }
-                                console.log('[Preview.Load] Custom image loaded - dimensions:', img.width, 'x', img.height);
 
                                 img.set({
                                     left: fabricObject.left,
@@ -1641,34 +1542,23 @@ function loadPreviewTemplateObjects(templateJson, canvas, scale) {
 
                                 canvas.add(img);
                                 canvas.renderAll();
-                                console.log('[Preview.Load] Custom image added to canvas successfully');
                             }, function(error) {
                                 console.error('[Preview.Load] Error loading custom image:', error);
                             }, { crossOrigin: 'anonymous' });
 
                             shouldAddToCanvas = false;  // Don't add placeholder
-                            objectsCreated++;
-                            console.log(`[Preview.Load] Object ${index} queued for custom image loading, type: ${obj.type}`);
                         }
                     }
                 }
 
                 if (shouldAddToCanvas) {
                     canvas.add(fabricObject);
-                    objectsCreated++;
-                    console.log(`[Preview.Load] Object ${index} created successfully, type: ${obj.type}`);
                 }
-            } else {
-                console.warn(`[Preview.Load] Object ${index} creation returned null/undefined, type: ${obj.type}`);
-                objectsFailed++;
             }
         } catch (error) {
             console.error(`[Preview.Load] Error creating object ${index} (type ${obj.type}):`, error);
-            objectsFailed++;
         }
     });
-
-    console.log('[Preview.Load] Loading complete. Created:', objectsCreated, 'Failed:', objectsFailed);
 }
 
 /**

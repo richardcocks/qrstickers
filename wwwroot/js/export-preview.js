@@ -84,11 +84,9 @@ function generatePlaceholderMap(templateJson, uploadedImages = []) {
 
     // Add custom images from uploadedImages array
     if (uploadedImages && uploadedImages.length > 0) {
-        console.log('[generatePlaceholderMap] Adding', uploadedImages.length, 'custom images to placeholder map');
         uploadedImages.forEach(image => {
             const bindingKey = `customimage.image_${image.id}`;
             placeholders[bindingKey] = image.dataUri;
-            console.log(`[generatePlaceholderMap] Added ${bindingKey} → data URI (${image.name}, length: ${image.dataUri.length})`);
         });
     }
 
@@ -131,7 +129,6 @@ function createPreviewTemplate(templateJson, placeholders) {
             // Also populate properties.data for custom images so loadTemplateObjectsToCanvas can render them
             if (binding.startsWith('customimage.') && placeholders[binding]) {
                 objCopy.properties.data = placeholders[binding];
-                console.log(`[createPreviewTemplate] Set properties.data for custom image: ${binding} (length: ${placeholders[binding].length})`);
             }
         }
 
@@ -211,13 +208,6 @@ function loadTemplateObjectsToCanvas(templateJson, canvas, placeholders) {
         try {
             switch (obj.type) {
                 case 'qrcode':
-                    console.log('[QR Debug] Processing qrcode object:', {
-                        type: obj.type,
-                        hasProperties: !!obj.properties,
-                        dataSource: obj.properties?.dataSource,
-                        hasPreviewData: !!obj.previewData,
-                        previewData: obj.previewData ? obj.previewData.substring(0, 50) : null
-                    });
                     fabricObject = createQRCode({
                         left: mmToPx(obj.left),
                         top: mmToPx(obj.top),
@@ -242,25 +232,11 @@ function loadTemplateObjectsToCanvas(templateJson, canvas, placeholders) {
                     break;
 
                 case 'image':
-                    console.log('[Preview] Processing image object:', {
-                        type: obj.type,
-                        hasProperties: !!obj.properties,
-                        dataSource: obj.properties?.dataSource,
-                        hasData: !!obj.properties?.data,
-                        dataLength: obj.properties?.data?.length
-                    });
-
                     // Check if this is a custom image with data
                     if (obj.properties?.data) {
-                        console.log('[Preview] ============ CUSTOM IMAGE WITH DATA ============');
-                        console.log('[Preview] data URI length:', obj.properties.data.length);
-                        console.log('[Preview] data URI prefix:', obj.properties.data.substring(0, 80));
-                        console.log('[Preview] ======================================================');
-
                         // Create promise for async image load
                         const imageLoadPromise = new Promise((resolve, reject) => {
                             fabric.Image.fromURL(obj.properties.data, function(img) {
-                                console.log('[Preview] fabric.Image.fromURL callback triggered');
 
                                 if (!img || !img.width) {
                                     console.error('[Preview] Custom image loaded but has no dimensions');
@@ -281,7 +257,6 @@ function loadTemplateObjectsToCanvas(templateJson, canvas, placeholders) {
 
                                 canvas.add(img);
                                 canvas.renderAll();
-                                console.log('[Preview] Custom image added to canvas successfully');
                                 resolve();
                             }, function(error) {
                                 console.error('[Preview] Error loading custom image:', error);
@@ -292,7 +267,6 @@ function loadTemplateObjectsToCanvas(templateJson, canvas, placeholders) {
                         loadPromises.push(imageLoadPromise);
                         // Don't create placeholder - we're loading the real image
                     } else {
-                        console.log('[Preview] No properties.data, creating placeholder');
                         // Regular image placeholder
                         fabricObject = createImagePlaceholder({
                             left: mmToPx(obj.left),
@@ -337,27 +311,13 @@ function loadTemplateObjectsToCanvas(templateJson, canvas, placeholders) {
                 let shouldAddToCanvas = true;
 
                 // Replace QR code placeholder with real image if we have QR data
-                console.log('[QR Debug] Checking replacement condition:', {
-                    type: obj.type,
-                    isQrcode: obj.type === 'qrcode',
-                    hasProperties: !!obj.properties,
-                    hasDataSource: !!obj.properties?.dataSource,
-                    dataSource: obj.properties?.dataSource
-                });
                 if (obj.type === 'qrcode' && obj.properties?.dataSource) {
                     const dataSource = obj.properties.dataSource.toLowerCase();
                     if (dataSource === 'device.qrcode' || dataSource === 'network.qrcode') {
                         // Use real QR code from properties.data (export mode) or previewData (preview mode)
                         // or fall back to PLACEHOLDER_VALUES
                         const qrDataUri = obj.properties.data || obj.previewData || PLACEHOLDER_VALUES[dataSource];
-                        console.log('[QR Render] DataSource:', obj.properties.dataSource,
-                                    'Has properties.data:', !!obj.properties.data,
-                                    'Has previewData:', !!obj.previewData,
-                                    'Using fallback:', !obj.properties.data && !obj.previewData && !!PLACEHOLDER_VALUES[dataSource],
-                                    'QR URI length:', qrDataUri ? qrDataUri.length : 0);
                         if (qrDataUri) {
-                            console.log('[QR Render] Attempting to load QR image...');
-                            console.log('[QR Render] Data URI prefix:', qrDataUri.substring(0, 50));
 
                             // Create promise for async QR image load
                             const qrLoadPromise = new Promise((resolve, reject) => {
@@ -367,8 +327,6 @@ function loadTemplateObjectsToCanvas(templateJson, canvas, placeholders) {
                                         reject(new Error('QR image has no dimensions'));
                                         return;
                                     }
-                                    console.log('[QR Render] Image loaded - dimensions:', img.width, 'x', img.height);
-                                    console.log('[QR Render] Placeholder dimensions:', fabricObject.width, 'x', fabricObject.height);
 
                                     img.set({
                                         left: fabricObject.left,
@@ -379,11 +337,9 @@ function loadTemplateObjectsToCanvas(templateJson, canvas, placeholders) {
                                         originX: fabricObject.originX || 'center',
                                         originY: fabricObject.originY || 'center'
                                     });
-                                    console.log('[QR Render] Image scaled - scaleX:', img.scaleX, 'scaleY:', img.scaleY);
 
                                     canvas.add(img);
                                     canvas.renderAll();
-                                    console.log('[QR Render] Successfully added QR image to canvas');
                                     resolve();
                                 }, function(error) {
                                     console.error('[QR Render] Error loading image:', error);
@@ -393,8 +349,6 @@ function loadTemplateObjectsToCanvas(templateJson, canvas, placeholders) {
 
                             loadPromises.push(qrLoadPromise);
                             shouldAddToCanvas = false;  // Don't add placeholder - loading real QR instead
-                        } else {
-                            console.warn('[QR Render] No QR data URI available for', dataSource);
                         }
                     }
                 }
@@ -512,8 +466,6 @@ async function createAndRenderPreviewCanvas(
     forExport = false,
     exportOptions = { dpi: 96, background: 'white' }) {
 
-    console.log(`[Preview] Creating canvas for ${forExport ? 'export' : 'preview'}`);
-
     // Calculate canvas dimensions
     const pxPerMm = 3.779527559; // Standard screen DPI (96 DPI)
     const canvasWidth = pageWidthMm * pxPerMm;
@@ -523,8 +475,6 @@ async function createAndRenderPreviewCanvas(
     const multiplier = forExport ? (exportOptions.dpi || 96) / 96 : 1;
     const exportWidth = canvasWidth * multiplier;
     const exportHeight = canvasHeight * multiplier;
-
-    console.log(`[Preview] Canvas size: ${canvasWidth}x${canvasHeight}px (export: ${exportWidth}x${exportHeight}px)`);
 
     // Set canvas element dimensions
     canvasElement.width = forExport ? exportWidth : canvasWidth;
@@ -638,7 +588,6 @@ async function createAndRenderPreviewCanvas(
                     // Replace QR code placeholder with real image if we have QR data
                     if (obj.type === 'qrcode' && obj.properties?.data) {
                         const qrDataUri = obj.properties.data;
-                        console.log('[Device Export] QR code detected with data, loading real image...');
 
                         // Create promise for async QR image load
                         const qrLoadPromise = new Promise((resolve, reject) => {
@@ -661,7 +610,6 @@ async function createAndRenderPreviewCanvas(
 
                                 canvas.add(img);
                                 canvas.renderAll();
-                                console.log('[Device Export] QR image added to canvas successfully');
                                 resolve();
                             }, function(error) {
                                 console.error('[Device Export] Error loading QR image:', error);
@@ -676,19 +624,10 @@ async function createAndRenderPreviewCanvas(
                     // Replace image placeholder with real image if we have custom image data
                     if (obj.type === 'image' && obj.properties?.data) {
                         const imageDataUri = obj.properties.data;
-                        console.log('[Device Export] ============ CUSTOM IMAGE DETECTED ============');
-                        console.log('[Device Export] dataSource:', obj.properties.dataSource);
-                        console.log('[Device Export] data URI length:', imageDataUri.length);
-                        console.log('[Device Export] data URI prefix:', imageDataUri.substring(0, 80));
-                        console.log('[Device Export] ===============================================');
 
                         // Create promise for async image load
                         const imageLoadPromise = new Promise((resolve, reject) => {
                             fabric.Image.fromURL(imageDataUri, function(img) {
-                                console.log('[Device Export] fabric.Image.fromURL callback triggered');
-                                console.log('[Device Export] Image object:', img);
-                                console.log('[Device Export] Image width:', img?.width, 'height:', img?.height);
-
                                 if (!img || !img.width) {
                                     console.error('[Device Export] Custom image loaded but has no dimensions');
                                     reject(new Error('Custom image has no dimensions'));
@@ -707,7 +646,6 @@ async function createAndRenderPreviewCanvas(
 
                                 canvas.add(img);
                                 canvas.renderAll();
-                                console.log('[Device Export] Custom image added to canvas successfully');
                                 resolve();
                             }, function(error) {
                                 console.error('[Device Export] Error loading custom image:', error);
@@ -731,9 +669,7 @@ async function createAndRenderPreviewCanvas(
 
     // Wait for all QR/custom images to load before continuing
     if (qrLoadPromises.length > 0) {
-        console.log(`[Preview] ========== WAITING FOR ${qrLoadPromises.length} IMAGE(S) ==========`);
         await Promise.all(qrLoadPromises);
-        console.log(`[Preview] ========== ALL IMAGES LOADED ==========`);
     }
 
     // Hide Fabric.js upper canvas (interactive overlay)
@@ -744,7 +680,6 @@ async function createAndRenderPreviewCanvas(
     }
 
     canvas.renderAll();
-    console.log(`[Preview] Canvas created and rendered`);
 
     return canvas;
 }
@@ -756,8 +691,6 @@ function exportPNGForDevice(canvas, pageWidthMm, pageHeightMm, deviceIdentifier 
     try {
         const dpi = parseInt(document.querySelector('input[name="export-dpi"]:checked')?.value || '96') || 96;
         const background = document.querySelector('input[name="export-background"]:checked')?.value || 'white';
-
-        console.log(`[Export] Exporting PNG at ${dpi} DPI`);
 
         // Calculate multiplier based on DPI (96 DPI = 1x, 150 DPI = 1.56x, 300 DPI = 3.125x)
         const multiplier = dpi / 96;
@@ -779,8 +712,6 @@ function exportPNGForDevice(canvas, pageWidthMm, pageHeightMm, deviceIdentifier 
 
         // Download file
         downloadFile(dataUrl, fileName, 'image/png');
-
-        console.log(`[Export] PNG exported successfully`);
     } catch (error) {
         console.error('[Export] PNG export error:', error);
         throw error;
@@ -792,7 +723,6 @@ function exportPNGForDevice(canvas, pageWidthMm, pageHeightMm, deviceIdentifier 
  */
 function exportSVGForDevice(canvas, pageWidthMm, pageHeightMm, deviceIdentifier = 'device') {
     try {
-        console.log(`[Export] Exporting SVG`);
 
         // Export as SVG string
         const svgString = canvas.toSVG();
@@ -810,8 +740,6 @@ function exportSVGForDevice(canvas, pageWidthMm, pageHeightMm, deviceIdentifier 
 
         // Clean up object URL
         URL.revokeObjectURL(url);
-
-        console.log(`[Export] SVG exported successfully`);
     } catch (error) {
         console.error('[Export] SVG export error:', error);
         throw error;

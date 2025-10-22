@@ -22,8 +22,6 @@ let deviceExportState = {
  * Attaches click handlers to all export buttons
  */
 function initDeviceExport() {
-    console.log('[Device Export] Initializing device export module');
-
     // Find all export buttons in device table
     const exportButtons = document.querySelectorAll('[data-export-button]');
     exportButtons.forEach(btn => {
@@ -35,16 +33,12 @@ function initDeviceExport() {
             openDeviceExportModal(deviceId, connectionId, deviceName);
         });
     });
-
-    console.log(`[Device Export] Initialized ${exportButtons.length} export buttons`);
 }
 
 /**
  * Opens device export modal and fetches all necessary data
  */
 async function openDeviceExportModal(deviceId, connectionId, deviceName) {
-    console.log(`[Device Export] Opening export modal for device ${deviceId} (${deviceName})`);
-
     // Create modal if not exists
     if (!deviceExportState.deviceExportModal) {
         createDeviceExportModal();
@@ -54,7 +48,6 @@ async function openDeviceExportModal(deviceId, connectionId, deviceName) {
 
     try {
         // Fetch device export data from API (while modal still hidden)
-        console.log('[Device Export] Fetching export data from API');
         const response = await fetch(`/api/export/device/${deviceId}?connectionId=${connectionId}`, {
             method: 'GET',
             headers: {
@@ -77,8 +70,6 @@ async function openDeviceExportModal(deviceId, connectionId, deviceName) {
         deviceExportState.currentExportData = result.data;
         deviceExportState.currentDevice = result.data.device;
         deviceExportState.currentTemplate = result.data.matchedTemplate;
-
-        console.log('[Device Export] Device data loaded, rendering modal');
 
         // Render modal UI
         renderDeviceExportModalUI();
@@ -285,8 +276,6 @@ function onExportBackgroundChanged() {
  * Updates the preview canvas with current export settings
  */
 async function updateDeviceExportPreview() {
-    console.log('[Device Export] Updating preview');
-
     const previewContainer = document.querySelector('#previewContainer');
     if (!previewContainer) return;
 
@@ -325,8 +314,6 @@ async function updateDeviceExportPreview() {
         } else {
             previewContainer.classList.remove('transparent-bg');
         }
-
-        console.log('[Device Export] Preview updated');
     } catch (error) {
         console.error('[Device Export] Error updating preview:', error);
     }
@@ -384,14 +371,10 @@ function createDeviceDataMap(exportData) {
     // Add custom images with lowercase binding keys
     // Format: customimage.image_42 → image data URI
     if (exportData.uploadedImages && exportData.uploadedImages.length > 0) {
-        console.log('[Device Export] Adding', exportData.uploadedImages.length, 'custom images to data map');
-
         exportData.uploadedImages.forEach(image => {
             const bindingKey = `customimage.image_${image.id}`;
             // Add to root level for easy lookup
             dataMap[bindingKey] = image.dataUri;
-
-            console.log(`[Device Export] Mapped ${bindingKey} → data URI (${image.name}, length: ${image.dataUri.length}, prefix: ${image.dataUri.substring(0, 50)}...)`);
         });
     }
 
@@ -416,15 +399,11 @@ function replacePlaceholdersInTemplate(templateObj, dataMap) {
         // Replace dataSource bindings for QR codes and other objects
         if (obj.properties && obj.properties.dataSource) {
             const dataSource = obj.properties.dataSource;
-            console.log('[replacePlaceholders] Object type:', obj.type, 'dataSource:', dataSource);
 
             const value = resolveDataSource(dataSource, dataMap);
 
             if (value !== null) {
                 obj.properties.data = value;
-                console.log('[replacePlaceholders] ✓ Set properties.data for', dataSource, 'length:', value.length);
-            } else {
-                console.log('[replacePlaceholders] ✗ No value found for', dataSource);
             }
         }
 
@@ -439,8 +418,6 @@ function replacePlaceholdersInTemplate(templateObj, dataMap) {
  * Resolves a dataSource binding (e.g., "device.serial") to its actual value
  */
 function resolveDataSource(dataSource, dataMap) {
-    console.log('[resolveDataSource] Looking up:', dataSource);
-
     if (!dataSource) return null;
 
     // Parse "entity.field" format (case-insensitive)
@@ -454,25 +431,15 @@ function resolveDataSource(dataSource, dataMap) {
     // Check for custom images first (special case: customImage.Image_42)
     // These are stored at root level with lowercase keys: customimage.image_42
     const customImageKey = `${entityLower}.${fieldLower}`;
-    console.log('[resolveDataSource] Checking custom image key:', customImageKey);
 
     if (dataMap[customImageKey] !== undefined) {
-        console.log('[resolveDataSource] ✓ Found custom image!', customImageKey, '→ length:', dataMap[customImageKey].length, 'prefix:', dataMap[customImageKey].substring(0, 50) + '...');
         return dataMap[customImageKey];
     }
-
-    console.log('[resolveDataSource] Not a custom image, checking regular entities for', entity + '.' + field);
 
     // Try exact match first, then lowercase match for regular entities
     let value = dataMap[entity]?.[field];
     if (value === undefined) {
         value = dataMap[entityLower]?.[fieldLower];
-    }
-
-    if (value !== undefined) {
-        console.log('[resolveDataSource] ✓ Found regular entity value');
-    } else {
-        console.log('[resolveDataSource] ✗ No value found for', dataSource);
     }
 
     return value !== undefined ? value : null;
@@ -502,8 +469,6 @@ function replacePlaceholders(text, dataMap) {
  * Downloads the device sticker with current settings
  */
 async function downloadDeviceExport() {
-    console.log('[Device Export] Starting export');
-
     try {
         const data = deviceExportState.currentExportData;
         const template = data.matchedTemplate;
@@ -559,9 +524,6 @@ async function downloadDeviceExport() {
  */
 function logExportToHistory(deviceId, templateId, format, options) {
     // This is a POST endpoint we'll need to create for Phase 5.2
-    // For now, we'll just log to console
-    console.log('[Device Export] Logging export to history:', { deviceId, templateId, format, options });
-
     // TODO: POST /api/export/history with export details
 }
 
@@ -569,7 +531,6 @@ function logExportToHistory(deviceId, templateId, format, options) {
  * Closes the device export modal
  */
 function closeDeviceExportModal() {
-    console.log('[Device Export] Closing export modal');
 
     if (deviceExportState.previewCanvas) {
         deviceExportState.previewCanvas.dispose?.();

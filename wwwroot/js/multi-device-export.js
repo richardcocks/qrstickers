@@ -75,8 +75,6 @@ function getSelectedDevices() {
  * Opens bulk export modal with selected devices
  */
 async function openBulkExportModal() {
-    console.log('[Bulk Export] Opening bulk export modal');
-
     const selected = getSelectedDevices();
     if (selected.length === 0) {
         showNotification('Please select at least one device to export.', 'error');
@@ -106,7 +104,6 @@ async function openBulkExportModal() {
 
     try {
         // Fetch template matches for all devices
-        console.log(`[Bulk Export] Fetching data for ${selected.length} devices`);
         const exportDataPromises = selected.map(device =>
             fetchDeviceExportData(device.id, device.connectionId)
         );
@@ -433,8 +430,6 @@ function validateStickersForPageSize(exportDataList, pageSizeName) {
  * Exports devices as a multi-page PDF with grid layout (server-side rendering)
  */
 async function exportBulkAsPdf(selected, exportDataList, dpi, background) {
-    console.log('[PDF Export] Starting PDF export');
-
     const layout = document.querySelector('input[name="pdf-layout"]:checked')?.value || 'auto-fit';
     const pageSize = document.getElementById('pdfPageSize')?.value || 'A4';
 
@@ -473,7 +468,6 @@ async function exportBulkAsPdf(selected, exportDataList, dpi, background) {
     // Render each device to PNG base64
     for (let i = 0; i < selected.length; i++) {
         if (bulkExportState.exportCancelled) {
-            console.log('[PDF Export] Export cancelled by user');
             break;
         }
 
@@ -506,8 +500,6 @@ async function exportBulkAsPdf(selected, exportDataList, dpi, background) {
                 deviceSerial: device.serial
             });
 
-            console.log(`[PDF Export] Rendered ${i + 1}/${selected.length}: ${device.name}`);
-
         } catch (error) {
             console.error(`[PDF Export] Failed to render device ${device.name}:`, error);
             failedDevices.push({ device: device.name, error: error.message });
@@ -520,7 +512,6 @@ async function exportBulkAsPdf(selected, exportDataList, dpi, background) {
     // Send to server for PDF generation
     if (!bulkExportState.exportCancelled && images.length > 0) {
         try {
-            console.log(`[PDF Export] Sending ${images.length} images to server for PDF generation...`);
             updateProgress(selected.length, selected.length, 'Generating PDF on server...');
 
             const response = await fetch('/api/export/pdf/bulk', {
@@ -572,8 +563,6 @@ function blobToBase64(blob) {
  * Starts the bulk export process
  */
 async function startBulkExport() {
-    console.log('[Bulk Export] Starting bulk export');
-
     const selected = bulkExportState.selectedDevices;
     const exportDataList = bulkExportState.currentExportData;
     const format = document.querySelector('input[name="bulk-format"]:checked')?.value || 'zip-png';
@@ -603,7 +592,6 @@ async function startBulkExport() {
     // Export each device
     for (let i = 0; i < selected.length; i++) {
         if (bulkExportState.exportCancelled) {
-            console.log('[Bulk Export] Export cancelled by user');
             break;
         }
 
@@ -631,8 +619,6 @@ async function startBulkExport() {
             zip.file(filename, blob);
             exportedFiles.push(filename);
 
-            console.log(`[Bulk Export] Exported ${i + 1}/${selected.length}: ${filename}`);
-
         } catch (error) {
             console.error(`[Bulk Export] Failed to export device ${device.name}:`, error);
             failedDevices.push({ device: device.name, error: error.message });
@@ -645,7 +631,6 @@ async function startBulkExport() {
     // Generate and download ZIP if not cancelled
     if (!bulkExportState.exportCancelled && exportedFiles.length > 0) {
         try {
-            console.log('[Bulk Export] Generating ZIP file...');
             updateProgress(selected.length, selected.length, 'Generating ZIP file...');
 
             // Small delay to show ZIP generation step
@@ -800,7 +785,6 @@ function toggleBulkFormatOptions() {
  * Cancels the bulk export
  */
 function cancelBulkExport() {
-    console.log('[Bulk Export] User cancelled export');
     bulkExportState.exportCancelled = true;
 }
 
@@ -808,8 +792,6 @@ function cancelBulkExport() {
  * Closes the bulk export modal
  */
 function closeBulkExportModal() {
-    console.log('[Bulk Export] Closing bulk export modal');
-
     if (bulkExportState.bulkExportModal) {
         bulkExportState.bulkExportModal.style.display = 'none';
     }
@@ -818,5 +800,3 @@ function closeBulkExportModal() {
     bulkExportState.currentExportData = [];
     bulkExportState.exportCancelled = false;
 }
-
-console.log('[Bulk Export] Multi-device export module loaded');

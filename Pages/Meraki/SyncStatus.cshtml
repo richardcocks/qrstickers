@@ -56,8 +56,6 @@
 
     // Handle sync status updates
     connection.on("SyncStatusUpdate", function(update) {
-        console.log("Received sync status update:", update);
-
         const syncStatus = document.getElementById("sync-status");
 
         if (update.status === "Failed") {
@@ -124,11 +122,9 @@
     // Start connection and join group
     connection.start()
         .then(() => {
-            console.log("SignalR connected");
             return connection.invoke("JoinConnectionGroup", connectionId);
         })
         .then(() => {
-            console.log("Joined connection group:", connectionId);
             const status = document.getElementById("connection-status");
             if (status) status.textContent = "Connected";
         })
