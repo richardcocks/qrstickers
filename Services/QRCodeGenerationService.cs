@@ -8,14 +8,14 @@ namespace QRStickers.Services;
 public class QRCodeGenerationService
 {
     private readonly QRCodeGenerator _qrGenerator;
-    private readonly ILogger<QRCodeGenerationService> _logger;
+    private readonly ILogger<QRCodeGenerationService>? _logger;
 
     public QRCodeGenerationService(
         QRCodeGenerator qrGenerator,
         ILogger<QRCodeGenerationService> logger)
     {
         _qrGenerator = qrGenerator ?? throw new ArgumentNullException(nameof(qrGenerator));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _logger = logger;
     }
 
     /// <summary>
@@ -28,7 +28,7 @@ public class QRCodeGenerationService
     {
         if (string.IsNullOrWhiteSpace(content))
         {
-            _logger.LogWarning("[QR Generation] Cannot generate QR code: content is null or empty");
+            _logger?.LogWarning("[QR Generation] Cannot generate QR code: content is null or empty");
             return null;
         }
 
@@ -47,7 +47,7 @@ public class QRCodeGenerationService
             var base64 = Convert.ToBase64String(qrCodeImage);
             var dataUri = $"data:image/png;base64,{base64}";
 
-            _logger.LogDebug("[QR Generation] Generated QR code for content: {Content} ({Size} bytes)",
+            _logger?.LogDebug("[QR Generation] Generated QR code for content: {Content} ({Size} bytes)",
                 content.Length > 50 ? content.Substring(0, 50) + "..." : content,
                 base64.Length);
 
@@ -55,7 +55,7 @@ public class QRCodeGenerationService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[QR Generation] Error generating QR code for content: {Content}", content);
+            _logger?.LogError(ex, "[QR Generation] Error generating QR code for content: {Content}", content);
             return null;
         }
     }
