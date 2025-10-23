@@ -148,7 +148,6 @@ public class ConnectionDefaultsModel : PageModel
         return RedirectToPage("/Templates/ConnectionDefaults", new { connectionId = SelectedConnectionId, returnTo = ReturnTo });
     }
 
-    [ValidateAntiForgeryToken]
     public async Task<IActionResult> OnPostUpdateDefaultAsync(int connectionId, string productType, int? templateId, string? returnTo)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
