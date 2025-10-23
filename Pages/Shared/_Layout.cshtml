@@ -1,3 +1,4 @@
+@inject IConfiguration Configuration
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,11 +7,17 @@
     <title>@ViewData["Title"] - QR Stickers</title>
     <link rel="icon" type="image/svg+xml" href="~/favicon.svg">
     <style>
+        html {
+            height: 100%;
+        }
         body {
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
             background-color: #f5f5f5;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
         }
         .navbar {
             background-color: #1976d2;
@@ -61,6 +68,7 @@
             background-color: white;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             border-radius: 4px;
+            flex: 1 0 auto;
         }
         .btn {
             display: inline-block;
@@ -113,6 +121,65 @@
             display: table;
             clear: both;
         }
+        .footer {
+            background-color: #1976d2;
+            color: white;
+            padding: 20px;
+            margin-top: 40px;
+            border-top: 3px solid #1565c0;
+            flex-shrink: 0;
+        }
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .footer-left {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .footer-right {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        .footer a {
+            color: white;
+            text-decoration: none;
+            padding: 5px 10px;
+        }
+        .footer a:hover {
+            background-color: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            text-decoration: none;
+        }
+        .footer-version {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+        .footer-environment {
+            background-color: #ffa726;
+            color: #000;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+        @@media (max-width: 768px) {
+            .footer-content {
+                flex-direction: column;
+                text-align: center;
+            }
+            .footer-right {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -145,6 +212,33 @@
     <div class="container">
         @RenderBody()
     </div>
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-left">
+                <div>
+                    &copy; @DateTime.Now.Year QRStickers Project
+                    @if (!string.IsNullOrEmpty(Configuration["Footer:Version"]))
+                    {
+                        <span class="footer-version">@Configuration["Footer:Version"]</span>
+                    }
+                </div>
+                @if (Configuration.GetValue<bool>("Footer:ShowEnvironment"))
+                {
+                    <div>
+                        <span class="footer-environment">@(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production")</span>
+                    </div>
+                }
+            </div>
+            <div class="footer-right">
+                @if (!string.IsNullOrEmpty(Configuration["Footer:GitHubUrl"]))
+                {
+                    <a href="@Configuration["Footer:GitHubUrl"]" target="_blank" rel="noopener">Source Available</a>
+                }
+                <a href="/Terms">Terms</a>
+                <a href="/Privacy">Privacy</a>
+            </div>
+        </div>
+    </footer>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
