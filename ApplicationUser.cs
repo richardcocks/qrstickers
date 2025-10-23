@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Identity;
 
 namespace QRStickers;
@@ -15,6 +16,7 @@ public class ApplicationUser : IdentityUser
     /// <summary>
     /// Optional display name for personalized greeting (falls back to email if not set)
     /// </summary>
+    [MaxLength(100)]
     public string? DisplayName { get; set; }
 
     /// <summary>
