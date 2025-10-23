@@ -59,4 +59,9 @@ public abstract class Connection
     /// Navigation property to the user who owns this connection
     /// </summary>
     public ApplicationUser User { get; set; } = null!;
+
+    /// <summary>
+    /// Navigation property to default templates per device ProductType
+    /// </summary>
+    public ICollection<ConnectionDefaultTemplate> DefaultTemplates { get; set; } = new List<ConnectionDefaultTemplate>();
 }

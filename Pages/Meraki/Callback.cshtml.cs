@@ -137,6 +137,9 @@ public class CallbackModel : PageModel
             _logger.LogInformation("Created new Meraki connection {ConnectionId} for user {UserId} with display name '{DisplayName}'",
                 connection.Id, userId, displayName);
 
+            // Seed default template mappings for this connection
+            await SeedConnectionDefaultTemplatesAsync(connection.Id);
+
             // Store refresh token linked to connection
             var oauthToken = new MerakiOAuthToken
             {
@@ -179,5 +182,56 @@ public class CallbackModel : PageModel
             ErrorMessage = "An error occurred while connecting your Meraki account";
             return Page();
         }
+    }
+
+    /// <summary>
+    /// Seeds ConnectionDefaultTemplates for a newly created connection
+    /// Maps ProductTypes to system templates (rack vs ceiling/wall)
+    /// </summary>
+    private async Task SeedConnectionDefaultTemplatesAsync(int connectionId)
+    {
+        // Get system template IDs
+        var rackTemplate = await _db.StickerTemplates
+            .Where(t => t.IsSystemTemplate && t.Name == "Rack Mount Default")
+            .FirstOrDefaultAsync();
+
+        var ceilingTemplate = await _db.StickerTemplates
+            .Where(t => t.IsSystemTemplate && t.Name == "Ceiling/Wall Mount Default")
+            .FirstOrDefaultAsync();
+
+        if (rackTemplate == null || ceilingTemplate == null)
+        {
+            _logger.LogWarning("System templates not found when seeding defaults for connection {ConnectionId}", connectionId);
+            return;
+        }
+
+        // Define ProductType → Template mappings
+        var productTypeMappings = new[]
+        {
+            ("switch", rackTemplate.Id),
+            ("appliance", rackTemplate.Id),
+            ("wireless", ceilingTemplate.Id),
+            ("camera", ceilingTemplate.Id),
+            ("sensor", ceilingTemplate.Id),
+            ("cellularGateway", ceilingTemplate.Id)
+        };
+
+        // Create ConnectionDefaultTemplate entries
+        foreach (var (productType, templateId) in productTypeMappings)
+        {
+            _db.ConnectionDefaultTemplates.Add(new ConnectionDefaultTemplate
+            {
+                ConnectionId = connectionId,
+                ProductType = productType,
+                TemplateId = templateId,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            });
+        }
+
+        await _db.SaveChangesAsync();
+
+        _logger.LogInformation("Seeded {Count} default template mappings for connection {ConnectionId}",
+            productTypeMappings.Length, connectionId);
     }
 }

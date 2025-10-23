@@ -30,26 +30,6 @@ public class StickerTemplate
     public string? Description { get; set; }
 
     /// <summary>
-    /// Filter by Meraki product type (nullable = matches all)
-    /// Values: "switch", "wireless", "appliance", "camera", "sensor", "cellularGateway"
-    /// </summary>
-    [MaxLength(50)]
-    public string? ProductTypeFilter { get; set; }
-
-    /// <summary>
-    /// Whether this is a rack-mount template (for categorization)
-    /// Rack-mount: switches, appliances, some cameras
-    /// Non-rack: wireless APs, sensors, wall-mount cameras
-    /// </summary>
-    public bool IsRackMount { get; set; }
-
-    /// <summary>
-    /// Whether this is the fallback template
-    /// Only one template should have IsDefault=true per connection (or global)
-    /// </summary>
-    public bool IsDefault { get; set; } = false;
-
-    /// <summary>
     /// System templates are read-only and cloneable by users
     /// </summary>
     public bool IsSystemTemplate { get; set; } = false;

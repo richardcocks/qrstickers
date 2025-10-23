@@ -34,15 +34,6 @@ public class CreateModel : PageModel
     public double PageHeight { get; set; } = 50.0;
 
     [BindProperty]
-    public string? ProductTypeFilter { get; set; }
-
-    [BindProperty]
-    public bool IsRackMount { get; set; }
-
-    [BindProperty]
-    public bool IsDefault { get; set; }
-
-    [BindProperty]
     public int? CloneFromTemplateId { get; set; }
 
     public List<Connection> UserConnections { get; set; } = new();
@@ -100,8 +91,6 @@ public class CreateModel : PageModel
             Description = sourceTemplate.Description;
             PageWidth = sourceTemplate.PageWidth;
             PageHeight = sourceTemplate.PageHeight;
-            ProductTypeFilter = sourceTemplate.ProductTypeFilter;
-            IsRackMount = sourceTemplate.IsRackMount;
         }
 
         return Page();
@@ -182,9 +171,6 @@ public class CreateModel : PageModel
                 ConnectionId = ConnectionId,
                 PageWidth = sourceTemplate.PageWidth,
                 PageHeight = sourceTemplate.PageHeight,
-                ProductTypeFilter = ProductTypeFilter,
-                IsRackMount = IsRackMount,
-                IsDefault = IsDefault,
                 IsSystemTemplate = false,
                 TemplateJson = sourceTemplate.TemplateJson,
                 CreatedAt = DateTime.UtcNow,
@@ -204,9 +190,6 @@ public class CreateModel : PageModel
                 ConnectionId = ConnectionId,
                 PageWidth = PageWidth,
                 PageHeight = PageHeight,
-                ProductTypeFilter = ProductTypeFilter,
-                IsRackMount = IsRackMount,
-                IsDefault = IsDefault,
                 IsSystemTemplate = false,
                 TemplateJson = CreateBlankTemplateJson(PageWidth, PageHeight),
                 CreatedAt = DateTime.UtcNow,

@@ -19,8 +19,7 @@ public class QRStickersDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<SyncStatus> SyncStatuses { get; set; } = null!;
     public DbSet<StickerTemplate> StickerTemplates { get; set; } = null!;
     public DbSet<GlobalVariable> GlobalVariables { get; set; } = null!;
-    public DbSet<TemplateDeviceModel> TemplateDeviceModels { get; set; } = null!;
-    public DbSet<TemplateDeviceType> TemplateDeviceTypes { get; set; } = null!;
+    public DbSet<ConnectionDefaultTemplate> ConnectionDefaultTemplates { get; set; } = null!;
     public DbSet<ExportHistory> ExportHistory { get; set; } = null!;
     public DbSet<UploadedImage> UploadedImages { get; set; } = null!;
 
@@ -135,18 +134,9 @@ public class QRStickersDbContext : IdentityDbContext<ApplicationUser>
             .HasForeignKey(t => t.ConnectionId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // Indexes for StickerTemplate performance
+        // Index for StickerTemplate performance
         modelBuilder.Entity<StickerTemplate>()
             .HasIndex(t => t.ConnectionId);
-
-        modelBuilder.Entity<StickerTemplate>()
-            .HasIndex(t => t.ProductTypeFilter);
-
-        modelBuilder.Entity<StickerTemplate>()
-            .HasIndex(t => t.IsDefault);
-
-        modelBuilder.Entity<StickerTemplate>()
-            .HasIndex(t => t.IsRackMount);
 
         // Configure GlobalVariable relationships
         modelBuilder.Entity<GlobalVariable>()
@@ -163,41 +153,29 @@ public class QRStickersDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<GlobalVariable>()
             .HasIndex(v => v.ConnectionId);
 
-        // Configure TemplateDeviceModel relationships
-        modelBuilder.Entity<TemplateDeviceModel>()
-            .HasOne(m => m.Template)
-            .WithMany()
-            .HasForeignKey(m => m.TemplateId)
+        // Configure ConnectionDefaultTemplate relationships
+        modelBuilder.Entity<ConnectionDefaultTemplate>()
+            .HasOne(d => d.Connection)
+            .WithMany(c => c.DefaultTemplates)
+            .HasForeignKey(d => d.ConnectionId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // Unique constraint: One template can have multiple models, but not duplicates
-        modelBuilder.Entity<TemplateDeviceModel>()
-            .HasIndex(m => new { m.TemplateId, m.DeviceModel })
-            .IsUnique();
-
-        modelBuilder.Entity<TemplateDeviceModel>()
-            .HasIndex(m => m.TemplateId);
-
-        modelBuilder.Entity<TemplateDeviceModel>()
-            .HasIndex(m => m.DeviceModel);
-
-        // Configure TemplateDeviceType relationships
-        modelBuilder.Entity<TemplateDeviceType>()
-            .HasOne(t => t.Template)
+        modelBuilder.Entity<ConnectionDefaultTemplate>()
+            .HasOne(d => d.Template)
             .WithMany()
-            .HasForeignKey(t => t.TemplateId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .HasForeignKey(d => d.TemplateId)
+            .OnDelete(DeleteBehavior.NoAction); // Prevent cascade path conflicts
 
-        // Unique constraint: One template can have multiple types, but not duplicates
-        modelBuilder.Entity<TemplateDeviceType>()
-            .HasIndex(t => new { t.TemplateId, t.DeviceType })
+        // Unique constraint: One ProductType per Connection
+        modelBuilder.Entity<ConnectionDefaultTemplate>()
+            .HasIndex(d => new { d.ConnectionId, d.ProductType })
             .IsUnique();
 
-        modelBuilder.Entity<TemplateDeviceType>()
-            .HasIndex(t => t.TemplateId);
+        modelBuilder.Entity<ConnectionDefaultTemplate>()
+            .HasIndex(d => d.ConnectionId);
 
-        modelBuilder.Entity<TemplateDeviceType>()
-            .HasIndex(t => t.DeviceType);
+        modelBuilder.Entity<ConnectionDefaultTemplate>()
+            .HasIndex(d => d.ProductType);
 
         // Configure ExportHistory relationships
         modelBuilder.Entity<ExportHistory>()

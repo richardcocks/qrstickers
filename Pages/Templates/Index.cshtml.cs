@@ -23,15 +23,11 @@ public class IndexModel : PageModel
 
     // Filter properties
     public int? SelectedConnectionId { get; set; }
-    public string? ProductTypeFilter { get; set; }
-    public bool? IsRackMount { get; set; }
     public bool? ShowSystemTemplates { get; set; } = true;
     public string? SearchQuery { get; set; }
 
     public async Task<IActionResult> OnGetAsync(
         int? connectionId,
-        string? productType,
-        bool? rackMount,
         bool? systemTemplates,
         string? search)
     {
@@ -62,16 +58,6 @@ public class IndexModel : PageModel
             query = query.Where(t => t.ConnectionId == connectionId);
         }
 
-        if (!string.IsNullOrEmpty(productType))
-        {
-            query = query.Where(t => t.ProductTypeFilter == productType);
-        }
-
-        if (rackMount.HasValue)
-        {
-            query = query.Where(t => t.IsRackMount == rackMount.Value);
-        }
-
         if (systemTemplates.HasValue && !systemTemplates.Value)
         {
             query = query.Where(t => !t.IsSystemTemplate);
@@ -87,14 +73,11 @@ public class IndexModel : PageModel
 
         Templates = await query
             .OrderByDescending(t => t.IsSystemTemplate)
-            .ThenByDescending(t => t.IsDefault)
             .ThenBy(t => t.Name)
             .ToListAsync();
 
         // Set filter state for UI
         SelectedConnectionId = connectionId;
-        ProductTypeFilter = productType;
-        IsRackMount = rackMount;
         ShowSystemTemplates = systemTemplates ?? true; // Default to true (show system templates)
         SearchQuery = search;
 

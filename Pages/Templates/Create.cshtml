@@ -167,10 +167,10 @@
             <div class="form-group">
                 <label>Page Size</label>
                 <div class="preset-buttons">
-                    <button type="button" class="preset-btn" onclick="setPageSize(100, 50, true)">
+                    <button type="button" class="preset-btn" onclick="setPageSize(100, 50)">
                         100×50mm (Rack Mount)
                     </button>
-                    <button type="button" class="preset-btn" onclick="setPageSize(60, 60, false)">
+                    <button type="button" class="preset-btn" onclick="setPageSize(60, 60)">
                         60×60mm (Ceiling/Wall)
                     </button>
                     <button type="button" class="preset-btn" onclick="enableCustomSize()">
@@ -194,33 +194,6 @@
                 </div>
             </div>
 
-            <div class="form-group">
-                <label for="ProductTypeFilter">Product Type Filter</label>
-                <select id="ProductTypeFilter" name="ProductTypeFilter" asp-for="ProductTypeFilter">
-                    <option value="">All Product Types</option>
-                    <option value="switch">Switch</option>
-                    <option value="wireless">Wireless AP</option>
-                    <option value="appliance">Appliance</option>
-                    <option value="camera">Camera</option>
-                    <option value="sensor">Sensor</option>
-                    <option value="cellularGateway">Cellular Gateway</option>
-                </select>
-                <div class="help-text">Optional: Restrict this template to specific device types</div>
-            </div>
-
-            <div class="form-group">
-                <label for="IsRackMount">Mount Type</label>
-                <select id="IsRackMount" name="IsRackMount" asp-for="IsRackMount">
-                    <option value="true">Rack Mount</option>
-                    <option value="false">Ceiling/Wall</option>
-                </select>
-            </div>
-
-            <div class="form-group checkbox-group">
-                <input type="checkbox" id="IsDefault" name="IsDefault" asp-for="IsDefault" />
-                <label for="IsDefault">Set as Default Template</label>
-                <div class="help-text" style="margin-left: 28px;">Default template is used when no specific template matches</div>
-            </div>
         </div>
 
         <!-- Form Actions -->
@@ -234,10 +207,9 @@
 </div>
 
 <script>
-    function setPageSize(width, height, isRackMount) {
+    function setPageSize(width, height) {
         document.getElementById('PageWidth').value = width;
         document.getElementById('PageHeight').value = height;
-        document.getElementById('IsRackMount').value = isRackMount ? 'true' : 'false';
         updatePresetButtons();
     }
 

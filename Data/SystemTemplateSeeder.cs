@@ -143,9 +143,6 @@ public static class SystemTemplateSeeder
         {
             Name = "Rack Mount Default",
             Description = "Default template for rack-mounted devices (switches, appliances)",
-            ProductTypeFilter = null, // Matches all product types
-            IsRackMount = true,
-            IsDefault = false,
             IsSystemTemplate = true,
             PageWidth = 100.0,
             PageHeight = 50.0,
@@ -240,9 +237,6 @@ public static class SystemTemplateSeeder
         {
             Name = "Ceiling/Wall Mount Default",
             Description = "Default template for ceiling/wall-mounted devices (APs, cameras, sensors)",
-            ProductTypeFilter = null, // Matches all product types
-            IsRackMount = false,
-            IsDefault = true, // This is the global fallback
             IsSystemTemplate = true,
             PageWidth = 60.0,
             PageHeight = 60.0,
