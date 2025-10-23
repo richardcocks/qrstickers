@@ -200,7 +200,13 @@
 
 <div class="templates-header">
     <h1>Templates</h1>
-    <a href="/Templates/Create" class="btn btn-primary">+ New Template</a>
+    <div style="display: flex; gap: 10px;">
+        <a asp-page="/Templates/ConnectionDefaults"
+           asp-route-connectionId="@Model.SelectedConnectionId"
+           asp-route-returnTo="templates"
+           class="btn btn-secondary">⚙️ Manage Defaults</a>
+        <a href="/Templates/Create" class="btn btn-primary">+ New Template</a>
+    </div>
 </div>
 
 <div class="templates-toolbar">

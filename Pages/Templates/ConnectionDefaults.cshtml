@@ -1,0 +1,421 @@
+@page
+@model QRStickers.Pages.Templates.ConnectionDefaultsModel
+@{
+    ViewData["Title"] = "Template Defaults";
+}
+
+<style>
+    .defaults-container {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
+    .defaults-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .defaults-card {
+        background: white;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+
+    .connection-selector {
+        margin-bottom: 20px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #eee;
+    }
+
+    .connection-selector label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #555;
+    }
+
+    .connection-selector select {
+        width: 100%;
+        max-width: 400px;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+
+    .defaults-grid {
+        display: table;
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .default-row {
+        display: table-row;
+        border-bottom: 1px solid #eee;
+    }
+
+    .default-row:last-child {
+        border-bottom: none;
+    }
+
+    .device-type-cell {
+        display: table-cell;
+        padding: 15px 10px;
+        font-weight: 600;
+        color: #333;
+        width: 40%;
+        vertical-align: middle;
+    }
+
+    .device-type-icon {
+        margin-right: 8px;
+        font-size: 18px;
+    }
+
+    .template-cell {
+        display: table-cell;
+        padding: 15px 10px;
+        vertical-align: middle;
+    }
+
+    .template-cell select {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        padding-top: 20px;
+        border-top: 1px solid #eee;
+        margin-top: 20px;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        border-radius: 4px;
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-block;
+        border: none;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .btn-primary {
+        background: #1976d2;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #1565c0;
+        color: white;
+    }
+
+    .btn-secondary {
+        background: #757575;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #616161;
+        color: white;
+    }
+
+    .help-text {
+        font-size: 14px;
+        color: #666;
+        margin-top: 20px;
+        padding: 15px;
+        background: #f5f5f5;
+        border-radius: 4px;
+        border-left: 4px solid #1976d2;
+    }
+</style>
+
+<div class="defaults-container">
+    <div class="defaults-header">
+        <h1>Template Defaults</h1>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success">
+            @TempData["SuccessMessage"]
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger">
+            @TempData["ErrorMessage"]
+        </div>
+    }
+
+    <div class="defaults-card">
+        <form method="post">
+            @if (Model.UserConnections.Count > 1)
+            {
+                <div class="connection-selector">
+                    <label for="connectionSelector">Select Connection:</label>
+                    <select id="connectionSelector" onchange="window.location.href='/Templates/ConnectionDefaults?connectionId=' + this.value">
+                        @foreach (var connection in Model.UserConnections)
+                        {
+                            <option value="@connection.Id" selected="@(Model.SelectedConnectionId == connection.Id)">
+                                @connection.DisplayName (@connection.ConnectionType)
+                            </option>
+                        }
+                    </select>
+                </div>
+            }
+            else
+            {
+                <div class="connection-selector">
+                    <h3>@Model.SelectedConnection?.DisplayName</h3>
+                    <p style="color: #666; margin: 0;">Configure which template to use for each device type</p>
+                </div>
+            }
+
+            <input type="hidden" asp-for="SelectedConnectionId" />
+            <input type="hidden" asp-for="ReturnTo" />
+
+            <div class="defaults-grid">
+                <div class="default-row">
+                    <div class="device-type-cell">
+                        <span class="device-type-icon">🔌</span>
+                        Switches
+                    </div>
+                    <div class="template-cell">
+                        <select asp-for="SwitchTemplateId" data-product-type="switch" class="template-select">
+                            <option value="">No default (use fallback)</option>
+                            @foreach (var template in Model.AvailableTemplates)
+                            {
+                                <option value="@template.Id">
+                                    @template.Name @(template.IsSystemTemplate ? "(System)" : "")
+                                </option>
+                            }
+                        </select>
+                        <span class="save-status" style="display: none;"></span>
+                    </div>
+                </div>
+
+                <div class="default-row">
+                    <div class="device-type-cell">
+                        <span class="device-type-icon">📦</span>
+                        Appliances
+                    </div>
+                    <div class="template-cell">
+                        <select asp-for="ApplianceTemplateId" data-product-type="appliance" class="template-select">
+                            <option value="">No default (use fallback)</option>
+                            @foreach (var template in Model.AvailableTemplates)
+                            {
+                                <option value="@template.Id">
+                                    @template.Name @(template.IsSystemTemplate ? "(System)" : "")
+                                </option>
+                            }
+                        </select>
+                        <span class="save-status" style="display: none;"></span>
+                    </div>
+                </div>
+
+                <div class="default-row">
+                    <div class="device-type-cell">
+                        <span class="device-type-icon">📡</span>
+                        Wireless APs
+                    </div>
+                    <div class="template-cell">
+                        <select asp-for="WirelessTemplateId" data-product-type="wireless" class="template-select">
+                            <option value="">No default (use fallback)</option>
+                            @foreach (var template in Model.AvailableTemplates)
+                            {
+                                <option value="@template.Id">
+                                    @template.Name @(template.IsSystemTemplate ? "(System)" : "")
+                                </option>
+                            }
+                        </select>
+                        <span class="save-status" style="display: none;"></span>
+                    </div>
+                </div>
+
+                <div class="default-row">
+                    <div class="device-type-cell">
+                        <span class="device-type-icon">📷</span>
+                        Cameras
+                    </div>
+                    <div class="template-cell">
+                        <select asp-for="CameraTemplateId" data-product-type="camera" class="template-select">
+                            <option value="">No default (use fallback)</option>
+                            @foreach (var template in Model.AvailableTemplates)
+                            {
+                                <option value="@template.Id">
+                                    @template.Name @(template.IsSystemTemplate ? "(System)" : "")
+                                </option>
+                            }
+                        </select>
+                        <span class="save-status" style="display: none;"></span>
+                    </div>
+                </div>
+
+                <div class="default-row">
+                    <div class="device-type-cell">
+                        <span class="device-type-icon">🌡️</span>
+                        Sensors
+                    </div>
+                    <div class="template-cell">
+                        <select asp-for="SensorTemplateId" data-product-type="sensor" class="template-select">
+                            <option value="">No default (use fallback)</option>
+                            @foreach (var template in Model.AvailableTemplates)
+                            {
+                                <option value="@template.Id">
+                                    @template.Name @(template.IsSystemTemplate ? "(System)" : "")
+                                </option>
+                            }
+                        </select>
+                        <span class="save-status" style="display: none;"></span>
+                    </div>
+                </div>
+
+                <div class="default-row">
+                    <div class="device-type-cell">
+                        <span class="device-type-icon">📱</span>
+                        Cellular Gateways
+                    </div>
+                    <div class="template-cell">
+                        <select asp-for="CellularGatewayTemplateId" data-product-type="cellularGateway" class="template-select">
+                            <option value="">No default (use fallback)</option>
+                            @foreach (var template in Model.AvailableTemplates)
+                            {
+                                <option value="@template.Id">
+                                    @template.Name @(template.IsSystemTemplate ? "(System)" : "")
+                                </option>
+                            }
+                        </select>
+                        <span class="save-status" style="display: none;"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                @if (Model.ReturnTo == "connections")
+                {
+                    <a href="/Connections/Index" class="btn btn-secondary">&larr; Back to Connections</a>
+                }
+                else
+                {
+                    <a href="/Templates/Index" class="btn btn-secondary">&larr; Back to Templates</a>
+                }
+            </div>
+        </form>
+
+        <div class="help-text">
+            <strong>💡 Tip:</strong> Templates are saved automatically when you change them.
+            These defaults control which template is used when generating stickers for devices.
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <style>
+        .save-status {
+            margin-left: 10px;
+            font-size: 13px;
+            color: #666;
+            display: inline-block;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .save-status.show {
+            opacity: 1;
+        }
+
+        .save-status.saving {
+            color: #1976d2;
+        }
+
+        .save-status.success {
+            color: #28a745;
+        }
+
+        .save-status.error {
+            color: #dc3545;
+        }
+    </style>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const form = document.querySelector('form');
+            const connectionId = @Model.SelectedConnectionId;
+            const returnTo = '@Model.ReturnTo';
+            const token = form.querySelector('input[name="__RequestVerificationToken"]').value;
+
+            // Attach change handlers to all template dropdowns
+            const selects = document.querySelectorAll('.template-select');
+            selects.forEach(select => {
+                select.addEventListener('change', async function () {
+                    const productType = this.getAttribute('data-product-type');
+                    const templateId = this.value || null;
+                    const statusSpan = this.nextElementSibling;
+
+                    // Show saving status
+                    statusSpan.textContent = '💾 Saving...';
+                    statusSpan.className = 'save-status saving show';
+                    statusSpan.style.display = 'inline-block';
+
+                    try {
+                        const response = await fetch('/Templates/ConnectionDefaults?handler=UpdateDefault', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                                'RequestVerificationToken': token
+                            },
+                            body: new URLSearchParams({
+                                connectionId: connectionId,
+                                productType: productType,
+                                templateId: templateId,
+                                returnTo: returnTo,
+                                __RequestVerificationToken: token
+                            })
+                        });
+
+                        const result = await response.json();
+
+                        if (result.success) {
+                            // Show success indicator
+                            statusSpan.textContent = '✓ Saved';
+                            statusSpan.className = 'save-status success show';
+
+                            // Fade out after 1.5 seconds
+                            setTimeout(() => {
+                                statusSpan.classList.remove('show');
+                                setTimeout(() => {
+                                    statusSpan.style.display = 'none';
+                                }, 300); // Wait for fade animation
+                            }, 1500);
+                        } else {
+                            // Show error
+                            statusSpan.textContent = '✗ Error';
+                            statusSpan.className = 'save-status error show';
+                            console.error('Save failed:', result.message);
+                        }
+                    } catch (error) {
+                        // Show error
+                        statusSpan.textContent = '✗ Error';
+                        statusSpan.className = 'save-status error show';
+                        console.error('Save failed:', error);
+                    }
+                });
+            });
+        });
+    </script>
+}
+
