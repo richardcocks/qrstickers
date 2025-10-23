@@ -208,11 +208,6 @@
                                 <option value="network.QRCode">Network QR Code (URL)</option>
                                 <option value="organization.QRCode">Organization QR Code (URL)</option>
                             </optgroup>
-                            <optgroup label="Text Content">
-                                <option value="device.Serial">Device Serial</option>
-                                <option value="device.Name">Device Name</option>
-                                <option value="network.Name">Network Name</option>
-                            </optgroup>
                             @if (Model.GlobalVariables.Any())
                             {
                                 <optgroup label="Global Variables">
@@ -222,15 +217,6 @@
                                     }
                                 </optgroup>
                             }
-                        </select>
-                    </div>
-                    <div class="property-group">
-                        <label>Error Correction</label>
-                        <select id="qrEccLevel" class="form-control">
-                            <option value="L">Low (7%)</option>
-                            <option value="M">Medium (15%)</option>
-                            <option value="Q" selected>High (25%)</option>
-                            <option value="H">Highest (30%)</option>
                         </select>
                     </div>
                     <div class="property-group">
@@ -290,17 +276,6 @@
                 <div id="imageProperties" class="property-panel" style="display: none;">
                     <div id="customImageInfo" style="display: none;">
                         <!-- Custom image info populated by JavaScript -->
-                    </div>
-                    <div class="property-group">
-                        <label>Image Source</label>
-                        <select id="imageDataSource" class="form-control">
-                            <option value="connection.CompanyLogoUrl">Company Logo</option>
-                            <option value="">Custom URL...</option>
-                        </select>
-                    </div>
-                    <div class="property-group">
-                        <label>Custom URL</label>
-                        <input type="text" id="imageUrl" class="form-control" placeholder="https://... or data:image/..." />
                     </div>
                 </div>
 

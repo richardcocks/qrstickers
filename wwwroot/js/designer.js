@@ -454,19 +454,14 @@ function initPropertyInspector() {
         }
     });
 
-    document.getElementById('qrEccLevel').addEventListener('change', function() {
-        const activeObject = canvas.getActiveObject();
-        if (activeObject && activeObject.type === 'qrcode') {
-            activeObject.set('eccLevel', this.value);
-            canvas.renderAll();
-        }
-    });
-
     document.getElementById('qrSize').addEventListener('input', function() {
         const activeObject = canvas.getActiveObject();
         if (activeObject && activeObject.type === 'qrcode') {
-            const size = parseFloat(this.value);
-            activeObject.set({ width: size, height: size });
+            const newSize = mmToPx(parseFloat(this.value));
+            const currentWidth = activeObject.getScaledWidth();
+            const scaleFactor = newSize / currentWidth;
+            activeObject.scaleX = (activeObject.scaleX || 1) * scaleFactor;
+            activeObject.scaleY = (activeObject.scaleY || 1) * scaleFactor;
             canvas.renderAll();
         }
     });
@@ -521,21 +516,7 @@ function initPropertyInspector() {
     });
 
     // Image properties
-    document.getElementById('imageDataSource').addEventListener('change', function() {
-        const activeObject = canvas.getActiveObject();
-        if (activeObject && (activeObject.type === 'image' || activeObject.get('type') === 'image')) {
-            activeObject.set('dataSource', this.value);
-            canvas.renderAll();
-        }
-    });
-
-    document.getElementById('imageUrl').addEventListener('input', function() {
-        const activeObject = canvas.getActiveObject();
-        if (activeObject && (activeObject.type === 'image' || activeObject.get('type') === 'image')) {
-            activeObject.set('src', this.value);
-            canvas.renderAll();
-        }
-    });
+    // (Image source and URL controls removed - users should use custom image gallery instead)
 
     // Rectangle properties
     document.getElementById('rectFill').addEventListener('input', function() {
@@ -706,7 +687,6 @@ function updatePropertyInspector() {
     if (objectType === 'qrcode') {
         document.getElementById('qrcodeProperties').style.display = 'flex';
         document.getElementById('qrDataSource').value = activeObject.get('dataSource') || '';
-        document.getElementById('qrEccLevel').value = activeObject.get('eccLevel') || 'Q';
         document.getElementById('qrSize').value = pxToMm(activeObject.width).toFixed(1);
     } else if (objectType === 'i-text' || objectType === 'text') {
         document.getElementById('textProperties').style.display = 'flex';
@@ -725,11 +705,6 @@ function updatePropertyInspector() {
 
         if (customImageId) {
             // Custom image - show custom info
-            document.getElementById('imageDataSource').value = activeObject.get('dataSource') || '';
-            document.getElementById('imageUrl').value = '(Custom Image)';
-            document.getElementById('imageUrl').disabled = true;
-
-            // Show custom image info (use textContent for XSS prevention)
             const customImageInfo = document.getElementById('customImageInfo');
             if (customImageInfo) {
                 customImageInfo.style.display = 'block';
@@ -745,12 +720,7 @@ function updatePropertyInspector() {
                 customImageInfo.querySelector('[data-field="data-source"]').textContent = activeObject.get('dataSource');
             }
         } else {
-            // Regular image
-            document.getElementById('imageDataSource').value = activeObject.get('dataSource') || '';
-            document.getElementById('imageUrl').value = activeObject.get('src') || '';
-            document.getElementById('imageUrl').disabled = false;
-
-            // Hide custom image info
+            // Hide custom image info (no custom image selected)
             const customImageInfo = document.getElementById('customImageInfo');
             if (customImageInfo) {
                 customImageInfo.style.display = 'none';

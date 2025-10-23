@@ -135,22 +135,6 @@ public static class SystemTemplateSeeder
                     {
                         dataSource = "device.Model"
                     }
-                },
-                new
-                {
-                    type = "image",
-                    id = "company-logo",
-                    left = 70,
-                    top = 38,
-                    width = 25,
-                    height = 10,
-                    src = "{{connection.CompanyLogoUrl}}",
-                    properties = new
-                    {
-                        dataSource = "connection.CompanyLogoUrl",
-                        placeholder = true,
-                        aspectRatio = "contain"
-                    }
                 }
             }
         };
@@ -247,22 +231,6 @@ public static class SystemTemplateSeeder
                     {
                         dataSource = "device.Serial",
                         format = "uppercase"
-                    }
-                },
-                new
-                {
-                    type = "image",
-                    id = "company-logo",
-                    left = 45,
-                    top = 5,
-                    width = 12,
-                    height = 8,
-                    src = "{{connection.CompanyLogoUrl}}",
-                    properties = new
-                    {
-                        dataSource = "connection.CompanyLogoUrl",
-                        placeholder = true,
-                        aspectRatio = "contain"
                     }
                 }
             }

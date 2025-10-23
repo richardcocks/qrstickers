@@ -102,8 +102,7 @@ public class TemplateMatchingService
                 .AsNoTracking()
                 .Where(t => t.ConnectionId == device.ConnectionId)
                 .Where(t => t.ProductTypeFilter != null && t.ProductTypeFilter.ToLower() == productType)
-                .OrderByDescending(t => t.IsDefault) // Prioritize default templates for this product type
-                .ThenBy(t => t.Id)
+                .OrderBy(t => t.Id)
                 .FirstOrDefaultAsync();
 
             if (productTypeMatch != null)
@@ -123,6 +122,7 @@ public class TemplateMatchingService
         var userDefaultTemplate = await _db.StickerTemplates
             .AsNoTracking()
             .Where(t => t.ConnectionId == device.ConnectionId && t.IsDefault)
+            .Where(t => t.ProductTypeFilter == null || t.ProductTypeFilter.ToLower() == productType)
             .FirstOrDefaultAsync();
 
         if (userDefaultTemplate != null)
@@ -141,6 +141,7 @@ public class TemplateMatchingService
         var defaultTemplate = await _db.StickerTemplates
             .AsNoTracking()
             .Where(t => t.IsSystemTemplate && t.IsDefault)
+            .Where(t => t.ProductTypeFilter == null || t.ProductTypeFilter.ToLower() == productType)
             .FirstOrDefaultAsync();
 
         if (defaultTemplate != null)
@@ -158,6 +159,7 @@ public class TemplateMatchingService
         // 5. Fallback to any available template
         var anyTemplate = await _db.StickerTemplates
             .AsNoTracking()
+            .Where(t => t.ProductTypeFilter == null || t.ProductTypeFilter.ToLower() == productType)
             .FirstOrDefaultAsync();
 
         if (anyTemplate != null)
