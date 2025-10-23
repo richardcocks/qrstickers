@@ -94,8 +94,6 @@ public class DesignerModel : PageModel
                 Description = "",
                 PageWidth = 100.0,
                 PageHeight = 50.0,
-                IsRackMount = false,
-                IsDefault = false,
                 IsSystemTemplate = false,
                 ConnectionId = connectionId,
                 TemplateJson = CreateBlankTemplateJson()
@@ -235,9 +233,6 @@ public class DesignerModel : PageModel
             existingTemplate.Description = Template.Description;
             existingTemplate.PageWidth = Template.PageWidth;
             existingTemplate.PageHeight = Template.PageHeight;
-            existingTemplate.ProductTypeFilter = Template.ProductTypeFilter;
-            existingTemplate.IsRackMount = Template.IsRackMount;
-            existingTemplate.IsDefault = Template.IsDefault;
             existingTemplate.TemplateJson = Template.TemplateJson;
             existingTemplate.UpdatedAt = DateTime.UtcNow;
 

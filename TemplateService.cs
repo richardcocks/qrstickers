@@ -17,63 +17,44 @@ public class TemplateService
     }
 
     /// <summary>
-    /// Gets the best matching template for a device based on priority order:
-    /// 1. User's connection-specific template for exact product type
-    /// 2. User's connection-specific default template
-    /// 3. System template for product type
-    /// 4. System default template (fallback)
+    /// Gets the best matching template for a device based on ConnectionDefaultTemplates mapping
+    /// 1. Connection default for device ProductType
+    /// 2. Any available template (connection-specific or system)
     /// </summary>
     /// <param name="device">The device to generate a sticker for</param>
     /// <param name="connectionId">The connection ID</param>
     /// <returns>The selected template</returns>
-    /// <exception cref="InvalidOperationException">Thrown if no default system template exists</exception>
+    /// <exception cref="InvalidOperationException">Thrown if no templates exist</exception>
     public async Task<StickerTemplate> GetTemplateForDeviceAsync(
         CachedDevice device,
         int connectionId)
     {
-        // Get device's product type from network
-        var network = await _db.CachedNetworks
-            .FirstOrDefaultAsync(n => n.ConnectionId == connectionId
-                                   && n.NetworkId == device.NetworkId);
+        // 1. Try connection default for this ProductType
+        if (!string.IsNullOrEmpty(device.ProductType))
+        {
+            var defaultMapping = await _db.ConnectionDefaultTemplates
+                .Include(d => d.Template)
+                .Where(d => d.ConnectionId == connectionId)
+                .Where(d => d.ProductType.ToLower() == device.ProductType.ToLower())
+                .Where(d => d.TemplateId != null)
+                .FirstOrDefaultAsync();
 
-        var productType = network?.ProductTypes?.FirstOrDefault();
+            if (defaultMapping?.Template != null)
+            {
+                return defaultMapping.Template;
+            }
+        }
 
-        // 1. Try user's template for this product type
+        // 2. Fallback to any available template
         var template = await _db.StickerTemplates
-            .Where(t => t.ConnectionId == connectionId
-                     && t.ProductTypeFilter == productType)
+            .Where(t => t.ConnectionId == connectionId || t.IsSystemTemplate)
+            .OrderByDescending(t => t.IsSystemTemplate)
             .FirstOrDefaultAsync();
 
-        // 2. Try user's default template
-        if (template == null)
-        {
-            template = await _db.StickerTemplates
-                .Where(t => t.ConnectionId == connectionId && t.IsDefault)
-                .FirstOrDefaultAsync();
-        }
-
-        // 3. Try system template for this product type
-        if (template == null)
-        {
-            template = await _db.StickerTemplates
-                .Where(t => t.IsSystemTemplate
-                         && t.ProductTypeFilter == productType)
-                .FirstOrDefaultAsync();
-        }
-
-        // 4. Fallback to system default
-        if (template == null)
-        {
-            template = await _db.StickerTemplates
-                .Where(t => t.IsSystemTemplate && t.IsDefault)
-                .FirstOrDefaultAsync();
-        }
-
-        // If still no template found, throw exception (should never happen if seeder ran)
         if (template == null)
         {
             throw new InvalidOperationException(
-                "No default system template found. Ensure SystemTemplateSeeder has run.");
+                "No templates available. Ensure SystemTemplateSeeder has run.");
         }
 
         return template;
@@ -128,9 +109,6 @@ public class TemplateService
             ConnectionId = targetConnectionId,
             PageWidth = sourceTemplate.PageWidth,
             PageHeight = sourceTemplate.PageHeight,
-            ProductTypeFilter = sourceTemplate.ProductTypeFilter,
-            IsRackMount = sourceTemplate.IsRackMount,
-            IsDefault = false, // Never default on clone
             IsSystemTemplate = false, // Always user template
             TemplateJson = sourceTemplate.TemplateJson,
             CreatedAt = DateTime.UtcNow,

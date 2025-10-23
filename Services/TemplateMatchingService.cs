@@ -5,8 +5,8 @@ using QRStickers.Meraki;
 namespace QRStickers.Services;
 
 /// <summary>
-/// Matches devices to appropriate sticker templates based on device type/model
-/// Uses priority-based matching with fallbacks
+/// Matches devices to appropriate sticker templates based on ProductType → Template mappings
+/// Uses simplified connection-based defaults instead of complex priority matching
 /// </summary>
 public class TemplateMatchingService
 {
@@ -23,13 +23,13 @@ public class TemplateMatchingService
 
     /// <summary>
     /// Finds the best matching template for a device
-    /// Priority: 1) Model match, 2) Type match, 3) User default, 4) System default, 5) Fallback
+    /// Logic: 1) Connection default for ProductType, 2) Fallback to any available template
     /// </summary>
     public async Task<TemplateMatchResult> FindTemplateForDeviceAsync(
         CachedDevice device,
         ApplicationUser user)
     {
-        _logger.LogInformation($"[Template] Matching template for device {device.Name} (model: {device.Model})");
+        _logger.LogInformation($"[Template] Matching template for device {device.Name} (ProductType: {device.ProductType})");
 
         // Check cache first
         var cacheKey = $"template_match_{device.Id}_{user.Id}";
@@ -51,120 +51,40 @@ public class TemplateMatchingService
         CachedDevice device,
         ApplicationUser user)
     {
-        // 1. Try exact model match
-        var modelMatch = await _db.TemplateDeviceModels
-            .AsNoTracking()
-            .Include(m => m.Template)
-            .Where(m => m.Template.ConnectionId == null || m.Template.ConnectionId == device.ConnectionId)
-            .Where(m => m.DeviceModel == device.Model)
-            .OrderBy(m => m.Priority)
-            .FirstOrDefaultAsync();
-
-        if (modelMatch != null)
+        // 1. Try connection default for this ProductType
+        if (!string.IsNullOrEmpty(device.ProductType))
         {
-            _logger.LogInformation($"[Template] Found model match: {modelMatch.Template.Name}");
-            return new TemplateMatchResult
-            {
-                Template = modelMatch.Template,
-                MatchReason = "model_match",
-                Confidence = 1.0,
-                MatchedBy = device.Model ?? "unknown"
-            };
-        }
-
-        // 2. Try device type match (using TemplateDeviceTypes mapping table)
-        var deviceType = DeriveDeviceType(device.Model);
-        var typeMatch = await _db.TemplateDeviceTypes
-            .AsNoTracking()
-            .Include(t => t.Template)
-            .Where(t => t.Template.ConnectionId == null || t.Template.ConnectionId == device.ConnectionId)
-            .Where(t => t.DeviceType == deviceType)
-            .OrderBy(t => t.Priority)
-            .FirstOrDefaultAsync();
-
-        if (typeMatch != null)
-        {
-            _logger.LogInformation($"[Template] Found type match: {typeMatch.Template.Name} (type: {deviceType})");
-            return new TemplateMatchResult
-            {
-                Template = typeMatch.Template,
-                MatchReason = "type_match",
-                Confidence = 0.8,
-                MatchedBy = deviceType
-            };
-        }
-
-        // 2.5. Try ProductTypeFilter match (templates with matching product type filter)
-        var productType = device.ProductType?.ToLower();
-        if (!string.IsNullOrEmpty(productType))
-        {
-            var productTypeMatch = await _db.StickerTemplates
+            var defaultMapping = await _db.ConnectionDefaultTemplates
                 .AsNoTracking()
-                .Where(t => t.ConnectionId == device.ConnectionId)
-                .Where(t => t.ProductTypeFilter != null && t.ProductTypeFilter.ToLower() == productType)
-                .OrderBy(t => t.Id)
+                .Include(d => d.Template)
+                .Where(d => d.ConnectionId == device.ConnectionId)
+                .Where(d => d.ProductType.ToLower() == device.ProductType.ToLower())
+                .Where(d => d.TemplateId != null) // Must have a template assigned
                 .FirstOrDefaultAsync();
 
-            if (productTypeMatch != null)
+            if (defaultMapping?.Template != null)
             {
-                _logger.LogInformation($"[Template] Found product type filter match: {productTypeMatch.Name} (productType: {productType})");
+                _logger.LogInformation($"[Template] Found connection default: {defaultMapping.Template.Name} (ProductType: {device.ProductType})");
                 return new TemplateMatchResult
                 {
-                    Template = productTypeMatch,
-                    MatchReason = "type_match",
-                    Confidence = 0.75,
-                    MatchedBy = productType
+                    Template = defaultMapping.Template,
+                    MatchReason = "connection_default",
+                    Confidence = 1.0,
+                    MatchedBy = device.ProductType
                 };
             }
         }
 
-        // 3. Try user's default template (for this connection)
-        var userDefaultTemplate = await _db.StickerTemplates
-            .AsNoTracking()
-            .Where(t => t.ConnectionId == device.ConnectionId && t.IsDefault)
-            .Where(t => t.ProductTypeFilter == null || t.ProductTypeFilter.ToLower() == productType)
-            .FirstOrDefaultAsync();
-
-        if (userDefaultTemplate != null)
-        {
-            _logger.LogInformation($"[Template] Using user default template: {userDefaultTemplate.Name}");
-            return new TemplateMatchResult
-            {
-                Template = userDefaultTemplate,
-                MatchReason = "user_default",
-                Confidence = 0.5,
-                MatchedBy = "user_default"
-            };
-        }
-
-        // 4. Try system default template
-        var defaultTemplate = await _db.StickerTemplates
-            .AsNoTracking()
-            .Where(t => t.IsSystemTemplate && t.IsDefault)
-            .Where(t => t.ProductTypeFilter == null || t.ProductTypeFilter.ToLower() == productType)
-            .FirstOrDefaultAsync();
-
-        if (defaultTemplate != null)
-        {
-            _logger.LogInformation($"[Template] Using system default template: {defaultTemplate.Name}");
-            return new TemplateMatchResult
-            {
-                Template = defaultTemplate,
-                MatchReason = "system_default",
-                Confidence = 0.3,
-                MatchedBy = "system_default"
-            };
-        }
-
-        // 5. Fallback to any available template
+        // 2. Fallback to any available template
         var anyTemplate = await _db.StickerTemplates
             .AsNoTracking()
-            .Where(t => t.ProductTypeFilter == null || t.ProductTypeFilter.ToLower() == productType)
+            .Where(t => t.ConnectionId == device.ConnectionId || t.ConnectionId == null)
+            .OrderByDescending(t => t.IsSystemTemplate) // Prefer system templates as fallback
             .FirstOrDefaultAsync();
 
         if (anyTemplate != null)
         {
-            _logger.LogWarning($"[Template] No matching template found, using first available: {anyTemplate.Name}");
+            _logger.LogWarning($"[Template] No default mapping found for ProductType '{device.ProductType}', using fallback: {anyTemplate.Name}");
             return new TemplateMatchResult
             {
                 Template = anyTemplate,
@@ -186,9 +106,7 @@ public class TemplateMatchingService
         ApplicationUser user,
         int? excludeTemplateId = null)
     {
-        var deviceType = DeriveDeviceType(device.Model);
-
-        // Get all templates (model matches + type matches)
+        // Get all templates (connection-specific + system)
         var templates = await _db.StickerTemplates
             .AsNoTracking()
             .Where(t =>
@@ -198,36 +116,6 @@ public class TemplateMatchingService
             .ToListAsync();
 
         return templates;
-    }
-
-    /// <summary>
-    /// Derives device type from model string (heuristic)
-    /// Examples: MS225-48FP → switch, MR32 → ap, MX64W → gateway
-    /// </summary>
-    private static string DeriveDeviceType(string? model)
-    {
-        if (string.IsNullOrEmpty(model))
-            return "unknown";
-
-        model = model.ToUpperInvariant();
-
-        // Meraki device type patterns
-        if (model.StartsWith("MS") || model.StartsWith("C9"))
-            return "switch";
-        if (model.StartsWith("MR"))
-            return "ap"; // Access Point
-        if (model.StartsWith("MX"))
-            return "gateway";
-        if (model.StartsWith("Z") || model.Contains("CAPTIVE"))
-            return "appliance";
-        if (model.StartsWith("MV"))
-            return "camera";
-        if (model.StartsWith("MT"))
-            return "sensor";
-        if (model.StartsWith("MC"))
-            return "cellular";
-
-        return "unknown";
     }
 }
 
@@ -242,7 +130,7 @@ public class TemplateMatchResult
     public required StickerTemplate Template { get; set; }
 
     /// <summary>
-    /// Reason for the match: model_match, type_match, user_default, system_default, fallback
+    /// Reason for the match: connection_default, fallback
     /// </summary>
     public required string MatchReason { get; set; }
 
@@ -252,7 +140,7 @@ public class TemplateMatchResult
     public required double Confidence { get; set; }
 
     /// <summary>
-    /// What was matched against (model name, type, etc.)
+    /// What was matched against (ProductType, "fallback", etc.)
     /// </summary>
     public required string MatchedBy { get; set; }
 }

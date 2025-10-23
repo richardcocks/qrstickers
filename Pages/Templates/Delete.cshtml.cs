@@ -51,12 +51,6 @@ public class DeleteModel : PageModel
             return Forbid();
         }
 
-        // Set warning if default template
-        if (Template.IsDefault)
-        {
-            WarningMessage = "This is your default template. After deletion, devices will fall back to system templates.";
-        }
-
         return Page();
     }
 

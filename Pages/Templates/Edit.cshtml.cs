@@ -27,15 +27,6 @@ public class EditModel : PageModel
     [BindProperty]
     public string? Description { get; set; }
 
-    [BindProperty]
-    public string? ProductTypeFilter { get; set; }
-
-    [BindProperty]
-    public bool IsRackMount { get; set; }
-
-    [BindProperty]
-    public bool IsDefault { get; set; }
-
     // Read-only properties (cannot be edited)
     public int ConnectionId { get; set; }
     public string ConnectionDisplayName { get; set; } = null!;
@@ -86,9 +77,6 @@ public class EditModel : PageModel
         Id = template.Id;
         Name = template.Name;
         Description = template.Description;
-        ProductTypeFilter = template.ProductTypeFilter;
-        IsRackMount = template.IsRackMount;
-        IsDefault = template.IsDefault;
 
         // Read-only display values
         ConnectionId = template.ConnectionId.Value;
@@ -158,9 +146,6 @@ public class EditModel : PageModel
         // Update editable properties only
         template.Name = Name;
         template.Description = Description;
-        template.ProductTypeFilter = ProductTypeFilter;
-        template.IsRackMount = IsRackMount;
-        template.IsDefault = IsDefault;
         template.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();

@@ -102,24 +102,9 @@
         color: #1976d2;
     }
 
-    .badge-default {
-        background: #fff3e0;
-        color: #f57c00;
-    }
-
     .badge-dimensions {
         background: #f5f5f5;
         color: #666;
-    }
-
-    .badge-rack {
-        background: #e8f5e9;
-        color: #388e3c;
-    }
-
-    .badge-ceiling {
-        background: #fce4ec;
-        color: #c2185b;
     }
 
     .template-description {
@@ -239,27 +224,6 @@
         </div>
 
         <div class="filter-group">
-            <label>Product Type:</label>
-            <select name="productType" onchange="this.form.submit()">
-                <option value="">All Types</option>
-                <option value="switch" selected="@(Model.ProductTypeFilter == "switch")">Switch</option>
-                <option value="wireless" selected="@(Model.ProductTypeFilter == "wireless")">Wireless</option>
-                <option value="appliance" selected="@(Model.ProductTypeFilter == "appliance")">Appliance</option>
-                <option value="camera" selected="@(Model.ProductTypeFilter == "camera")">Camera</option>
-                <option value="sensor" selected="@(Model.ProductTypeFilter == "sensor")">Sensor</option>
-            </select>
-        </div>
-
-        <div class="filter-group">
-            <label>Mount Type:</label>
-            <select name="rackMount" onchange="this.form.submit()">
-                <option value="">All</option>
-                <option value="true" selected="@(Model.IsRackMount == true)">Rack Mount</option>
-                <option value="false" selected="@(Model.IsRackMount == false)">Ceiling/Wall</option>
-            </select>
-        </div>
-
-        <div class="filter-group">
             <label>Templates:</label>
             <select name="systemTemplates" onchange="this.form.submit()">
                 <option value="true" selected="@(Model.ShowSystemTemplates == true)">All (System + User)</option>
@@ -296,23 +260,7 @@ else
                     {
                         <span class="badge badge-system">System</span>
                     }
-                    @if (template.IsDefault)
-                    {
-                        <span class="badge badge-default">⭐ Default</span>
-                    }
                     <span class="badge badge-dimensions">@(template.PageWidth)×@(template.PageHeight)mm</span>
-                    @if (template.IsRackMount)
-                    {
-                        <span class="badge badge-rack">Rack Mount</span>
-                    }
-                    else
-                    {
-                        <span class="badge badge-ceiling">Ceiling/Wall</span>
-                    }
-                    @if (!string.IsNullOrEmpty(template.ProductTypeFilter))
-                    {
-                        <span class="badge badge-dimensions">@template.ProductTypeFilter</span>
-                    }
                 </div>
 
                 <div class="template-description">
