@@ -16,11 +16,11 @@ using QuestPDF.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure QuestPDF license (Community License for open-source projects)
+// Configure QuestPDF license (Community License (MIT) )
 QuestPDF.Settings.License = LicenseType.Community;
 
 // Enable debugging for detailed layout error messages
-QuestPDF.Settings.EnableDebugging = true;
+QuestPDF.Settings.EnableDebugging = false;
 
 // Configure logging explicitly for Azure
 builder.Logging.ClearProviders();
@@ -312,7 +312,8 @@ app.MapPost("/api/export/pdf/bulk", async (
     [FromBody] PdfExportRequest request,
     HttpContext httpContext,
     PdfExportService pdfService,
-    UserManager<ApplicationUser> userManager) =>
+    UserManager<ApplicationUser> userManager,
+    ILogger<Program> logger) =>
 {
     try
     {
@@ -339,8 +340,7 @@ app.MapPost("/api/export/pdf/bulk", async (
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"[PDF Export] Error: {ex.Message}");
-        Console.WriteLine($"[PDF Export] Stack trace: {ex.StackTrace}");
+        logger.LogError(ex, "[PDF Export] Error generating PDF: {ErrorMessage}", ex.Message);
         return Results.Json(new { error = ex.Message }, statusCode: 500);
     }
 }).RequireAuthorization();

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using QRStickers.Models;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -10,6 +11,13 @@ namespace QRStickers.Services;
 /// </summary>
 public class PdfExportService
 {
+    private readonly ILogger<PdfExportService> _logger;
+
+    public PdfExportService(ILogger<PdfExportService> logger)
+    {
+        _logger = logger;
+    }
+
     /// <summary>
     /// Page size definitions in millimeters
     /// </summary>
@@ -176,7 +184,7 @@ public class PdfExportService
         {
             // Swap dimensions for rotated stickers
             (stickerWidth, stickerHeight) = (stickerHeight, stickerWidth);
-            Console.WriteLine($"[PDF Export] Rotating stickers 90° for better fit on {GetPageSizeName(pageSize)}");
+            _logger.LogInformation("[PDF Export] Rotating stickers 90° for better fit on {PageSize}", GetPageSizeName(pageSize));
         }
 
         // Calculate usable area (page minus margins)
