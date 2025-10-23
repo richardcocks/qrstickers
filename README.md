@@ -184,14 +184,6 @@ See [DEPLOYMENT.md](Docs/DEPLOYMENT.md) for complete deployment instructions inc
 - GitHub Actions CI/CD
 - Container Apps deployment
 
-## Azure SQL Free Tier
-
-Production database runs on **Azure SQL Database free tier**:
-- ✅ 100,000 vCore seconds/month
-- ✅ 32 GB storage
-- ✅ Auto-pause when inactive (zero cost during pause)
-- ✅ Forever free (renews monthly)
-
 ## Development
 
 ### Common Commands
