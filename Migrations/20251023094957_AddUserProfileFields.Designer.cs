@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using QRStickers;
 
@@ -11,9 +12,11 @@ using QRStickers;
 namespace QRStickers.Migrations
 {
     [DbContext(typeof(QRStickersDbContext))]
-    partial class QRStickersDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251023094957_AddUserProfileFields")]
+    partial class AddUserProfileFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -171,8 +174,7 @@ namespace QRStickers.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("DisplayName")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Email")
                         .HasMaxLength(256)

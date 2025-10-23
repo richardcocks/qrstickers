@@ -57,6 +57,17 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 .AddEntityFrameworkStores<QRStickersDbContext>()
 .AddDefaultTokenProviders();
 
+// Configure security stamp validation for session revocation
+// This enables "Revoke All Other Sessions" to work by periodically checking the SecurityStamp
+var validationIntervalSeconds = builder.Configuration
+    .GetValue<int?>("Identity:SecurityStampValidationIntervalSeconds")
+    ?? 10; // Default to 10 seconds if not configured
+
+builder.Services.Configure<SecurityStampValidatorOptions>(options =>
+{
+    options.ValidationInterval = TimeSpan.FromSeconds(validationIntervalSeconds);
+});
+
 // Configure cookie settings
 builder.Services.ConfigureApplicationCookie(options =>
 {

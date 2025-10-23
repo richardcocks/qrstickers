@@ -9,11 +9,13 @@ namespace QRStickers.Pages.Identity.Account;
 public class LoginModel : PageModel
 {
     private readonly SignInManager<ApplicationUser> _signInManager;
+    private readonly UserManager<ApplicationUser> _userManager;
     private readonly ILogger<LoginModel> _logger;
 
-    public LoginModel(SignInManager<ApplicationUser> signInManager, ILogger<LoginModel> logger)
+    public LoginModel(SignInManager<ApplicationUser> signInManager, UserManager<ApplicationUser> userManager, ILogger<LoginModel> logger)
     {
         _signInManager = signInManager;
+        _userManager = userManager;
         _logger = logger;
     }
 
@@ -55,6 +57,21 @@ public class LoginModel : PageModel
             var result = await _signInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: true);
             if (result.Succeeded)
             {
+                // Track login timestamps for security awareness
+                var user = await _userManager.FindByEmailAsync(Input.Email);
+                if (user != null)
+                {
+                    // Move current login to previous
+                    user.PreviousLoginAt = user.LastLoginAt;
+
+                    // Set new login timestamps
+                    var now = DateTime.UtcNow;
+                    user.LastLoginAt = now;
+                    user.CurrentSessionStartedAt = now;
+
+                    await _userManager.UpdateAsync(user);
+                }
+
                 _logger.LogInformation("User logged in.");
                 return LocalRedirect(returnUrl);
             }

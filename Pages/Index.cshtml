@@ -8,7 +8,7 @@
 
 @if (User.Identity?.IsAuthenticated == true)
 {
-    <h2>Hello @User.Identity.Name!</h2>
+    <h2>Hello @Model.DisplayName!</h2>
 
     <h3>Your Connections</h3>
 
