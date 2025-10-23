@@ -147,11 +147,6 @@ Networks → Select Device → Preview → Export (PNG/SVG/PDF)
 Templates → Export → Select Devices → Configure Options → Real-time Progress → Download ZIP
 
 ## API Endpoints
-
-### Public
-- `GET /qrcode?q={text}` - Generate QR code (rate limited)
-
-### Authenticated
 - `GET /api/templates` - List templates
 - `POST /api/templates` - Create template
 - `GET /api/templates/match` - Match template to device

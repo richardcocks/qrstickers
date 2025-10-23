@@ -160,20 +160,6 @@ app.UseRateLimiter();
 
 // ===================== API ENDPOINTS =====================
 
-// QR Code generation API endpoint (keep as minimal API for programmatic access)
-app.MapGet("/qrcode", (HttpContext httpContext, string q, QRCodeGenerator qrGenerator) =>
-{
-    if (q.Length > 512)
-    {
-        return Results.BadRequest("Maximum string length is 512");
-    }
-    using QRCodeData qrCodeData = qrGenerator.CreateQrCode(q, QRCodeGenerator.ECCLevel.Q);
-    using PngByteQRCode qrCode = new(qrCodeData);
-    byte[] qrCodeImage = qrCode.GetGraphic(20, false);
-    httpContext.Response.ContentType = MediaTypeNames.Image.Png;
-    return Results.File(qrCodeImage, MediaTypeNames.Image.Png);
-}).RequireRateLimiting("tokenBucket");
-
 // Device export API endpoints (Phase 5)
 app.MapGet("/api/export/device/{deviceId}", async (
     int deviceId,

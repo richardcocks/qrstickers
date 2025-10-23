@@ -123,9 +123,6 @@ On first run, the application will automatically:
 
 ## API Endpoints
 
-**Public:**
-- `GET /qrcode?q={text}` - Generate QR code (public, rate limited)
-
 **Device Export (Authenticated):**
 - `GET /api/export/device/{id}?connectionId={id}` - Retrieve device data + matched template
 - `GET /api/templates/match?deviceId={id}&connectionId={id}` - Template matching + alternatives

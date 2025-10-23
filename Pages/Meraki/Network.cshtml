@@ -24,7 +24,7 @@ else
                 @if (!string.IsNullOrEmpty(Model.Network.Url))
                 {
                     <a href="@Model.Network.Url" target="_blank" rel="noopener noreferrer" style="text-decoration: none;">
-                        <img src="/qrcode?q=@Uri.EscapeDataString(Model.Network.Url)"
+                        <img src="@Model.Network.QRCodeDataUri"
                              alt="QR Code for @Model.Network.Name - Dashboard Link"
                              style="width: 100px; height: 100px; border: 1px solid #ddd; border-radius: 4px; padding: 4px; background-color: #fff;" />
                     </a>
