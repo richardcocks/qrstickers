@@ -11,45 +11,6 @@ Most API endpoints require authentication via ASP.NET Identity cookie-based auth
 
 ---
 
-## Public Endpoints
-
-### Generate QR Code
-
-Generate a QR code image from text.
-
-**Endpoint:** `GET /qrcode`
-
-**Parameters:**
-- `q` (required) - Text to encode in QR code (max 512 characters)
-
-**Response:**
-- Content-Type: `image/png`
-- Binary PNG image data
-
-**Rate Limit:**
-- Algorithm: Token bucket
-- Token limit: 5,000
-- Replenishment: 100 tokens/second
-- Queue limit: 10 requests
-- Order: FIFO (OldestFirst)
-
-**Example:**
-
-```http
-GET /qrcode?q=Hello%20World
-```
-
-**Response:**
-```
-[Binary PNG image data]
-```
-
-**Error Responses:**
-- `400 Bad Request` - Query parameter missing or too long
-- `429 Too Many Requests` - Rate limit exceeded
-
----
-
 ## Template Management Endpoints
 
 ### List Templates
@@ -592,30 +553,7 @@ Delete a global variable.
 
 ## Rate Limiting
 
-### QR Code Endpoint
-
-- **Algorithm:** Token bucket
-- **Token limit:** 5,000 tokens
-- **Replenishment rate:** 100 tokens/second
-- **Queue limit:** 10 queued requests
-- **Queue order:** FIFO (oldest first)
-
-**Rate Limit Headers:**
-```http
-X-Rate-Limit-Limit: 5000
-X-Rate-Limit-Remaining: 4985
-X-Rate-Limit-Reset: 1634832000
-```
-
-**429 Response:**
-```json
-{
-  "error": "Rate limit exceeded",
-  "retryAfter": 15
-}
-```
-
-### Other Endpoints
+### Endpoints
 
 No rate limiting currently applied to authenticated endpoints. Future enhancements may add per-user limits for export operations.
 

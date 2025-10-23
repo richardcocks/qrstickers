@@ -47,7 +47,7 @@ else
                     @if (!string.IsNullOrEmpty(Model.Organization.Url))
                     {
                         <a href="@Model.Organization.Url" target="_blank" rel="noopener noreferrer" style="text-decoration: none;">
-                            <img src="/qrcode?q=@Uri.EscapeDataString(Model.Organization.Url)"
+                            <img src="@Model.Organization.QRCodeDataUri"
                                  alt="QR Code for @Model.Organization.Name - Dashboard Link"
                                  style="width: 100px; height: 100px; border: 1px solid #ddd; border-radius: 4px; padding: 4px; background-color: #fff;" />
                         </a>
@@ -103,7 +103,7 @@ else
                                 @if (!string.IsNullOrEmpty(network.Url))
                                 {
                                     <a href="@network.Url" target="_blank" rel="noopener noreferrer" style="text-decoration: none;">
-                                        <img src="/qrcode?q=@Uri.EscapeDataString(network.Url)"
+                                        <img src="@network.QRCodeDataUri"
                                              alt="QR Code for @network.Name - Dashboard Link"
                                              style="width: 100px; height: 100px; border: 1px solid #ddd; border-radius: 4px; padding: 4px; background-color: #fff;" />
                                     </a>
