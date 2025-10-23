@@ -83,6 +83,36 @@
     </div>
 </div>
 
+<!-- Stage 1: Initial Delete Button -->
+<div id="deleteAccountInitial" style="margin-top: 40px;">
+    <button type="button" onclick="showDangerZone()" class="btn btn-danger">Delete Account</button>
+</div>
+
+<!-- Stage 2: Danger Zone Panel (initially hidden) -->
+<div id="dangerZonePanel" style="display: none; margin-top: 40px; border: 2px solid #c62828; border-radius: 4px; padding: 20px; background-color: #ffebee;">
+    <h3 style="color: #c62828; margin-top: 0;">⚠️ Danger Zone</h3>
+    <hr style="border-color: #c62828;" />
+
+    <div class="alert alert-danger" style="background-color: #ffcdd2; border: 1px solid #c62828; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
+        <strong>Warning:</strong> Deleting your account is permanent and cannot be undone. All your data, including connected accounts, templates and uploaded images will be permanently deleted.
+    </div>
+
+    <form method="post" asp-page-handler="DeleteAccount" id="deleteAccountForm">
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+        <div class="form-group">
+            <label asp-for="Input.DeletePassword">Confirm your password to delete account</label>
+            <input asp-for="Input.DeletePassword" class="form-control" maxlength="100" placeholder="Enter your password" id="deletePasswordInput" />
+            <span asp-validation-for="Input.DeletePassword" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <button type="submit" class="btn btn-danger">Confirm Delete</button>
+            <button type="button" onclick="hideDangerZone()" class="btn btn-secondary" style="margin-left: 10px;">Cancel</button>
+        </div>
+    </form>
+</div>
+
 <style>
     .form-group {
         margin-bottom: 15px;
@@ -110,8 +140,49 @@
         vertical-align: top;
         margin-right: 2%;
     }
+    .btn-danger {
+        background-color: #c62828;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+    }
+    .btn-danger:hover {
+        background-color: #b71c1c;
+    }
+    .alert-danger {
+        color: #c62828;
+    }
+    #dangerZonePanel {
+        animation: fadeIn 0.3s ease-in;
+    }
+    @@keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 </style>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" optional="true" />
+    <script>
+        function showDangerZone() {
+            document.getElementById('deleteAccountInitial').style.display = 'none';
+            document.getElementById('dangerZonePanel').style.display = 'block';
+        }
+
+        function hideDangerZone() {
+            document.getElementById('dangerZonePanel').style.display = 'none';
+            document.getElementById('deleteAccountInitial').style.display = 'block';
+            // Clear password field when canceling
+            document.getElementById('deletePasswordInput').value = '';
+        }
+    </script>
 }

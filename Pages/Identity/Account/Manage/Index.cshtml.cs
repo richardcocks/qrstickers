@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
+using QRStickers.Meraki;
 
 namespace QRStickers.Pages.Identity.Account.Manage;
 
@@ -11,11 +13,22 @@ public class IndexModel : PageModel
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
+    private readonly QRStickersDbContext _db;
+    private readonly MerakiAccessTokenCache _tokenCache;
+    private readonly ILogger<IndexModel> _logger;
 
-    public IndexModel(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager)
+    public IndexModel(
+        UserManager<ApplicationUser> userManager,
+        SignInManager<ApplicationUser> signInManager,
+        QRStickersDbContext db,
+        MerakiAccessTokenCache tokenCache,
+        ILogger<IndexModel> logger)
     {
         _userManager = userManager;
         _signInManager = signInManager;
+        _db = db;
+        _tokenCache = tokenCache;
+        _logger = logger;
     }
 
     [BindProperty]
@@ -33,6 +46,12 @@ public class IndexModel : PageModel
         [Display(Name = "Display Name")]
         [StringLength(100, ErrorMessage = "The {0} must be at most {1} characters long.")]
         public string? DisplayName { get; set; }
+
+        [Required]
+        [StringLength(100, MinimumLength = 6)]
+        [DataType(DataType.Password)]
+        [Display(Name = "Password")]
+        public string? DeletePassword { get; set; }
     }
 
     public async Task<IActionResult> OnGetAsync()
@@ -100,5 +119,74 @@ public class IndexModel : PageModel
 
         StatusMessage = "All other sessions have been revoked. You remain logged in on this device.";
         return RedirectToPage();
+    }
+
+    public async Task<IActionResult> OnPostDeleteAccountAsync()
+    {
+        var user = await _userManager.GetUserAsync(User);
+        if (user == null)
+        {
+            return NotFound("Unable to load user.");
+        }
+
+        // Validate the password field is provided
+        if (string.IsNullOrWhiteSpace(Input.DeletePassword))
+        {
+            ModelState.AddModelError(string.Empty, "Password is required to delete your account.");
+            await OnGetAsync();
+            return Page();
+        }
+
+        // Verify the password
+        var passwordCheck = await _signInManager.CheckPasswordSignInAsync(user, Input.DeletePassword, false);
+        if (!passwordCheck.Succeeded)
+        {
+            ModelState.AddModelError(string.Empty, "Incorrect password. Please try again.");
+            await OnGetAsync();
+            return Page();
+        }
+
+        try
+        {
+            _logger.LogInformation("User {UserId} ({Email}) is deleting their account", user.Id, user.Email);
+
+            // Load all connections to clear from token cache
+            var connections = await _db.Connections
+                .Where(c => c.UserId == user.Id)
+                .ToListAsync();
+
+            // Clear in-memory token cache for all connections
+            foreach (var connection in connections)
+            {
+                _tokenCache.RemoveToken(connection.Id);
+                _logger.LogInformation("Removed cached token for connection {ConnectionId}", connection.Id);
+            }
+
+            // Delete the user (this will CASCADE delete all related data)
+            var result = await _userManager.DeleteAsync(user);
+            if (!result.Succeeded)
+            {
+                _logger.LogError("Failed to delete user {UserId}: {Errors}", user.Id, string.Join(", ", result.Errors.Select(e => e.Description)));
+                ModelState.AddModelError(string.Empty, "Unable to delete account. Please try again later.");
+                await OnGetAsync();
+                return Page();
+            }
+
+            _logger.LogInformation("User {UserId} ({Email}) successfully deleted their account", user.Id, user.Email);
+
+            // Sign out the user
+            await _signInManager.SignOutAsync();
+
+            // Redirect to home page with success message
+            TempData["StatusMessage"] = "Your account has been deleted.";
+            return RedirectToPage("/Index");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting user account {UserId}", user.Id);
+            ModelState.AddModelError(string.Empty, "Unable to delete account. Please try again later.");
+            await OnGetAsync();
+            return Page();
+        }
     }
 }
