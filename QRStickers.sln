@@ -3,11 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.2.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "QRStickers.Web", "QRStickers.Web", "{AC4062C3-4269-81D5-819F-6EDAD3F396E1}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QRStickers", "QRStickers.Web\QRStickers.csproj", "{4801E38D-CBE6-406D-854C-203CD8A86C75}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QRStickers.Tests", "QRStickers.Tests\QRStickers.Tests.csproj", "{F2863779-4873-451B-887B-C18D532405BE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QRStickers", "src\QRStickers.csproj", "{E2BE5B78-7D05-4F48-A6B7-70D4251FA281}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -19,18 +17,6 @@ Global
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{4801E38D-CBE6-406D-854C-203CD8A86C75}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{4801E38D-CBE6-406D-854C-203CD8A86C75}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{4801E38D-CBE6-406D-854C-203CD8A86C75}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{4801E38D-CBE6-406D-854C-203CD8A86C75}.Debug|x64.Build.0 = Debug|Any CPU
-		{4801E38D-CBE6-406D-854C-203CD8A86C75}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{4801E38D-CBE6-406D-854C-203CD8A86C75}.Debug|x86.Build.0 = Debug|Any CPU
-		{4801E38D-CBE6-406D-854C-203CD8A86C75}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{4801E38D-CBE6-406D-854C-203CD8A86C75}.Release|Any CPU.Build.0 = Release|Any CPU
-		{4801E38D-CBE6-406D-854C-203CD8A86C75}.Release|x64.ActiveCfg = Release|Any CPU
-		{4801E38D-CBE6-406D-854C-203CD8A86C75}.Release|x64.Build.0 = Release|Any CPU
-		{4801E38D-CBE6-406D-854C-203CD8A86C75}.Release|x86.ActiveCfg = Release|Any CPU
-		{4801E38D-CBE6-406D-854C-203CD8A86C75}.Release|x86.Build.0 = Release|Any CPU
 		{F2863779-4873-451B-887B-C18D532405BE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{F2863779-4873-451B-887B-C18D532405BE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F2863779-4873-451B-887B-C18D532405BE}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -43,12 +29,23 @@ Global
 		{F2863779-4873-451B-887B-C18D532405BE}.Release|x64.Build.0 = Release|Any CPU
 		{F2863779-4873-451B-887B-C18D532405BE}.Release|x86.ActiveCfg = Release|Any CPU
 		{F2863779-4873-451B-887B-C18D532405BE}.Release|x86.Build.0 = Release|Any CPU
+		{E2BE5B78-7D05-4F48-A6B7-70D4251FA281}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E2BE5B78-7D05-4F48-A6B7-70D4251FA281}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E2BE5B78-7D05-4F48-A6B7-70D4251FA281}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{E2BE5B78-7D05-4F48-A6B7-70D4251FA281}.Debug|x64.Build.0 = Debug|Any CPU
+		{E2BE5B78-7D05-4F48-A6B7-70D4251FA281}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{E2BE5B78-7D05-4F48-A6B7-70D4251FA281}.Debug|x86.Build.0 = Debug|Any CPU
+		{E2BE5B78-7D05-4F48-A6B7-70D4251FA281}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E2BE5B78-7D05-4F48-A6B7-70D4251FA281}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E2BE5B78-7D05-4F48-A6B7-70D4251FA281}.Release|x64.ActiveCfg = Release|Any CPU
+		{E2BE5B78-7D05-4F48-A6B7-70D4251FA281}.Release|x64.Build.0 = Release|Any CPU
+		{E2BE5B78-7D05-4F48-A6B7-70D4251FA281}.Release|x86.ActiveCfg = Release|Any CPU
+		{E2BE5B78-7D05-4F48-A6B7-70D4251FA281}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{4801E38D-CBE6-406D-854C-203CD8A86C75} = {AC4062C3-4269-81D5-819F-6EDAD3F396E1}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D2640261-BB28-4898-B4E0-8B80E214A12A}
