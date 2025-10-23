@@ -30,7 +30,13 @@ Complete documentation for the QRStickers application.
    - Technology stack
    - User flows
 
-3. **[User Flows](README.md#user-flows)**
+3. **[Account Settings](ACCOUNT_SETTINGS.md)**
+   - Display name customization
+   - Login activity tracking
+   - Session management (revoke other sessions)
+   - Configuration options
+
+4. **[User Flows](README.md#user-flows)**
    - Authentication flow
    - Connection management
    - Meraki integration
@@ -42,7 +48,7 @@ Complete documentation for the QRStickers application.
 
 ### Architecture
 
-4. **[Architecture Overview](ARCHITECTURE.md)**
+5. **[Architecture Overview](ARCHITECTURE.md)**
    - Technology stack details
    - Project structure
    - Database architecture
@@ -51,20 +57,20 @@ Complete documentation for the QRStickers application.
    - Performance optimizations
    - Security considerations
 
-5. **[Database Architecture](ARCHITECTURE.md#database-architecture)**
+6. **[Database Architecture](ARCHITECTURE.md#database-architecture)**
    - Database provider strategy (SQL Server)
    - Schema and tables
    - Table-per-Hierarchy (TPH) pattern
    - Foreign key relationships
    - Migrations
 
-6. **[Token Management](ARCHITECTURE.md#token-management)**
+7. **[Token Management](ARCHITECTURE.md#token-management)**
    - Access token cache (in-memory)
    - Refresh token persistence (database)
    - Token refresh flow
    - Service layers
 
-7. **[Template Designer](ARCHITECTURE.md#template-designer-architecture)**
+8. **[Template Designer](ARCHITECTURE.md#template-designer-architecture)**
    - Client-side rendering with Fabric.js
    - Template matching algorithm
    - Data binding system
@@ -72,45 +78,45 @@ Complete documentation for the QRStickers application.
 
 ### API Reference
 
-8. **[Public Endpoints](API_REFERENCE.md#public-endpoints)**
+9. **[Public Endpoints](API_REFERENCE.md#public-endpoints)**
    - QR code generation API
 
-9. **[Template Management](API_REFERENCE.md#template-management-endpoints)**
-   - List, create, update, delete templates
-   - Track template usage
+10. **[Template Management](API_REFERENCE.md#template-management-endpoints)**
+    - List, create, update, delete templates
+    - Track template usage
 
-10. **[Template Matching](API_REFERENCE.md#template-matching-endpoints)**
+11. **[Template Matching](API_REFERENCE.md#template-matching-endpoints)**
     - Match template to device
     - Get alternate templates
 
-11. **[Export Endpoints](API_REFERENCE.md#export-endpoints)**
+12. **[Export Endpoints](API_REFERENCE.md#export-endpoints)**
     - Export single device
     - Export multiple devices (bulk)
     - Progress tracking with SignalR
 
-12. **[Custom Images](API_REFERENCE.md#custom-image-endpoints)**
+13. **[Custom Images](API_REFERENCE.md#custom-image-endpoints)**
     - Upload, list, delete images
     - Usage tracking
 
-13. **[Global Variables](API_REFERENCE.md#global-variables-endpoints)**
+14. **[Global Variables](API_REFERENCE.md#global-variables-endpoints)**
     - Create custom template variables
     - Manage per-connection variables
 
 ### Deployment
 
-14. **[Azure Deployment](DEPLOYMENT.md)**
+15. **[Azure Deployment](DEPLOYMENT.md)**
     - Azure Service Connector setup (passwordless)
     - Manual connection string setup
     - Docker deployment
     - Azure Container Apps
     - GitHub Actions CI/CD
 
-15. **[Azure SQL Database](DEPLOYMENT.md#azure-sql-database-free-tier)**
+16. **[Azure SQL Database](DEPLOYMENT.md#azure-sql-database-free-tier)**
     - Free tier setup and limits
     - Monitoring usage
     - Cost management
 
-16. **[Troubleshooting Deployment](DEPLOYMENT.md#troubleshooting)**
+17. **[Troubleshooting Deployment](DEPLOYMENT.md#troubleshooting)**
     - Database connection issues
     - Migration problems
     - OAuth callback failures
@@ -124,7 +130,7 @@ Development history and implementation details for each phase.
 
 ### Phase 2: Template Designer
 
-17. **[Phase 2 Progress](Implementation/Phase2-Designer-Progress.md)**
+18. **[Phase 2 Progress](Implementation/Phase2-Designer-Progress.md)**
     - Initial template designer implementation
     - Fabric.js integration
     - Canvas rendering
@@ -212,6 +218,13 @@ Development history and implementation details for each phase.
     - Critical security fixes
     - XSS prevention measures
     - Input sanitization
+
+41. **[DoS Protection via String Length Constraints](Security/SECURITY_FIX_DOS_PROTECTION.md)**
+    - String length constraint implementation
+    - Defense in depth strategy
+    - Database-level protection
+    - Attack scenario mitigation
+    - Configuration and monitoring
 
 ---
 

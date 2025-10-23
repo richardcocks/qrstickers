@@ -153,6 +153,15 @@ public class DesignerModel : PageModel
             return Page();
         }
 
+        // Validate template JSON size (max 5 MB to allow complex designs while preventing DoS)
+        const int MAX_TEMPLATE_JSON_SIZE = 5_000_000; // 5 MB
+        if (Template.TemplateJson.Length > MAX_TEMPLATE_JSON_SIZE)
+        {
+            var sizeMB = Template.TemplateJson.Length / 1024.0 / 1024.0;
+            ModelState.AddModelError("", $"Template too complex ({sizeMB:F2} MB). Maximum size: 5 MB");
+            return Page();
+        }
+
         // Validate custom image limit (max 4 per template)
         try
         {

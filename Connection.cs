@@ -29,6 +29,7 @@ public abstract class Connection
     /// Values: "Meraki", "LogicMonitor", etc.
     /// </summary>
     [Required]
+    [MaxLength(50)]
     public string ConnectionType { get; set; } = null!;
 
     /// <summary>
