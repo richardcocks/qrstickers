@@ -232,7 +232,8 @@ function initToolbar() {
     document.getElementById('btnSendToBack').addEventListener('click', () => {
         const activeObject = canvas.getActiveObject();
         if (activeObject) {
-            canvas.sendToBack(activeObject);
+            // Move to index 1 (boundary is at index 0, so this is the lowest user elements can go)
+            canvas.moveTo(activeObject, 1);
             canvas.renderAll();
             updateStatus('Sent object to back');
         }
@@ -250,9 +251,15 @@ function initToolbar() {
     document.getElementById('btnSendBackward').addEventListener('click', () => {
         const activeObject = canvas.getActiveObject();
         if (activeObject) {
-            canvas.sendBackwards(activeObject);
-            canvas.renderAll();
-            updateStatus('Sent object backward');
+            const currentIndex = canvas.getObjects().indexOf(activeObject);
+            // Only move backward if not already at minimum index (boundary is at 0, so minimum is 1)
+            if (currentIndex > 1) {
+                canvas.sendBackwards(activeObject);
+                canvas.renderAll();
+                updateStatus('Sent object backward');
+            } else {
+                updateStatus('Object is already at the back');
+            }
         }
     });
 }
