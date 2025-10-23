@@ -56,8 +56,17 @@ else
                         @if (connection.ConnectionType == "Meraki")
                         {
                             <a href="/Meraki/Connection?connectionId=@connection.Id" style="margin-right: 10px;">View</a>
+                            <span style="color: #ddd;">|</span>
+                            <a href="/Meraki/SyncStatus?connectionId=@connection.Id&trigger=true"
+                               style="margin-left: 10px; margin-right: 10px;"
+                               title="Force a data refresh from Meraki">🔄 Resync</a>
+                            <span style="color: #ddd;">|</span>
                         }
-                        <a href="/Connections/Delete?connectionId=@connection.Id" style="color: #dc3545;">Delete</a>
+                        <a href="/Images/Index?connectionId=@connection.Id"
+                           style="margin-left: 10px; margin-right: 10px;"
+                           title="Manage custom images for this connection">📁 Manage Images</a>
+                        <span style="color: #ddd;">|</span>
+                        <a href="/Connections/Delete?connectionId=@connection.Id" style="color: #dc3545; margin-left: 10px;">Delete</a>
                     </td>
                 </tr>
             }

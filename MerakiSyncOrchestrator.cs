@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using QRStickers.Meraki;
+using QRStickers.Services;
 using System.Text.Json;
 
 namespace QRStickers;
@@ -14,17 +15,20 @@ public class MerakiSyncOrchestrator
     private readonly QRStickersDbContext _db;
     private readonly ILogger<MerakiSyncOrchestrator> _logger;
     private readonly IHubContext<SyncStatusHub> _hubContext;
+    private readonly QRCodeGenerationService _qrCodeService;
 
     public MerakiSyncOrchestrator(
         MerakiServiceFactory merakiFactory,
         QRStickersDbContext db,
         ILogger<MerakiSyncOrchestrator> logger,
-        IHubContext<SyncStatusHub> hubContext)
+        IHubContext<SyncStatusHub> hubContext,
+        QRCodeGenerationService qrCodeService)
     {
         _merakiFactory = merakiFactory ?? throw new ArgumentNullException(nameof(merakiFactory));
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _hubContext = hubContext ?? throw new ArgumentNullException(nameof(hubContext));
+        _qrCodeService = qrCodeService ?? throw new ArgumentNullException(nameof(qrCodeService));
     }
 
     /// <summary>
@@ -151,20 +155,39 @@ public class MerakiSyncOrchestrator
             {
                 // Update existing
                 existing.Name = apiOrg.Name;
-                existing.Url = apiOrg.Url;
+
+                // Regenerate QR code only if URL changed
+                if (_qrCodeService.ShouldRegenerateQRCode(existing.Url, apiOrg.Url))
+                {
+                    existing.Url = apiOrg.Url;
+                    existing.QRCodeDataUri = !string.IsNullOrWhiteSpace(apiOrg.Url)
+                        ? _qrCodeService.GenerateQRCodeDataUri(apiOrg.Url)
+                        : null;
+                }
+                // Also generate QR code if it's missing (migration scenario)
+                else if (string.IsNullOrWhiteSpace(existing.QRCodeDataUri) && !string.IsNullOrWhiteSpace(existing.Url))
+                {
+                    existing.QRCodeDataUri = _qrCodeService.GenerateQRCodeDataUri(existing.Url);
+                }
+
                 existing.IsDeleted = false;
                 existing.LastSyncedAt = now;
                 _db.CachedOrganizations.Update(existing);
             }
             else
             {
-                // Insert new
+                // Insert new - generate QR code if URL exists
+                var qrCodeDataUri = !string.IsNullOrWhiteSpace(apiOrg.Url)
+                    ? _qrCodeService.GenerateQRCodeDataUri(apiOrg.Url)
+                    : null;
+
                 _db.CachedOrganizations.Add(new CachedOrganization
                 {
                     ConnectionId = connectionId,
                     OrganizationId = apiOrg.Id,
                     Name = apiOrg.Name,
                     Url = apiOrg.Url,
+                    QRCodeDataUri = qrCodeDataUri,
                     IsDeleted = false,
                     LastSyncedAt = now,
                     CreatedAt = now
@@ -229,18 +252,36 @@ public class MerakiSyncOrchestrator
             {
                 // Update existing
                 existing.Name = apiNetwork.Name;
-                existing.Url = apiNetwork.Url;
                 existing.OrganizationId = apiNetwork.OrganizationId;
                 existing.ProductTypesJson = apiNetwork.ProductTypes != null ? JsonSerializer.Serialize(apiNetwork.ProductTypes) : null;
                 existing.TagsJson = apiNetwork.Tags != null ? JsonSerializer.Serialize(apiNetwork.Tags) : null;
                 existing.TimeZone = apiNetwork.TimeZone;
+
+                // Regenerate QR code only if URL changed
+                if (_qrCodeService.ShouldRegenerateQRCode(existing.Url, apiNetwork.Url))
+                {
+                    existing.Url = apiNetwork.Url;
+                    existing.QRCodeDataUri = !string.IsNullOrWhiteSpace(apiNetwork.Url)
+                        ? _qrCodeService.GenerateQRCodeDataUri(apiNetwork.Url)
+                        : null;
+                }
+                // Also generate QR code if it's missing (migration scenario)
+                else if (string.IsNullOrWhiteSpace(existing.QRCodeDataUri) && !string.IsNullOrWhiteSpace(existing.Url))
+                {
+                    existing.QRCodeDataUri = _qrCodeService.GenerateQRCodeDataUri(existing.Url);
+                }
+
                 existing.IsDeleted = false;
                 existing.LastSyncedAt = now;
                 _db.CachedNetworks.Update(existing);
             }
             else
             {
-                // Insert new
+                // Insert new - generate QR code if URL exists
+                var qrCodeDataUri = !string.IsNullOrWhiteSpace(apiNetwork.Url)
+                    ? _qrCodeService.GenerateQRCodeDataUri(apiNetwork.Url)
+                    : null;
+
                 _db.CachedNetworks.Add(new CachedNetwork
                 {
                     ConnectionId = connectionId,
@@ -248,6 +289,7 @@ public class MerakiSyncOrchestrator
                     NetworkId = apiNetwork.Id,
                     Name = apiNetwork.Name,
                     Url = apiNetwork.Url,
+                    QRCodeDataUri = qrCodeDataUri,
                     ProductTypesJson = apiNetwork.ProductTypes != null ? JsonSerializer.Serialize(apiNetwork.ProductTypes) : null,
                     TagsJson = apiNetwork.Tags != null ? JsonSerializer.Serialize(apiNetwork.Tags) : null,
                     TimeZone = apiNetwork.TimeZone,
@@ -318,17 +360,33 @@ public class MerakiSyncOrchestrator
                 existing.Model = apiDevice.Model;
                 existing.ProductType = apiDevice.ProductType;
                 existing.NetworkId = apiDevice.NetworkId;
+
+                // Regenerate QR code only if Serial changed (extremely rare, but handle it)
+                if (_qrCodeService.ShouldRegenerateQRCode(existing.Serial, apiDevice.Serial))
+                {
+                    existing.Serial = apiDevice.Serial!;
+                    existing.QRCodeDataUri = _qrCodeService.GenerateQRCodeDataUri(apiDevice.Serial!);
+                }
+                // Also generate QR code if it's missing (migration scenario)
+                else if (string.IsNullOrWhiteSpace(existing.QRCodeDataUri))
+                {
+                    existing.QRCodeDataUri = _qrCodeService.GenerateQRCodeDataUri(existing.Serial);
+                }
+
                 existing.IsDeleted = false;
                 existing.LastSyncedAt = now;
                 _db.CachedDevices.Update(existing);
             }
             else
             {
-                // Insert new
+                // Insert new - always generate QR code for device serial
+                var qrCodeDataUri = _qrCodeService.GenerateQRCodeDataUri(apiDevice.Serial!);
+
                 _db.CachedDevices.Add(new CachedDevice
                 {
                     ConnectionId = connectionId,
                     Serial = apiDevice.Serial!,
+                    QRCodeDataUri = qrCodeDataUri,
                     Name = apiDevice.Name,
                     Model = apiDevice.Model,
                     ProductType = apiDevice.ProductType,

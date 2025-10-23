@@ -47,6 +47,14 @@ public abstract class Connection
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     /// <summary>
+    /// Company logo URL or base64 data URI for this connection
+    /// Used in sticker templates when logo element is present
+    /// Format: "https://..." or "data:image/png;base64,..."
+    /// </summary>
+    [MaxLength(5000)]  // Allow for base64-encoded images
+    public string? CompanyLogoUrl { get; set; }
+
+    /// <summary>
     /// Navigation property to the user who owns this connection
     /// </summary>
     public ApplicationUser User { get; set; } = null!;

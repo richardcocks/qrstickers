@@ -228,6 +228,10 @@ namespace QRStickers.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("CompanyLogoUrl")
+                        .HasMaxLength(5000)
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("ConnectionType")
                         .IsRequired()
                         .HasMaxLength(13)
@@ -262,6 +266,113 @@ namespace QRStickers.Migrations
                     b.UseTphMappingStrategy();
                 });
 
+            modelBuilder.Entity("QRStickers.ExportHistory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("BackgroundType")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int?>("ConnectionId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("DeviceId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ExportDpi")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ExportFormat")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<DateTime>("ExportedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FilePath")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int?>("FileSize")
+                        .HasColumnType("int");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int?>("TemplateId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConnectionId");
+
+                    b.HasIndex("DeviceId");
+
+                    b.HasIndex("ExportedAt");
+
+                    b.HasIndex("TemplateId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("ExportHistory");
+                });
+
+            modelBuilder.Entity("QRStickers.GlobalVariable", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ConnectionId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("VariableName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("VariableValue")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConnectionId");
+
+                    b.HasIndex("ConnectionId", "VariableName")
+                        .IsUnique();
+
+                    b.ToTable("GlobalVariables");
+                });
+
             modelBuilder.Entity("QRStickers.Meraki.CachedDevice", b =>
                 {
                     b.Property<int>("Id")
@@ -292,6 +403,9 @@ namespace QRStickers.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("ProductType")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("QRCodeDataUri")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Serial")
@@ -345,6 +459,9 @@ namespace QRStickers.Migrations
                     b.Property<string>("ProductTypesJson")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("QRCodeDataUri")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("TagsJson")
                         .HasColumnType("nvarchar(max)");
 
@@ -394,6 +511,9 @@ namespace QRStickers.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<string>("QRCodeDataUri")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Url")
                         .HasColumnType("nvarchar(max)");
 
@@ -439,6 +559,71 @@ namespace QRStickers.Migrations
                     b.ToTable("MerakiOAuthTokens");
                 });
 
+            modelBuilder.Entity("QRStickers.StickerTemplate", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("ConnectionId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsRackMount")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSystemTemplate")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastUsedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<double>("PageHeight")
+                        .HasColumnType("float");
+
+                    b.Property<double>("PageWidth")
+                        .HasColumnType("float");
+
+                    b.Property<string>("ProductTypeFilter")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("TemplateJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConnectionId");
+
+                    b.HasIndex("IsDefault");
+
+                    b.HasIndex("IsRackMount");
+
+                    b.HasIndex("ProductTypeFilter");
+
+                    b.ToTable("StickerTemplates");
+                });
+
             modelBuilder.Entity("QRStickers.SyncStatus", b =>
                 {
                     b.Property<int>("Id")
@@ -477,6 +662,138 @@ namespace QRStickers.Migrations
                         .IsUnique();
 
                     b.ToTable("SyncStatuses");
+                });
+
+            modelBuilder.Entity("QRStickers.TemplateDeviceModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeviceModel")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TemplateId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeviceModel");
+
+                    b.HasIndex("TemplateId");
+
+                    b.HasIndex("TemplateId", "DeviceModel")
+                        .IsUnique();
+
+                    b.ToTable("TemplateDeviceModels");
+                });
+
+            modelBuilder.Entity("QRStickers.TemplateDeviceType", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeviceType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TemplateId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeviceType");
+
+                    b.HasIndex("TemplateId");
+
+                    b.HasIndex("TemplateId", "DeviceType")
+                        .IsUnique();
+
+                    b.ToTable("TemplateDeviceTypes");
+                });
+
+            modelBuilder.Entity("QRStickers.UploadedImage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ConnectionId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("DataUri")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<long>("FileSizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("HeightPx")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastUsedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("MimeType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime>("UploadedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("WidthPx")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConnectionId")
+                        .HasDatabaseName("IX_UploadedImages_ConnectionId");
+
+                    b.HasIndex("ConnectionId", "Name")
+                        .HasDatabaseName("IX_UploadedImages_ConnectionId_Name");
+
+                    b.ToTable("UploadedImages");
                 });
 
             modelBuilder.Entity("QRStickers.MerakiConnection", b =>
@@ -548,6 +865,49 @@ namespace QRStickers.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("QRStickers.ExportHistory", b =>
+                {
+                    b.HasOne("QRStickers.Connection", "Connection")
+                        .WithMany()
+                        .HasForeignKey("ConnectionId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("QRStickers.Meraki.CachedDevice", "Device")
+                        .WithMany()
+                        .HasForeignKey("DeviceId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("QRStickers.StickerTemplate", "Template")
+                        .WithMany()
+                        .HasForeignKey("TemplateId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("QRStickers.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Connection");
+
+                    b.Navigation("Device");
+
+                    b.Navigation("Template");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("QRStickers.GlobalVariable", b =>
+                {
+                    b.HasOne("QRStickers.Connection", "Connection")
+                        .WithMany()
+                        .HasForeignKey("ConnectionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Connection");
+                });
+
             modelBuilder.Entity("QRStickers.Meraki.CachedDevice", b =>
                 {
                     b.HasOne("QRStickers.Connection", "Connection")
@@ -609,7 +969,50 @@ namespace QRStickers.Migrations
                     b.Navigation("Connection");
                 });
 
+            modelBuilder.Entity("QRStickers.StickerTemplate", b =>
+                {
+                    b.HasOne("QRStickers.Connection", "Connection")
+                        .WithMany()
+                        .HasForeignKey("ConnectionId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("Connection");
+                });
+
             modelBuilder.Entity("QRStickers.SyncStatus", b =>
+                {
+                    b.HasOne("QRStickers.Connection", "Connection")
+                        .WithMany()
+                        .HasForeignKey("ConnectionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Connection");
+                });
+
+            modelBuilder.Entity("QRStickers.TemplateDeviceModel", b =>
+                {
+                    b.HasOne("QRStickers.StickerTemplate", "Template")
+                        .WithMany()
+                        .HasForeignKey("TemplateId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Template");
+                });
+
+            modelBuilder.Entity("QRStickers.TemplateDeviceType", b =>
+                {
+                    b.HasOne("QRStickers.StickerTemplate", "Template")
+                        .WithMany()
+                        .HasForeignKey("TemplateId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Template");
+                });
+
+            modelBuilder.Entity("QRStickers.UploadedImage", b =>
                 {
                     b.HasOne("QRStickers.Connection", "Connection")
                         .WithMany()

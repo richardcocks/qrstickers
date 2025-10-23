@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <style>
+    .letter { fill: #000000; }
+  </style>
+
+  <!-- Q Letter -->
+  <path class="letter" d="M 15 20 L 15 65 Q 15 80 30 80 L 35 80 L 35 70 L 30 70 Q 25 70 25 65 L 25 35 Q 25 30 30 30 L 40 30 Q 45 30 45 35 L 45 55 L 35 55 L 35 45 L 25 45 L 25 55 Q 25 60 30 60 L 45 60 Q 55 60 55 50 L 55 35 Q 55 20 40 20 Z"/>
+
+  <!-- Q Tail -->
+  <rect class="letter" x="45" y="70" width="10" height="10" transform="rotate(45 50 75)"/>
+
+  <!-- R Letter -->
+  <path class="letter" d="M 65 20 L 65 80 L 75 80 L 75 55 L 80 55 Q 85 55 85 60 L 85 80 L 95 80 L 95 60 Q 95 50 85 50 L 85 45 Q 95 45 95 35 L 95 30 Q 95 20 85 20 Z M 75 30 L 80 30 Q 85 30 85 35 L 85 40 Q 85 45 80 45 L 75 45 Z"/>
+</svg>

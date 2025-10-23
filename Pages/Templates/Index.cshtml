@@ -1,0 +1,357 @@
+@page
+@model QRStickers.Pages.Templates.IndexModel
+@{
+    ViewData["Title"] = "Templates";
+}
+
+<style>
+    .templates-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .templates-toolbar {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    .filter-group {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .filter-group label {
+        font-size: 14px;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    .filter-group select,
+    .filter-group input[type="text"] {
+        padding: 6px 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+
+    .checkbox-group {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .templates-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+    }
+
+    .template-card {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: box-shadow 0.2s;
+    }
+
+    .template-card:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+
+    .template-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 10px;
+    }
+
+    .template-card-title {
+        margin: 0;
+        font-size: 1.2em;
+        font-weight: 600;
+        color: #333;
+        word-break: break-word;
+    }
+
+    .template-badges {
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+        margin-bottom: 10px;
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 3px 8px;
+        font-size: 11px;
+        font-weight: 600;
+        border-radius: 3px;
+        text-transform: uppercase;
+    }
+
+    .badge-system {
+        background: #e3f2fd;
+        color: #1976d2;
+    }
+
+    .badge-default {
+        background: #fff3e0;
+        color: #f57c00;
+    }
+
+    .badge-dimensions {
+        background: #f5f5f5;
+        color: #666;
+    }
+
+    .badge-rack {
+        background: #e8f5e9;
+        color: #388e3c;
+    }
+
+    .badge-ceiling {
+        background: #fce4ec;
+        color: #c2185b;
+    }
+
+    .template-description {
+        color: #666;
+        font-size: 14px;
+        margin-bottom: 10px;
+        min-height: 40px;
+    }
+
+    .template-meta {
+        font-size: 13px;
+        color: #999;
+        margin-bottom: 15px;
+    }
+
+    .template-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .btn-small {
+        padding: 6px 12px;
+        font-size: 13px;
+        border-radius: 4px;
+        text-decoration: none;
+        display: inline-block;
+        border: none;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .btn-edit {
+        background: #1976d2;
+        color: white;
+    }
+
+    .btn-edit:hover {
+        background: #1565c0;
+        color: white;
+    }
+
+    .btn-clone {
+        background: #757575;
+        color: white;
+    }
+
+    .btn-clone:hover {
+        background: #616161;
+        color: white;
+    }
+
+    .btn-delete {
+        background: #d32f2f;
+        color: white;
+    }
+
+    .btn-delete:hover {
+        background: #c62828;
+        color: white;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #999;
+    }
+
+    .empty-state-icon {
+        font-size: 48px;
+        margin-bottom: 20px;
+    }
+
+    .empty-state-text {
+        font-size: 18px;
+        margin-bottom: 20px;
+    }
+</style>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success">
+        @TempData["SuccessMessage"]
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger">
+        @TempData["ErrorMessage"]
+    </div>
+}
+
+<div class="templates-header">
+    <h1>Templates</h1>
+    <a href="/Templates/Create" class="btn btn-primary">+ New Template</a>
+</div>
+
+<div class="templates-toolbar">
+    <form method="get" style="display: contents;">
+        <div class="filter-group">
+            <label>Search:</label>
+            <input type="text" name="search" value="@Model.SearchQuery" placeholder="Template name..." />
+        </div>
+
+        <div class="filter-group">
+            <label>Connection:</label>
+            <select name="connectionId" onchange="this.form.submit()">
+                <option value="">All Connections</option>
+                @foreach (var conn in Model.UserConnections)
+                {
+                    <option value="@conn.Id" selected="@(Model.SelectedConnectionId == conn.Id)">
+                        @conn.DisplayName
+                    </option>
+                }
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label>Product Type:</label>
+            <select name="productType" onchange="this.form.submit()">
+                <option value="">All Types</option>
+                <option value="switch" selected="@(Model.ProductTypeFilter == "switch")">Switch</option>
+                <option value="wireless" selected="@(Model.ProductTypeFilter == "wireless")">Wireless</option>
+                <option value="appliance" selected="@(Model.ProductTypeFilter == "appliance")">Appliance</option>
+                <option value="camera" selected="@(Model.ProductTypeFilter == "camera")">Camera</option>
+                <option value="sensor" selected="@(Model.ProductTypeFilter == "sensor")">Sensor</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label>Mount Type:</label>
+            <select name="rackMount" onchange="this.form.submit()">
+                <option value="">All</option>
+                <option value="true" selected="@(Model.IsRackMount == true)">Rack Mount</option>
+                <option value="false" selected="@(Model.IsRackMount == false)">Ceiling/Wall</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label>Templates:</label>
+            <select name="systemTemplates" onchange="this.form.submit()">
+                <option value="true" selected="@(Model.ShowSystemTemplates == true)">All (System + User)</option>
+                <option value="false" selected="@(Model.ShowSystemTemplates == false)">User Only</option>
+            </select>
+        </div>
+
+        <button type="submit" class="btn btn-secondary">Search</button>
+        <a href="/Templates" class="btn btn-secondary">Clear</a>
+    </form>
+</div>
+
+@if (Model.Templates.Count == 0)
+{
+    <div class="empty-state">
+        <div class="empty-state-icon">📄</div>
+        <div class="empty-state-text">No templates found</div>
+        <p>Create a new template or adjust your filters.</p>
+        <a href="/Templates/Create" class="btn btn-primary">Create Your First Template</a>
+    </div>
+}
+else
+{
+    <div class="templates-grid">
+        @foreach (var template in Model.Templates)
+        {
+            <div class="template-card">
+                <div class="template-card-header">
+                    <h3 class="template-card-title">@template.Name</h3>
+                </div>
+
+                <div class="template-badges">
+                    @if (template.IsSystemTemplate)
+                    {
+                        <span class="badge badge-system">System</span>
+                    }
+                    @if (template.IsDefault)
+                    {
+                        <span class="badge badge-default">⭐ Default</span>
+                    }
+                    <span class="badge badge-dimensions">@(template.PageWidth)×@(template.PageHeight)mm</span>
+                    @if (template.IsRackMount)
+                    {
+                        <span class="badge badge-rack">Rack Mount</span>
+                    }
+                    else
+                    {
+                        <span class="badge badge-ceiling">Ceiling/Wall</span>
+                    }
+                    @if (!string.IsNullOrEmpty(template.ProductTypeFilter))
+                    {
+                        <span class="badge badge-dimensions">@template.ProductTypeFilter</span>
+                    }
+                </div>
+
+                <div class="template-description">
+                    @if (!string.IsNullOrEmpty(template.Description))
+                    {
+                        @template.Description
+                    }
+                    else
+                    {
+                        <em style="color: #ccc;">No description</em>
+                    }
+                </div>
+
+                <div class="template-meta">
+                    @if (template.ConnectionId.HasValue && template.Connection != null)
+                    {
+                        <div>Connection: @template.Connection.DisplayName</div>
+                    }
+                    <div>Created: @template.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd")</div>
+                </div>
+
+                <div class="template-actions">
+                    @if (!template.IsSystemTemplate)
+                    {
+                        <a href="/Templates/Edit?id=@template.Id" class="btn-small btn-edit" title="Edit template name, description, and settings">Edit Details</a>
+                        <a href="/Templates/Designer?id=@template.Id" class="btn-small btn-edit" title="Edit template design and layout">Edit Design</a>
+                    }
+
+                    @if (Model.UserConnections.Count > 0)
+                    {
+                        <a href="/Templates/Create?cloneFrom=@template.Id" class="btn-small btn-clone">Clone</a>
+                    }
+
+                    @if (!template.IsSystemTemplate)
+                    {
+                        <a href="/Templates/Delete?id=@template.Id" class="btn-small btn-delete">Delete</a>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}

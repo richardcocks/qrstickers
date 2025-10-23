@@ -42,6 +42,12 @@ public class CachedNetwork
     public string? Url { get; set; }
 
     /// <summary>
+    /// QR code data URI (generated from Url during sync)
+    /// Format: data:image/png;base64,...
+    /// </summary>
+    public string? QRCodeDataUri { get; set; }
+
+    /// <summary>
     /// Product types as JSON array string (e.g., ["appliance", "switch"])
     /// </summary>
     public string? ProductTypesJson { get; set; }

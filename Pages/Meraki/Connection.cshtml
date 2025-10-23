@@ -15,6 +15,15 @@
 }
 else
 {
+    <div style="margin-bottom: 20px;">
+        <a href="/Images/Index?connectionId=@Model.Connection.Id" class="btn btn-secondary">
+            📁 Manage Images
+        </a>
+        <a href="/Meraki/SyncStatus?connectionId=@Model.Connection.Id&trigger=true" class="btn btn-secondary">
+            🔄 Resync Data
+        </a>
+    </div>
+
     @if (Model.LastSyncedAt.HasValue)
     {
         <p style="color: #666; font-size: 0.9em;">

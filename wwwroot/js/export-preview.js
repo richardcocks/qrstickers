@@ -1,0 +1,747 @@
+/**
+ * QR Sticker Export & Preview Engine
+ * Client-side placeholder generation and export functionality
+ */
+
+/**
+ * Realistic placeholder values for all data binding types
+ */
+const PLACEHOLDER_VALUES = {
+    'device.serial': 'MS-1234-ABCD-5678',      // Cisco Meraki format
+    'device.name': 'Example Switch',            // Descriptive name
+    'device.mac': '00:1A:2B:3C:4D:5E',        // Valid MAC format
+    'device.model': 'MS225-48FP',              // Actual Meraki model
+    'device.ipaddress': '192.168.1.10',        // Valid IP
+    'device.tags': 'production, datacenter',   // Comma-separated
+    'connection.name': 'Main Office',          // Business location
+    'connection.displayname': 'HQ Network',    // User-friendly name
+    'connection.companylogourl': 'https://example.com/logo.png',  // Logo URL
+    'network.name': 'Production Network',       // Network name
+    'global.supporturl': 'support.example.com',  // Support website
+    'global.supportphone': '+1-555-0100',       // Support phone
+    // QR code data URIs (real scannable QR codes for preview)
+    'device.qrcode': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAa0AAAGtAQAAAACNLRaaAAABp0lEQVR4nO3bu3HDMAyAYehSpNQIHiWj2aNlFI3g0oXP9BEEXxLzrMDkR5E7hPxUCTRM0hJ+EzeBwWAwGAwGg8H+CbtKiSVc5WzD70v8e6+DNgKD+WXNTH3GKQ6+6b/uMemmwWCOmb7nr4WJjjxkTayvDRhsEpYSiRWgCQw2KZOXNAiDTcgOXXVM4mxl/TQYzC8rYYv5KexXdg0YzDfrorLUYh8DBvPLLmIvvcgaLrEviazrS0YVAIP5Ys223SON75L0QBjMO9MKSF310iZlJgw2B7O9jrJtpzOt3y4jsRxgMN/M+pJwKzM3yU1KCGGTOGIJDOab2cwcmy3m2m9rEoYVAIO5YrZT17ciurLbM5oEBnPMtAJy99G99Kst8/npMJhr1hwSagUcriQ1TQoM5ph10V2oqxsfw8KBwXyx0Xn34cSwBgzml+1vIeUb+3lD76vPABjMCxu1IrqYl6QGDDYFs6+OzXm3fLAdDYO5Zrv1Ww+/v/ebFRjMAbOXO99s3t2u6zaqYTDHrERZzJu7ofl+0qcbHzCYA/bDgMFgMBgMBoPBwp9nTwEx5Yt/LG0pAAAAAElFTkSuQmCC',
+    'network.qrcode': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAYgAAAGIAQAAAABzOEqLAAACEklEQVR4nO2XQY7EMAgE8/9PZ7WhG3CkHOYAp8pqMzamfGk1kOv+9bkgICAgICCCuOK5r+tZ31ePxEt7iBWiiRmUsv6DT17LgFggpFspltoqpAyIVSLUeqdISIhtIraibC45CmKTEKejekWr+a6JECOE+/3339fMADFA+NHZsTszIFYIi1S2Kt2egCcBiBWipbv1VP+Rqi9HQQwSClXuy0O6qjsKYo7QqxupucjfkRBrhAbiyNG5RgIvU0OIcSKaSjsx3NuORwOIDaJ1evcWt5lmNIgVotUuuyn9VcThQYhJQieaAELNs9dkw4FYIKyXnVT3eFYOS0GsEA1KtayoIhoNIDYIy1P9RpFqNK9yCDFJHHlStHq/zJUnENPE9cI1L1dxKwxigbBkoVvFVOFyNmjXQgwSWeaq0qXJTFhHiAXC41goqL1I1bo0HsQ40QqdTt19jlZ0eBBimtC/PSRfae8AxAbhZJW401bHfRALRDSb+kDxSf52L0GMExbIyqn5xCVxY99ADBPpm2YmpanaSVyIFaI3/hBKYqbN0lUQC4Ts9Ly9OJduPxAbhB83e+kWOYe4EBuEvxK1sYnUdcpUTXOISUJLa+VANRu1HIglwvo98ZzMVOgcSdtB7BDK1hAg7XJaPiocxAJhKHO9an6D2CBcyaq0WcqgZDeIHULHoVO/4TlKU0HsED89EBAQEBA3xP0HUHCq6tODNOAAAAAASUVORK5CYII=',  // Network dashboard URL QR code
+    'organization.qrcode': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAYgAAAGIAQAAAABzOEqLAAACGUlEQVR4nO2XUY/DMAiD+///dE4NtiGtbtKkg3txpi1p4NuLhaHX+nZdJkyYMGHCRBBXrHV/9k087Yd73999Z2KEkDRXwfVzZJiYIEI/baV8GEPIxCSxdyXej3E28S/ETkMRFeU+KGiihyjVE0GoGThyTUwRZQL45fNhZjDx10RZUU1oPtT1zDDRThwCKSO7Dv/JxAixs6ja9jUd1YPS+Ex0E+ouO07NIFy5KhVlopNAGaHfq4yoLZiqoIlGIgsGpoYAbI0eZ2KIQFp4XLLUkO2IFyaaiVCLgFrLaXn0OBP9BOyL6kG+UljvTmSij2AuJrMIRyUFXQYyE/0EkigczUwxmt55a6KLYFWtp1jo+vXOxATBACtrHZoy8eFwJpqI8LbS6zkCVI3jL0wMEDK10nUUQmE9HM5EK1GHsZQydUOZmRgilIxR+FAx9mMuMNFJ5MyVyZiQ5XapqYkRQgKFmHpnxE4TNNFPSCxVlDxPs4GWiXaCd4zW1sN2c3YcE60ERcMZJVW+5EzMENIqE4rXVQc0MUBIIJ5YVUiVviaGiCOWQV4+31hM9BK4wjWxHAtKzzHRTnCVeTgtTk4HxEQ7wZKBx11FUUZeE5mJRgJHllGpIcwELwVNtBLs8bI0qKk+BElNjBKlscRDuh79zsQkEZJRRR5SPhMzhDhOyVBMLGrLxAhBjehqqZ0Ki4CJfuKrZcKECRMmlon1A+oPsuKNVshAAAAAAElFTkSuQmCC'  // Organization dashboard URL QR code (392px)
+};
+
+// Note: MM_TO_PX_RATIO is defined globally in fabric-extensions.js (loaded before this file)
+
+/**
+ * Extract all data binding patterns from template JSON
+ * Returns an array of unique bindings found in the template
+ */
+function extractDataBindings(templateJson) {
+    const bindings = new Set();
+
+    if (!templateJson || !templateJson.objects) {
+        return Array.from(bindings);
+    }
+
+    templateJson.objects.forEach(obj => {
+        // QR code data source
+        if (obj.properties && obj.properties.dataSource) {
+            const binding = obj.properties.dataSource.toLowerCase();
+            bindings.add(binding);
+        }
+
+        // Text content (extract {{...}} patterns)
+        if (obj.text) {
+            const pattern = /\{\{([^}]+)\}\}/g;
+            let match;
+            while ((match = pattern.exec(obj.text)) !== null) {
+                const binding = match[1].toLowerCase();
+                bindings.add(binding);
+            }
+        }
+
+        // Image data source
+        if (obj.type === 'image' && obj.properties && obj.properties.dataSource) {
+            const binding = obj.properties.dataSource.toLowerCase();
+            bindings.add(binding);
+        }
+    });
+
+    return Array.from(bindings);
+}
+
+/**
+ * Generate placeholder map for all detected bindings
+ */
+function generatePlaceholderMap(templateJson, uploadedImages = []) {
+    const bindings = extractDataBindings(templateJson);
+    const placeholders = {};
+
+    bindings.forEach(binding => {
+        // Direct lookup in PLACEHOLDER_VALUES
+        if (PLACEHOLDER_VALUES[binding]) {
+            placeholders[binding] = PLACEHOLDER_VALUES[binding];
+        } else {
+            // Generate a generic placeholder for unknown bindings
+            placeholders[binding] = generateGenericPlaceholder(binding);
+        }
+    });
+
+    // Add custom images from uploadedImages array
+    if (uploadedImages && uploadedImages.length > 0) {
+        uploadedImages.forEach(image => {
+            const bindingKey = `customimage.image_${image.id}`;
+            placeholders[bindingKey] = image.dataUri;
+        });
+    }
+
+    return placeholders;
+}
+
+/**
+ * Generate a generic placeholder for unknown data sources
+ */
+function generateGenericPlaceholder(binding) {
+    const parts = binding.split('.');
+    if (parts.length === 2) {
+        const [category, field] = parts;
+        return `[${category}.${field}]`;
+    }
+    return `[${binding}]`;
+}
+
+/**
+ * Replace data bindings in template JSON with placeholder values
+ */
+function createPreviewTemplate(templateJson, placeholders) {
+    // Deep clone the template to avoid mutating the original
+    const previewTemplate = JSON.parse(JSON.stringify(templateJson));
+
+    if (!previewTemplate.objects) {
+        return previewTemplate;
+    }
+
+    previewTemplate.objects = previewTemplate.objects.map(obj => {
+        const objCopy = JSON.parse(JSON.stringify(obj));
+
+        // Replace QR code data source
+        if (objCopy.properties && objCopy.properties.dataSource) {
+            const binding = objCopy.properties.dataSource.toLowerCase();
+            // For preview, we'll store the placeholder value in the data source
+            // This will be used when rendering the preview
+            objCopy.previewData = placeholders[binding] || PLACEHOLDER_VALUES[binding] || binding;
+
+            // Also populate properties.data for custom images so loadTemplateObjectsToCanvas can render them
+            if (binding.startsWith('customimage.') && placeholders[binding]) {
+                objCopy.properties.data = placeholders[binding];
+            }
+        }
+
+        // Replace text content ({{...}} patterns)
+        if (objCopy.text) {
+            objCopy.text = replacePlaceholders(objCopy.text, placeholders);
+        }
+
+        return objCopy;
+    });
+
+    return previewTemplate;
+}
+
+/**
+ * Replace {{variable}} patterns in text with placeholder values
+ */
+function replacePlaceholders(text, placeholders) {
+    let result = text;
+    const pattern = /\{\{([^}]+)\}\}/g;
+
+    result = result.replace(pattern, (match, binding) => {
+        const normalizedBinding = binding.toLowerCase().trim();
+        return placeholders[normalizedBinding] || match;
+    });
+
+    return result;
+}
+
+/**
+ * Create a preview canvas with template and placeholders
+ * Returns a promise that resolves when all async content (like QR images) is loaded
+ */
+async function createPreviewCanvas(templateJson, pageWidthMm, pageHeightMm, uploadedImages = []) {
+    // Generate placeholder map
+    const placeholders = generatePlaceholderMap(templateJson, uploadedImages);
+
+    // Create preview template with replaced data
+    const previewTemplate = createPreviewTemplate(templateJson, placeholders);
+
+    // Create a hidden canvas for rendering
+    const hiddenCanvas = document.createElement('canvas');
+    const stickerWidth = mmToPx(pageWidthMm);
+    const stickerHeight = mmToPx(pageHeightMm);
+
+    hiddenCanvas.width = stickerWidth;
+    hiddenCanvas.height = stickerHeight;
+
+    const previewCanvas = new fabric.Canvas(hiddenCanvas, {
+        width: stickerWidth,
+        height: stickerHeight,
+        backgroundColor: 'white',
+        selection: false
+    });
+
+    // Load template objects and wait for any async images to load
+    const loadPromises = loadTemplateObjectsToCanvas(previewTemplate, previewCanvas, placeholders);
+    await Promise.all(loadPromises);
+
+    return previewCanvas;
+}
+
+/**
+ * Load template objects to canvas for preview
+ * Returns array of promises for any async image loads
+ */
+function loadTemplateObjectsToCanvas(templateJson, canvas, placeholders) {
+    const loadPromises = [];
+
+    if (!templateJson || !templateJson.objects) {
+        return loadPromises;
+    }
+
+    templateJson.objects.forEach(obj => {
+        let fabricObject;
+
+        try {
+            switch (obj.type) {
+                case 'qrcode':
+                    fabricObject = createQRCode({
+                        left: mmToPx(obj.left),
+                        top: mmToPx(obj.top),
+                        width: mmToPx(obj.width || 30),
+                        height: mmToPx(obj.height || 30),
+                        dataSource: obj.properties?.dataSource || 'device.Serial'
+                    });
+                    break;
+
+                case 'text':
+                case 'i-text':
+                    fabricObject = createBoundText({
+                        left: mmToPx(obj.left),
+                        top: mmToPx(obj.top),
+                        text: obj.text || '',
+                        dataSource: obj.properties?.dataSource || '',
+                        fontFamily: obj.fontFamily || 'Arial',
+                        fontSize: obj.fontSize || 16,
+                        fontWeight: obj.fontWeight || 'normal',
+                        fill: obj.fill || '#000000'
+                    });
+                    break;
+
+                case 'image':
+                    // Check if this is a custom image with data
+                    if (obj.properties?.data) {
+                        // Create promise for async image load
+                        const imageLoadPromise = new Promise((resolve, reject) => {
+                            fabric.Image.fromURL(obj.properties.data, function(img) {
+
+                                if (!img || !img.width) {
+                                    console.error('[Preview] Custom image loaded but has no dimensions');
+                                    reject(new Error('Custom image has no dimensions'));
+                                    return;
+                                }
+
+                                const width = mmToPx(obj.width || 50);
+                                const height = mmToPx(obj.height || 50);
+
+                                img.set({
+                                    left: mmToPx(obj.left),
+                                    top: mmToPx(obj.top),
+                                    scaleX: width / img.width,
+                                    scaleY: height / img.height,
+                                    angle: obj.angle || 0
+                                });
+
+                                canvas.add(img);
+                                canvas.renderAll();
+                                resolve();
+                            }, function(error) {
+                                console.error('[Preview] Error loading custom image:', error);
+                                reject(error);
+                            }, { crossOrigin: 'anonymous' });
+                        });
+
+                        loadPromises.push(imageLoadPromise);
+                        // Don't create placeholder - we're loading the real image
+                    } else {
+                        // Regular image placeholder
+                        fabricObject = createImagePlaceholder({
+                            left: mmToPx(obj.left),
+                            top: mmToPx(obj.top),
+                            width: mmToPx(obj.width || 50),
+                            height: mmToPx(obj.height || 50),
+                            dataSource: obj.properties?.dataSource || '',
+                            src: obj.src || ''
+                        });
+                    }
+                    break;
+
+                case 'rect':
+                    fabricObject = createRectangle({
+                        left: mmToPx(obj.left),
+                        top: mmToPx(obj.top),
+                        width: mmToPx(obj.width || 50),
+                        height: mmToPx(obj.height || 50),
+                        fill: obj.fill || 'transparent',
+                        stroke: obj.stroke || '#000000',
+                        strokeWidth: obj.strokeWidth || 1
+                    });
+                    break;
+
+                case 'line':
+                    fabricObject = createLine({
+                        x1: mmToPx(obj.left),
+                        y1: mmToPx(obj.top),
+                        x2: mmToPx(obj.left) + mmToPx(obj.width || 50),
+                        y2: mmToPx(obj.top),
+                        stroke: obj.stroke || '#000000',
+                        strokeWidth: obj.strokeWidth || 1
+                    });
+                    break;
+            }
+
+            if (fabricObject) {
+                if (obj.angle) {
+                    fabricObject.set('angle', obj.angle);
+                }
+
+                let shouldAddToCanvas = true;
+
+                // Replace QR code placeholder with real image if we have QR data
+                if (obj.type === 'qrcode' && obj.properties?.dataSource) {
+                    const dataSource = obj.properties.dataSource.toLowerCase();
+                    if (dataSource === 'device.qrcode' || dataSource === 'network.qrcode') {
+                        // Use real QR code from properties.data (export mode) or previewData (preview mode)
+                        // or fall back to PLACEHOLDER_VALUES
+                        const qrDataUri = obj.properties.data || obj.previewData || PLACEHOLDER_VALUES[dataSource];
+                        if (qrDataUri) {
+
+                            // Create promise for async QR image load
+                            const qrLoadPromise = new Promise((resolve, reject) => {
+                                fabric.Image.fromURL(qrDataUri, function(img) {
+                                    if (!img || !img.width) {
+                                        console.error('[QR Render] Image loaded but has no dimensions');
+                                        reject(new Error('QR image has no dimensions'));
+                                        return;
+                                    }
+
+                                    img.set({
+                                        left: fabricObject.left,
+                                        top: fabricObject.top,
+                                        scaleX: fabricObject.width / img.width,
+                                        scaleY: fabricObject.height / img.height,
+                                        angle: fabricObject.angle || 0,
+                                        originX: fabricObject.originX || 'center',
+                                        originY: fabricObject.originY || 'center'
+                                    });
+
+                                    canvas.add(img);
+                                    canvas.renderAll();
+                                    resolve();
+                                }, function(error) {
+                                    console.error('[QR Render] Error loading image:', error);
+                                    reject(error);
+                                }, { crossOrigin: 'anonymous' });
+                            });
+
+                            loadPromises.push(qrLoadPromise);
+                            shouldAddToCanvas = false;  // Don't add placeholder - loading real QR instead
+                        }
+                    }
+                }
+
+                if (shouldAddToCanvas) {
+                    canvas.add(fabricObject);
+                }
+            }
+        } catch (error) {
+            console.error(`Error loading object of type ${obj.type}:`, error);
+        }
+    });
+
+    canvas.renderAll();
+    return loadPromises;
+}
+
+/**
+ * Export canvas as PNG with specified DPI
+ */
+function exportPNG(canvas, dpi, backgroundColor = 'white') {
+    try {
+        // Calculate multiplier based on DPI (96 DPI = 1x, 150 DPI = 1.56x, 300 DPI = 3.125x)
+        const multiplier = dpi / 96;
+
+        // Export options
+        const options = {
+            format: 'png',
+            multiplier: multiplier,
+            enableRetinaScaling: false,
+            backgroundColor: backgroundColor === 'transparent' ? 'rgba(0,0,0,0)' : '#ffffff'
+        };
+
+        // Get data URL
+        const dataUrl = canvas.toDataURL(options);
+
+        // Download file
+        downloadFile(dataUrl, 'template-preview.png', 'image/png');
+
+        updateStatus(`PNG exported at ${dpi} DPI`);
+    } catch (error) {
+        console.error('PNG export error:', error);
+        alert('Error exporting PNG: ' + error.message);
+    }
+}
+
+/**
+ * Export canvas as SVG
+ */
+function exportSVG(canvas) {
+    try {
+        // Export as SVG string
+        const svgString = canvas.toSVG();
+
+        // Create blob from SVG string
+        const blob = new Blob([svgString], { type: 'image/svg+xml' });
+        const url = URL.createObjectURL(blob);
+
+        // Download file
+        downloadFile(url, 'template-preview.svg', 'image/svg+xml');
+
+        // Clean up object URL
+        URL.revokeObjectURL(url);
+
+        updateStatus('SVG exported successfully');
+    } catch (error) {
+        console.error('SVG export error:', error);
+        alert('Error exporting SVG: ' + error.message);
+    }
+}
+
+/**
+ * Trigger file download
+ */
+function downloadFile(dataUrl, fileName, mimeType) {
+    try {
+        const link = document.createElement('a');
+        link.href = dataUrl;
+        link.download = fileName;
+        link.type = mimeType;
+
+        // Ensure link is added to DOM (required in some browsers)
+        document.body.appendChild(link);
+
+        // Trigger download
+        link.click();
+
+        // Clean up
+        document.body.removeChild(link);
+    } catch (error) {
+        console.error('Download error:', error);
+        alert('Error downloading file: ' + error.message);
+    }
+}
+
+/**
+ * Update status bar message
+ */
+function updateStatus(message) {
+    const statusEl = document.getElementById('statusText');
+    if (statusEl) {
+        statusEl.textContent = message;
+    }
+}
+
+/**
+ * Create and render a preview canvas with template and device data
+ * Used by both Phase 4 (preview mode) and Phase 5 (device export)
+ */
+async function createAndRenderPreviewCanvas(
+    canvasElement,
+    templateJson,
+    pageWidthMm = 100,
+    pageHeightMm = 50,
+    forExport = false,
+    exportOptions = { dpi: 96, background: 'white' }) {
+
+    // Calculate canvas dimensions
+    const pxPerMm = 3.779527559; // Standard screen DPI (96 DPI)
+    const canvasWidth = pageWidthMm * pxPerMm;
+    const canvasHeight = pageHeightMm * pxPerMm;
+
+    // For export, apply DPI multiplier
+    const multiplier = forExport ? (exportOptions.dpi || 96) / 96 : 1;
+    const exportWidth = canvasWidth * multiplier;
+    const exportHeight = canvasHeight * multiplier;
+
+    // Set canvas element dimensions
+    canvasElement.width = forExport ? exportWidth : canvasWidth;
+    canvasElement.height = forExport ? exportHeight : canvasHeight;
+    canvasElement.style.width = forExport ? exportWidth + 'px' : canvasWidth + 'px';
+    canvasElement.style.height = forExport ? exportHeight + 'px' : canvasHeight + 'px';
+
+    // Create Fabric.js canvas
+    const canvas = new fabric.Canvas(canvasElement, {
+        width: forExport ? exportWidth : canvasWidth,
+        height: forExport ? exportHeight : canvasHeight,
+        backgroundColor: exportOptions.background === 'transparent' ? 'rgba(0,0,0,0)' : '#ffffff'
+    });
+
+    // Load template objects onto canvas
+    const qrLoadPromises = [];
+    if (templateJson && templateJson.objects) {
+        templateJson.objects.forEach(obj => {
+            try {
+                // Convert coordinates from millimeters to pixels, then scale for DPI
+                const scaledObj = JSON.parse(JSON.stringify(obj));
+
+                // Step 1: Convert positional/dimensional properties from mm to px
+                // (Template stores left/top/width/height in mm, but fontSize/strokeWidth in px)
+                scaledObj.left = (scaledObj.left || 0) * MM_TO_PX_RATIO;
+                scaledObj.top = (scaledObj.top || 0) * MM_TO_PX_RATIO;
+                scaledObj.width = (scaledObj.width || 50) * MM_TO_PX_RATIO;
+                scaledObj.height = (scaledObj.height || 50) * MM_TO_PX_RATIO;
+                // fontSize and strokeWidth are already in pixels, don't convert them
+
+                // Step 2: Apply DPI multiplier to ALL properties if exporting at higher resolution
+                if (multiplier !== 1) {
+                    scaledObj.left *= multiplier;
+                    scaledObj.top *= multiplier;
+                    scaledObj.width *= multiplier;
+                    scaledObj.height *= multiplier;
+                    scaledObj.fontSize = (scaledObj.fontSize || 16) * multiplier;
+                    scaledObj.strokeWidth = (scaledObj.strokeWidth || 1) * multiplier;
+                }
+
+                let fabricObject;
+
+                switch (obj.type) {
+                    case 'qrcode':
+                        fabricObject = createQRCodePlaceholder({
+                            left: scaledObj.left,
+                            top: scaledObj.top,
+                            width: scaledObj.width || 50,
+                            height: scaledObj.height || 50,
+                            dataSource: obj.properties?.dataSource || '',
+                            data: obj.properties?.data || ''
+                        });
+                        break;
+
+                    case 'text':
+                    case 'i-text':
+                        fabricObject = createTextObject({
+                            left: scaledObj.left,
+                            top: scaledObj.top,
+                            text: scaledObj.text || '',
+                            dataSource: obj.properties?.dataSource || '',
+                            fontFamily: scaledObj.fontFamily || 'Arial',
+                            fontSize: scaledObj.fontSize || 16,
+                            fontWeight: scaledObj.fontWeight || 'normal',
+                            fill: scaledObj.fill || '#000000'
+                        });
+                        break;
+
+                    case 'image':
+                        fabricObject = createImagePlaceholder({
+                            left: scaledObj.left,
+                            top: scaledObj.top,
+                            width: scaledObj.width || 50,
+                            height: scaledObj.height || 50,
+                            dataSource: obj.properties?.dataSource || '',
+                            src: obj.src || ''
+                        });
+                        break;
+
+                    case 'rect':
+                        fabricObject = createRectangle({
+                            left: scaledObj.left,
+                            top: scaledObj.top,
+                            width: scaledObj.width || 50,
+                            height: scaledObj.height || 50,
+                            fill: scaledObj.fill || 'transparent',
+                            stroke: scaledObj.stroke || '#000000',
+                            strokeWidth: scaledObj.strokeWidth || 1
+                        });
+                        break;
+
+                    case 'line':
+                        fabricObject = createLine({
+                            x1: scaledObj.left,
+                            y1: scaledObj.top,
+                            x2: scaledObj.left + (scaledObj.width || 50),
+                            y2: scaledObj.top,
+                            stroke: scaledObj.stroke || '#000000',
+                            strokeWidth: scaledObj.strokeWidth || 1
+                        });
+                        break;
+                }
+
+                if (fabricObject) {
+                    if (scaledObj.angle) {
+                        fabricObject.set('angle', scaledObj.angle);
+                    }
+
+                    let shouldAddToCanvas = true;
+
+                    // Replace QR code placeholder with real image if we have QR data
+                    if (obj.type === 'qrcode' && obj.properties?.data) {
+                        const qrDataUri = obj.properties.data;
+
+                        // Create promise for async QR image load
+                        const qrLoadPromise = new Promise((resolve, reject) => {
+                            fabric.Image.fromURL(qrDataUri, function(img) {
+                                if (!img || !img.width) {
+                                    console.error('[Device Export] QR image loaded but has no dimensions');
+                                    reject(new Error('QR image has no dimensions'));
+                                    return;
+                                }
+
+                                img.set({
+                                    left: fabricObject.left,
+                                    top: fabricObject.top,
+                                    scaleX: fabricObject.width / img.width,
+                                    scaleY: fabricObject.height / img.height,
+                                    angle: fabricObject.angle || 0,
+                                    originX: fabricObject.originX || 'center',
+                                    originY: fabricObject.originY || 'center'
+                                });
+
+                                canvas.add(img);
+                                canvas.renderAll();
+                                resolve();
+                            }, function(error) {
+                                console.error('[Device Export] Error loading QR image:', error);
+                                reject(error);
+                            }, { crossOrigin: 'anonymous' });
+                        });
+
+                        qrLoadPromises.push(qrLoadPromise);
+                        shouldAddToCanvas = false;  // Don't add placeholder
+                    }
+
+                    // Replace image placeholder with real image if we have custom image data
+                    if (obj.type === 'image' && obj.properties?.data) {
+                        const imageDataUri = obj.properties.data;
+
+                        // Create promise for async image load
+                        const imageLoadPromise = new Promise((resolve, reject) => {
+                            fabric.Image.fromURL(imageDataUri, function(img) {
+                                if (!img || !img.width) {
+                                    console.error('[Device Export] Custom image loaded but has no dimensions');
+                                    reject(new Error('Custom image has no dimensions'));
+                                    return;
+                                }
+
+                                img.set({
+                                    left: fabricObject.left,
+                                    top: fabricObject.top,
+                                    scaleX: fabricObject.width / img.width,
+                                    scaleY: fabricObject.height / img.height,
+                                    angle: fabricObject.angle || 0,
+                                    originX: fabricObject.originX || 'center',
+                                    originY: fabricObject.originY || 'center'
+                                });
+
+                                canvas.add(img);
+                                canvas.renderAll();
+                                resolve();
+                            }, function(error) {
+                                console.error('[Device Export] Error loading custom image:', error);
+                                reject(error);
+                            }, { crossOrigin: 'anonymous' });
+                        });
+
+                        qrLoadPromises.push(imageLoadPromise);
+                        shouldAddToCanvas = false;  // Don't add placeholder
+                    }
+
+                    if (shouldAddToCanvas) {
+                        canvas.add(fabricObject);
+                    }
+                }
+            } catch (error) {
+                console.error(`[Preview] Error loading object:`, error);
+            }
+        });
+    }
+
+    // Wait for all QR/custom images to load before continuing
+    if (qrLoadPromises.length > 0) {
+        await Promise.all(qrLoadPromises);
+    }
+
+    // Hide Fabric.js upper canvas (interactive overlay)
+    if (canvas.upperCanvasEl) {
+        canvas.upperCanvasEl.style.display = 'none';
+        canvas.upperCanvasEl.style.visibility = 'hidden';
+        canvas.upperCanvasEl.style.pointerEvents = 'none';
+    }
+
+    canvas.renderAll();
+
+    return canvas;
+}
+
+/**
+ * Export canvas as PNG with device context (Phase 5 device export)
+ */
+function exportPNGForDevice(canvas, pageWidthMm, pageHeightMm, deviceIdentifier = 'device') {
+    try {
+        const dpi = parseInt(document.querySelector('input[name="export-dpi"]:checked')?.value || '96') || 96;
+        const background = document.querySelector('input[name="export-background"]:checked')?.value || 'white';
+
+        // Calculate multiplier based on DPI (96 DPI = 1x, 150 DPI = 1.56x, 300 DPI = 3.125x)
+        const multiplier = dpi / 96;
+
+        // Export options
+        const options = {
+            format: 'png',
+            multiplier: multiplier,
+            enableRetinaScaling: false,
+            backgroundColor: background === 'transparent' ? 'rgba(0,0,0,0)' : '#ffffff'
+        };
+
+        // Get data URL
+        const dataUrl = canvas.toDataURL(options);
+
+        // Generate filename
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+        const fileName = `sticker-${deviceIdentifier.replace(/\s+/g, '-').toLowerCase()}-${dpi}dpi.png`;
+
+        // Download file
+        downloadFile(dataUrl, fileName, 'image/png');
+    } catch (error) {
+        console.error('[Export] PNG export error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Export canvas as SVG with device context (Phase 5 device export)
+ */
+function exportSVGForDevice(canvas, pageWidthMm, pageHeightMm, deviceIdentifier = 'device') {
+    try {
+
+        // Export as SVG string
+        const svgString = canvas.toSVG();
+
+        // Create blob from SVG string
+        const blob = new Blob([svgString], { type: 'image/svg+xml' });
+        const url = URL.createObjectURL(blob);
+
+        // Generate filename
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+        const fileName = `sticker-${deviceIdentifier.replace(/\s+/g, '-').toLowerCase()}.svg`;
+
+        // Download file
+        downloadFile(url, fileName, 'image/svg+xml');
+
+        // Clean up object URL
+        URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error('[Export] SVG export error:', error);
+        throw error;
+    }
+}

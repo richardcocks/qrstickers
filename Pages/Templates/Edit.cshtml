@@ -1,0 +1,237 @@
+@page
+@model QRStickers.Pages.Templates.EditModel
+@{
+    ViewData["Title"] = "Edit Template";
+}
+
+<style>
+    .edit-container {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .edit-section {
+        background: white;
+        padding: 30px;
+        margin-bottom: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .edit-section h2 {
+        margin-top: 0;
+        margin-bottom: 20px;
+        color: #333;
+        font-size: 1.5em;
+        border-bottom: 2px solid #1976d2;
+        padding-bottom: 10px;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 5px;
+        color: #555;
+    }
+
+    .form-group input[type="text"],
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+
+    .form-group textarea {
+        resize: vertical;
+        min-height: 80px;
+    }
+
+    .form-group input:disabled,
+    .form-group select:disabled {
+        background-color: #f5f5f5;
+        color: #888;
+        cursor: not-allowed;
+    }
+
+    .checkbox-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+        width: auto;
+        cursor: pointer;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        padding-top: 20px;
+        border-top: 1px solid #eee;
+    }
+
+    .help-text {
+        font-size: 13px;
+        color: #666;
+        margin-top: 5px;
+    }
+
+    .error-message {
+        color: #d32f2f;
+        font-size: 13px;
+        margin-top: 5px;
+    }
+
+    .readonly-info {
+        background: #f9f9f9;
+        border-left: 4px solid #2196F3;
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 4px;
+    }
+
+    .readonly-info h3 {
+        margin: 0 0 10px 0;
+        font-size: 1em;
+        color: #555;
+    }
+
+    .readonly-info p {
+        margin: 5px 0;
+        color: #666;
+        font-size: 14px;
+    }
+
+    .btn-primary {
+        background: #1976d2;
+        color: white;
+        padding: 10px 24px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: background 0.2s;
+    }
+
+    .btn-primary:hover {
+        background: #1565c0;
+    }
+
+    .btn-secondary {
+        background: #f5f5f5;
+        color: #333;
+        padding: 10px 24px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.2s;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .btn-secondary:hover {
+        background: #e0e0e0;
+        border-color: #999;
+    }
+
+    .alert-danger {
+        background-color: #ffebee;
+        color: #c62828;
+        border: 1px solid #ef5350;
+        padding: 12px;
+        margin-bottom: 15px;
+        border-radius: 4px;
+    }
+</style>
+
+<div class="edit-container">
+    <h1>Edit Template: @Model.Name</h1>
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert-danger">
+            @TempData["ErrorMessage"]
+        </div>
+    }
+
+    <!-- Read-only information -->
+    <div class="readonly-info">
+        <h3>Template Information (Read-only)</h3>
+        <p><strong>Connection:</strong> @Model.ConnectionDisplayName</p>
+        <p><strong>Page Size:</strong> @Model.PageWidth mm × @Model.PageHeight mm</p>
+        <p class="help-text">To change page size or connection, please create a new template or clone this one.</p>
+    </div>
+
+    <form method="post">
+        <input type="hidden" asp-for="Id" />
+
+        <!-- Editable Template Properties -->
+        <div class="edit-section">
+            <h2>Template Properties</h2>
+
+            <div class="form-group">
+                <label for="Name">Template Name *</label>
+                <input type="text" id="Name" name="Name" asp-for="Name" required maxlength="200" />
+                <span asp-validation-for="Name" class="error-message"></span>
+            </div>
+
+            <div class="form-group">
+                <label for="Description">Description</label>
+                <textarea id="Description" name="Description" asp-for="Description" maxlength="1000"></textarea>
+                <div class="help-text">Optional description to help identify this template</div>
+            </div>
+
+            <div class="form-group">
+                <label for="ProductTypeFilter">Product Type Filter</label>
+                <select id="ProductTypeFilter" name="ProductTypeFilter" asp-for="ProductTypeFilter">
+                    <option value="">All Product Types</option>
+                    <option value="switch">Switch</option>
+                    <option value="wireless">Wireless AP</option>
+                    <option value="appliance">Appliance</option>
+                    <option value="camera">Camera</option>
+                    <option value="sensor">Sensor</option>
+                    <option value="cellularGateway">Cellular Gateway</option>
+                </select>
+                <div class="help-text">Optional: Restrict this template to specific device types</div>
+            </div>
+
+            <div class="form-group">
+                <label for="IsRackMount">Mount Type</label>
+                <select id="IsRackMount" name="IsRackMount" asp-for="IsRackMount">
+                    <option value="true">Rack Mount</option>
+                    <option value="false">Ceiling/Wall</option>
+                </select>
+            </div>
+
+            <div class="form-group checkbox-group">
+                <input type="checkbox" id="IsDefault" asp-for="IsDefault" />
+                <label for="IsDefault">Set as Default Template</label>
+                <div class="help-text" style="margin-left: 28px;">Default template is used when no specific template matches</div>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="edit-section">
+            <div class="form-actions">
+                <a href="/Templates" class="btn-secondary">Cancel</a>
+                <button type="submit" class="btn-primary">Save Changes</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" optional="true" />
+}
