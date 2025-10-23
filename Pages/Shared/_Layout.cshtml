@@ -229,6 +229,9 @@
                         <span class="footer-environment">@(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production")</span>
                     </div>
                 }
+                <div style="font-size: 0.85em; opacity: 0.8; margin-top: 5px;">
+                    Independent third-party application. Not affiliated with Cisco Meraki.
+                </div>
             </div>
             <div class="footer-right">
                 @if (!string.IsNullOrEmpty(Configuration["Footer:GitHubUrl"]))
