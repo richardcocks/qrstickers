@@ -468,8 +468,21 @@
     <script>
         // Initialize designer with template data
         (function() {
-            const templateData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Template, JsonSerializerOptions.Web));
-            const uploadedImages = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.UploadedImages, JsonSerializerOptions.Web));
+            const templateData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(new {
+                pageWidth = Model.Template.PageWidth,
+                pageHeight = Model.Template.PageHeight,
+                templateJson = Model.Template.TemplateJson
+            }, JsonSerializerOptions.Web));
+            const uploadedImages = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                Model.UploadedImages.Select(img => new {
+                    id = img.Id,
+                    name = img.Name,
+                    dataUri = img.DataUri,
+                    widthPx = img.WidthPx,
+                    heightPx = img.HeightPx
+                }),
+                JsonSerializerOptions.Web
+            ));
             const editMode = @Model.IsEditMode.ToString().ToLower();
             const systemTemplate = @Model.IsSystemTemplate.ToString().ToLower();
 
