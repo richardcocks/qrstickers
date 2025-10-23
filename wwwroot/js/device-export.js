@@ -528,11 +528,46 @@ async function downloadDeviceExport() {
 }
 
 /**
- * Logs export to server history (Phase 5.1)
+ * Extracts image IDs referenced in template JSON
+ * Searches for customImage.Image_* patterns used in data bindings
+ * @param {string} templateJson - Fabric.js template JSON
+ * @returns {number[]} Array of unique image IDs
  */
-function logExportToHistory(deviceId, templateId, format, options) {
-    // This is a POST endpoint we'll need to create for Phase 5.2
-    // TODO: POST /api/export/history with export details
+function extractImageIdsFromTemplate(templateJson) {
+    const regex = /customImage\.Image_(\d+)/g;
+    const matches = templateJson.matchAll(regex);
+    const ids = [...matches].map(m => parseInt(m[1]));
+    return [...new Set(ids)]; // Remove duplicates
+}
+
+/**
+ * Tracks usage of template and images (updates LastUsedAt timestamps)
+ */
+async function logExportToHistory(deviceId, templateId, format, options) {
+    try {
+        const templateJson = deviceExportState.currentExportData?.matchedTemplate?.templateJson;
+        if (!templateJson) {
+            console.warn('[Usage Tracking] No template JSON available');
+            return;
+        }
+
+        const imageIds = extractImageIdsFromTemplate(templateJson);
+
+        // Fire-and-forget API call to track usage
+        await fetch('/api/usage/track', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                imageIds: imageIds,
+                templateId: templateId
+            })
+        });
+
+        console.log(`[Usage Tracking] Tracked usage: template ${templateId}, ${imageIds.length} images`);
+    } catch (error) {
+        console.warn('[Usage Tracking] Failed to track usage:', error);
+        // Silent failure - don't block export
+    }
 }
 
 /**

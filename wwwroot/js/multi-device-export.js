@@ -15,6 +15,41 @@ let bulkExportState = {
 };
 
 /**
+ * Extracts image IDs referenced in template JSON
+ * Searches for customImage.Image_* patterns used in data bindings
+ * @param {string} templateJson - Fabric.js template JSON
+ * @returns {number[]} Array of unique image IDs
+ */
+function extractImageIdsFromTemplate(templateJson) {
+    const regex = /customImage\.Image_(\d+)/g;
+    const matches = templateJson.matchAll(regex);
+    const ids = [...matches].map(m => parseInt(m[1]));
+    return [...new Set(ids)]; // Remove duplicates
+}
+
+/**
+ * Tracks usage of template and images (updates LastUsedAt timestamps)
+ * Fire-and-forget - silent failure won't block exports
+ */
+async function trackUsage(templateId, templateJson) {
+    try {
+        const imageIds = extractImageIdsFromTemplate(templateJson);
+
+        await fetch('/api/usage/track', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                imageIds: imageIds,
+                templateId: templateId
+            })
+        });
+    } catch (error) {
+        console.warn('[Usage Tracking] Failed to track usage:', error);
+        // Silent failure - don't block export
+    }
+}
+
+/**
  * Toggle select all checkboxes
  */
 function toggleSelectAll() {
@@ -516,6 +551,9 @@ async function exportBulkAsPdf(selected, exportDataList, dpi, background) {
                 deviceSerial: device.serial
             });
 
+            // Track usage (fire-and-forget)
+            trackUsage(exportData.matchedTemplate.id, exportData.matchedTemplate.templateJson);
+
         } catch (error) {
             console.error(`[PDF Export] Failed to render device ${device.name}:`, error);
             failedDevices.push({ device: device.name, error: error.message });
@@ -634,6 +672,9 @@ async function startBulkExport() {
             // Add to ZIP
             zip.file(filename, blob);
             exportedFiles.push(filename);
+
+            // Track usage (fire-and-forget)
+            trackUsage(exportData.matchedTemplate.id, exportData.matchedTemplate.templateJson);
 
         } catch (error) {
             console.error(`[Bulk Export] Failed to export device ${device.name}:`, error);

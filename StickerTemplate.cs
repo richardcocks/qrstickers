@@ -82,6 +82,11 @@ public class StickerTemplate
     /// </summary>
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
+    /// <summary>
+    /// Last time this template was used in an export (for usage tracking)
+    /// </summary>
+    public DateTime? LastUsedAt { get; set; }
+
     // Navigation properties
     public Connection? Connection { get; set; }
 }

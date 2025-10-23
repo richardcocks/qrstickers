@@ -345,6 +345,52 @@ app.MapPost("/api/export/pdf/bulk", async (
     }
 }).RequireAuthorization();
 
+// Usage tracking API endpoint (tracks last used timestamps for templates and images)
+app.MapPost("/api/usage/track", async (
+    [FromBody] UsageTrackRequest request,
+    HttpContext httpContext,
+    DeviceExportHelper exportHelper,
+    QRStickersDbContext db,
+    UserManager<ApplicationUser> userManager,
+    ILogger<Program> logger) =>
+{
+    try
+    {
+        var user = await userManager.GetUserAsync(httpContext.User);
+        if (user == null)
+            return Results.Unauthorized();
+
+        // Track image usage (updates LastUsedAt for all referenced images)
+        if (request.ImageIds?.Length > 0)
+        {
+            await exportHelper.TrackImageUsageAsync(request.ImageIds);
+            logger.LogDebug("[Usage Tracking] Updated LastUsedAt for {Count} images", request.ImageIds.Length);
+        }
+
+        // Track template usage
+        if (request.TemplateId > 0)
+        {
+            var template = await db.StickerTemplates
+                .FirstOrDefaultAsync(t => t.Id == request.TemplateId);
+
+            if (template != null)
+            {
+                template.LastUsedAt = DateTime.UtcNow;
+                await db.SaveChangesAsync();
+                logger.LogDebug("[Usage Tracking] Updated LastUsedAt for template {TemplateId}", request.TemplateId);
+            }
+        }
+
+        return Results.Ok(new { success = true });
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "[Usage Tracking] Error tracking usage");
+        // Silent failure - don't block exports
+        return Results.Ok(new { success = false, error = ex.Message });
+    }
+}).RequireAuthorization();
+
 // Image upload API endpoints (Phase 6.1)
 app.MapPost("/api/images/upload", async (
     [FromBody] ImageUploadRequest request,
