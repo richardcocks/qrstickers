@@ -13,6 +13,8 @@ This document describes the technical architecture of the QRStickers application
 - **Fabric.js** v5.3.0 - HTML5 Canvas library for visual template designer
 - **SignalR** - Real-time sync status and export progress updates
 - **Azure Service Connector** - Passwordless database authentication (production)
+- **xUnit** - Unit testing framework (.NET 10.0 test project)
+- **Moq** - Mocking framework for unit tests
 - **Docker** - Multi-stage containerization
 - **Azure** - Deployment targets (Container Apps and Web Apps)
 - **GitHub Actions** - CI/CD pipelines
@@ -21,69 +23,93 @@ This document describes the technical architecture of the QRStickers application
 
 ```
 QRStickers/
-├── Program.cs                       # Application configuration & startup
-├── Connection.cs                    # Base connection class (TPH pattern)
-├── MerakiConnection.cs              # Meraki-specific connection (inherits Connection)
-├── ApplicationUser.cs               # Identity user model (owns Connections collection)
-├── QRStickersDbContext.cs           # Entity Framework IdentityDbContext with TPH config
-├── StickerTemplate.cs               # Sticker template data model
-├── CustomImage.cs                   # Custom image storage model
-├── GlobalVariable.cs                # Per-connection custom variables
-├── ExportHistory.cs                 # Export operation audit log
-├── TemplateUsageHistory.cs          # Template and image usage tracking
-├── TemplateDeviceModel.cs           # Model-specific template mappings
-├── TemplateDeviceType.cs            # Device type template mappings
-├── SyncStatus.cs                    # Sync status per connection
-├── MerakiBackgroundSyncService.cs   # Background service for periodic connection syncing
+├── src/                                    # Main application
+│   ├── Program.cs                          # Application configuration & startup
+│   ├── Connection.cs                       # Base connection class (TPH pattern)
+│   ├── MerakiConnection.cs                 # Meraki-specific connection (inherits Connection)
+│   ├── ApplicationUser.cs                  # Identity user model (owns Connections collection)
+│   ├── QRStickersDbContext.cs              # Entity Framework IdentityDbContext with TPH config
+│   ├── StickerTemplate.cs                  # Sticker template data model
+│   ├── ConnectionDefaultTemplate.cs        # Template defaults per connection
+│   ├── UploadedImage.cs                    # Custom image storage model
+│   ├── GlobalVariable.cs                   # Per-connection custom variables
+│   ├── ExportHistory.cs                    # Export operation audit log
+│   ├── SyncStatus.cs                       # Sync status per connection
+│   ├── SyncStatusHub.cs                    # SignalR hub for real-time sync updates
+│   ├── MerakiBackgroundSyncService.cs      # Background service for periodic syncing
+│   ├── TemplateService.cs                  # Template business logic
+│   ├── Device.cs, Network.cs, Organization.cs  # Domain entity models
+│   │
+│   ├── Models/                             # API request/response models
+│   │   ├── ImageUploadRequest.cs           # Image upload request model
+│   │   ├── ImageListResponse.cs            # Image list response model
+│   │   ├── UsageTrackRequest.cs            # Usage tracking request model
+│   │   └── PdfExportRequest.cs             # PDF export request model
+│   │
+│   ├── Data/                               # Database configuration and seeding
+│   │   └── SystemTemplateSeeder.cs         # Seeds default system templates
+│   │
+│   ├── Services/                           # Business logic services
+│   │   ├── TemplateMatchingService.cs      # Intelligent template-to-device matching
+│   │   ├── QRCodeGenerationService.cs      # QR code generation during sync
+│   │   ├── ImageUploadValidator.cs         # Image upload validation
+│   │   ├── PdfExportService.cs             # PDF export functionality
+│   │   └── DeviceExportHelper.cs           # Device data retrieval for exports
+│   │
+│   ├── Meraki/                             # Meraki-specific components
+│   │   ├── MerakiOAuthToken.cs             # OAuth refresh token per connection
+│   │   ├── MerakiAccessTokenCache.cs       # In-memory access token cache (singleton)
+│   │   ├── MerakiApiClient.cs              # Meraki OAuth & API client (low-level HTTP)
+│   │   ├── MerakiService.cs                # High-level Meraki service with auto token refresh
+│   │   ├── MerakiServiceFactory.cs         # Factory for creating connection-specific services
+│   │   ├── MerakiSyncOrchestrator.cs       # Orchestrates syncing from API to cache
+│   │   ├── CachedOrganization.cs           # Cached Meraki organization per connection
+│   │   ├── CachedNetwork.cs                # Cached Meraki network per connection
+│   │   └── CachedDevice.cs                 # Cached Meraki device per connection
+│   │
+│   ├── Pages/                              # Razor Pages UI
+│   │   ├── Index.cshtml                    # Home page (connection list)
+│   │   ├── Privacy.cshtml, Terms.cshtml    # Legal pages
+│   │   ├── Identity/Account/               # Identity pages
+│   │   │   ├── Login.cshtml, Register.cshtml, Logout.cshtml
+│   │   │   └── Manage/Index.cshtml         # User profile management
+│   │   ├── Connections/                    # Connection management
+│   │   │   ├── Index.cshtml, Create.cshtml, Delete.cshtml
+│   │   ├── Meraki/                         # Meraki OAuth and data pages
+│   │   │   ├── Connect.cshtml              # Initiate OAuth flow
+│   │   │   ├── Callback.cshtml             # OAuth callback handler
+│   │   │   ├── SyncStatus.cshtml           # Real-time sync progress
+│   │   │   ├── Connection.cshtml           # Organizations view
+│   │   │   └── Network.cshtml              # Networks and devices view
+│   │   ├── Templates/                      # Sticker template management
+│   │   │   ├── Index.cshtml                # List templates
+│   │   │   ├── Create.cshtml, Edit.cshtml, Delete.cshtml
+│   │   │   ├── Designer.cshtml             # Visual template designer
+│   │   │   └── ConnectionDefaults.cshtml   # Default template settings
+│   │   ├── Images/                         # Custom image management
+│   │   │   └── Index.cshtml
+│   │   └── Shared/                         # Shared layouts and partials
+│   │       └── _Layout.cshtml              # Main layout with navigation
+│   │
+│   ├── wwwroot/                            # Static assets
+│   │   ├── js/
+│   │   │   ├── designer.js                 # Template designer canvas logic (~1000 lines)
+│   │   │   ├── fabric-extensions.js        # Custom Fabric.js objects (QR codes, bound text)
+│   │   │   ├── export-progress.js          # SignalR export progress UI
+│   │   │   └── device-export.js            # Device export workflow
+│   │   └── css/
+│   │       └── designer.css                # Designer modal and UI styles
+│   │
+│   └── Migrations/                         # EF Core migrations
 │
-├── Data/                            # Database configuration and seeding
-│   └── SystemTemplateSeeder.cs      # Seeds default system templates
-│
-├── Services/                        # Business logic services
-│   ├── TemplateMatchingService.cs   # Intelligent template-to-device matching
-│   ├── QRCodeGenerationService.cs   # QR code generation during sync
-│   ├── ImageProcessingService.cs    # Image upload and processing
-│   └── DeviceExportHelper.cs        # Device data retrieval for exports
-│
-├── Meraki/                          # Meraki-specific components
-│   ├── MerakiOAuthToken.cs          # OAuth refresh token per connection
-│   ├── MerakiAccessTokenCache.cs    # In-memory access token cache (singleton)
-│   ├── MerakiApiClient.cs           # Meraki OAuth & API client (low-level HTTP)
-│   ├── MerakiService.cs             # High-level Meraki service with auto token refresh
-│   ├── MerakiServiceFactory.cs      # Factory for creating connection-specific services
-│   ├── MerakiSyncOrchestrator.cs    # Orchestrates syncing from API to cache
-│   ├── CachedOrganization.cs        # Cached Meraki organization per connection
-│   ├── CachedNetwork.cs             # Cached Meraki network per connection
-│   └── CachedDevice.cs              # Cached Meraki device per connection
-│
-├── Pages/                           # Razor Pages UI
-│   ├── Index.cshtml                 # Home page (connection list)
-│   ├── Identity/Account/            # Identity pages (Login, Register, Logout)
-│   ├── Connections/                 # Connection management (Index, Create, Delete)
-│   ├── Meraki/                      # Meraki OAuth and data pages
-│   │   ├── Connect.cshtml           # Initiate OAuth flow
-│   │   ├── Callback.cshtml          # OAuth callback handler
-│   │   ├── SyncStatus.cshtml        # Real-time sync progress
-│   │   ├── Organizations.cshtml     # List organizations
-│   │   └── Networks.cshtml          # List networks with devices
-│   ├── Templates/                   # Sticker template management
-│   │   ├── Index.cshtml             # List templates
-│   │   ├── Designer.cshtml          # Visual template designer
-│   │   ├── Export.cshtml            # Multi-device export
-│   │   └── Images.cshtml            # Custom image management
-│   └── Shared/                      # Shared layouts and partials
-│       └── _Layout.cshtml           # Main layout with navigation
-│
-├── wwwroot/                         # Static assets
-│   ├── js/
-│   │   ├── designer.js              # Template designer canvas logic (~1000 lines)
-│   │   ├── fabric-extensions.js     # Custom Fabric.js objects (QR codes, bound text)
-│   │   ├── export-progress.js       # SignalR export progress UI
-│   │   └── device-export.js         # Device export workflow
-│   └── css/
-│       └── designer.css             # Designer modal and UI styles
-│
-└── Migrations/                      # EF Core migrations
+└── QRStickers.Tests/                       # Unit test project (.NET 10.0)
+    ├── Services/                           # Service layer tests
+    │   ├── TemplateMatchingServiceTests.cs # Template matching algorithm tests
+    │   ├── QRCodeGenerationServiceTests.cs # QR code generation tests
+    │   └── ImageUploadValidatorTests.cs    # Image validation tests
+    └── Helpers/                            # Test helper utilities
+        ├── InMemoryDbContextFactory.cs     # In-memory DB for testing
+        └── TestDataBuilder.cs              # Test data generation
 ```
 
 ## Database Architecture
