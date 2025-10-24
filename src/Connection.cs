@@ -38,6 +38,12 @@ public abstract class Connection
     public bool IsActive { get; set; } = true;
 
     /// <summary>
+    /// Whether this is a demo connection with fake/placeholder data (for marketing screenshots)
+    /// Demo connections skip OAuth and sync with generated data instead of real API calls
+    /// </summary>
+    public bool IsDemo { get; set; } = false;
+
+    /// <summary>
     /// When this connection was created
     /// </summary>
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

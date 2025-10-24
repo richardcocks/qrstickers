@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 using QRStickers.Meraki;
 
 namespace QRStickers.Services;
@@ -12,13 +11,11 @@ public class TemplateMatchingService
 {
     private readonly QRStickersDbContext _db;
     private readonly ILogger<TemplateMatchingService> _logger;
-    private readonly IMemoryCache _cache;
 
-    public TemplateMatchingService(QRStickersDbContext db, ILogger<TemplateMatchingService> logger, IMemoryCache cache)
+    public TemplateMatchingService(QRStickersDbContext db, ILogger<TemplateMatchingService> logger)
     {
         _db = db;
         _logger = logger;
-        _cache = cache;
     }
 
     /// <summary>
@@ -31,18 +28,7 @@ public class TemplateMatchingService
     {
         _logger.LogInformation($"[Template] Matching template for device {device.Name} (ProductType: {device.ProductType})");
 
-        // Check cache first
-        var cacheKey = $"template_match_{device.Id}_{user.Id}";
-        if (_cache.TryGetValue(cacheKey, out TemplateMatchResult? cached))
-        {
-            _logger.LogDebug($"[Template] Cache hit for device {device.Id}");
-            return cached!;
-        }
-
         var result = await PerformTemplateMatchAsync(device, user);
-
-        // Cache result for 30 minutes
-        _cache.Set(cacheKey, result, TimeSpan.FromMinutes(30));
 
         return result;
     }

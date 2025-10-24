@@ -152,6 +152,18 @@ using (var scope = app.Services.CreateScope())
 
     // Seed system templates
     await SystemTemplateSeeder.SeedTemplatesAsync(dbContext);
+
+    // Seed demo account (for marketing screenshots) - only in development
+    var enableDemoSeeding = app.Configuration.GetValue<bool>("DemoData:EnableDemoDataSeeding");
+    if (enableDemoSeeding)
+    {
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        await DemoAccountSeeder.SeedDemoAccountAsync(dbContext, userManager);
+
+        // Sync demo data (populate cached organizations, networks, devices)
+        var orchestrator = scope.ServiceProvider.GetRequiredService<MerakiSyncOrchestrator>();
+        await DemoAccountSeeder.SyncDemoDataAsync(dbContext, orchestrator);
+    }
 }
 
 // Enable static files (CSS, JS, images from wwwroot)
