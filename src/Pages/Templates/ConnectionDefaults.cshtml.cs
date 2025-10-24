@@ -19,7 +19,16 @@ public class ConnectionDefaultsModel : PageModel
     }
 
     public List<Connection> UserConnections { get; set; } = new();
-    public List<StickerTemplate> AvailableTemplates { get; set; } = new();
+    public List<StickerTemplate> AvailableTemplates { get; set; } = new(); // All templates (kept for backward compatibility)
+
+    // Filtered template lists per ProductType
+    public List<StickerTemplate> SwitchTemplates { get; set; } = new();
+    public List<StickerTemplate> ApplianceTemplates { get; set; } = new();
+    public List<StickerTemplate> WirelessTemplates { get; set; } = new();
+    public List<StickerTemplate> CameraTemplates { get; set; } = new();
+    public List<StickerTemplate> SensorTemplates { get; set; } = new();
+    public List<StickerTemplate> CellularGatewayTemplates { get; set; } = new();
+
     public Connection? SelectedConnection { get; set; }
 
     [BindProperty]
@@ -91,6 +100,14 @@ public class ConnectionDefaultsModel : PageModel
             .OrderByDescending(t => t.IsSystemTemplate)
             .ThenBy(t => t.Name)
             .ToListAsync();
+
+        // Create filtered lists per ProductType (only show compatible templates)
+        SwitchTemplates = GetCompatibleTemplatesForProductType("switch", AvailableTemplates);
+        ApplianceTemplates = GetCompatibleTemplatesForProductType("appliance", AvailableTemplates);
+        WirelessTemplates = GetCompatibleTemplatesForProductType("wireless", AvailableTemplates);
+        CameraTemplates = GetCompatibleTemplatesForProductType("camera", AvailableTemplates);
+        SensorTemplates = GetCompatibleTemplatesForProductType("sensor", AvailableTemplates);
+        CellularGatewayTemplates = GetCompatibleTemplatesForProductType("cellularGateway", AvailableTemplates);
 
         // Load existing defaults
         var defaults = await _db.ConnectionDefaultTemplates
@@ -202,5 +219,18 @@ public class ConnectionDefaultsModel : PageModel
                 UpdatedAt = DateTime.UtcNow
             });
         }
+    }
+
+    /// <summary>
+    /// Gets templates compatible with the specified ProductType.
+    /// Returns templates that either explicitly support this ProductType or are universal (NULL compatibility).
+    /// </summary>
+    private List<StickerTemplate> GetCompatibleTemplatesForProductType(string productType, List<StickerTemplate> allTemplates)
+    {
+        return allTemplates
+            .Where(t => t.IsCompatibleWith(productType))
+            .OrderByDescending(t => t.IsSystemTemplate)
+            .ThenBy(t => t.Name)
+            .ToList();
     }
 }

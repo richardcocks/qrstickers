@@ -196,11 +196,13 @@
                     </div>
                     <div class="template-cell">
                         <select asp-for="SwitchTemplateId" data-product-type="switch" class="template-select">
-                            @foreach (var template in Model.AvailableTemplates)
+                            @foreach (var template in Model.SwitchTemplates)
                             {
-                                <option value="@template.Id">
-                                    @template.Name @(template.IsSystemTemplate ? "(System)" : "")
-                                </option>
+                                var isUniversal = template.GetCompatibleProductTypes() == null;
+                                var label = template.Name;
+                                if (template.IsSystemTemplate) label += " (System)";
+                                if (isUniversal) label += " (Universal)";
+                                <option value="@template.Id">@label</option>
                             }
                         </select>
                         <span class="save-status" style="display: none;"></span>
@@ -214,11 +216,13 @@
                     </div>
                     <div class="template-cell">
                         <select asp-for="ApplianceTemplateId" data-product-type="appliance" class="template-select">
-                            @foreach (var template in Model.AvailableTemplates)
+                            @foreach (var template in Model.ApplianceTemplates)
                             {
-                                <option value="@template.Id">
-                                    @template.Name @(template.IsSystemTemplate ? "(System)" : "")
-                                </option>
+                                var isUniversal = template.GetCompatibleProductTypes() == null;
+                                var label = template.Name;
+                                if (template.IsSystemTemplate) label += " (System)";
+                                if (isUniversal) label += " (Universal)";
+                                <option value="@template.Id">@label</option>
                             }
                         </select>
                         <span class="save-status" style="display: none;"></span>
@@ -232,11 +236,13 @@
                     </div>
                     <div class="template-cell">
                         <select asp-for="WirelessTemplateId" data-product-type="wireless" class="template-select">
-                            @foreach (var template in Model.AvailableTemplates)
+                            @foreach (var template in Model.WirelessTemplates)
                             {
-                                <option value="@template.Id">
-                                    @template.Name @(template.IsSystemTemplate ? "(System)" : "")
-                                </option>
+                                var isUniversal = template.GetCompatibleProductTypes() == null;
+                                var label = template.Name;
+                                if (template.IsSystemTemplate) label += " (System)";
+                                if (isUniversal) label += " (Universal)";
+                                <option value="@template.Id">@label</option>
                             }
                         </select>
                         <span class="save-status" style="display: none;"></span>
@@ -250,11 +256,13 @@
                     </div>
                     <div class="template-cell">
                         <select asp-for="CameraTemplateId" data-product-type="camera" class="template-select">
-                            @foreach (var template in Model.AvailableTemplates)
+                            @foreach (var template in Model.CameraTemplates)
                             {
-                                <option value="@template.Id">
-                                    @template.Name @(template.IsSystemTemplate ? "(System)" : "")
-                                </option>
+                                var isUniversal = template.GetCompatibleProductTypes() == null;
+                                var label = template.Name;
+                                if (template.IsSystemTemplate) label += " (System)";
+                                if (isUniversal) label += " (Universal)";
+                                <option value="@template.Id">@label</option>
                             }
                         </select>
                         <span class="save-status" style="display: none;"></span>
@@ -268,11 +276,13 @@
                     </div>
                     <div class="template-cell">
                         <select asp-for="SensorTemplateId" data-product-type="sensor" class="template-select">
-                            @foreach (var template in Model.AvailableTemplates)
+                            @foreach (var template in Model.SensorTemplates)
                             {
-                                <option value="@template.Id">
-                                    @template.Name @(template.IsSystemTemplate ? "(System)" : "")
-                                </option>
+                                var isUniversal = template.GetCompatibleProductTypes() == null;
+                                var label = template.Name;
+                                if (template.IsSystemTemplate) label += " (System)";
+                                if (isUniversal) label += " (Universal)";
+                                <option value="@template.Id">@label</option>
                             }
                         </select>
                         <span class="save-status" style="display: none;"></span>
@@ -286,11 +296,13 @@
                     </div>
                     <div class="template-cell">
                         <select asp-for="CellularGatewayTemplateId" data-product-type="cellularGateway" class="template-select">
-                            @foreach (var template in Model.AvailableTemplates)
+                            @foreach (var template in Model.CellularGatewayTemplates)
                             {
-                                <option value="@template.Id">
-                                    @template.Name @(template.IsSystemTemplate ? "(System)" : "")
-                                </option>
+                                var isUniversal = template.GetCompatibleProductTypes() == null;
+                                var label = template.Name;
+                                if (template.IsSystemTemplate) label += " (System)";
+                                if (isUniversal) label += " (Universal)";
+                                <option value="@template.Id">@label</option>
                             }
                         </select>
                         <span class="save-status" style="display: none;"></span>

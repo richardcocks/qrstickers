@@ -180,9 +180,11 @@ app.UseRateLimiter();
 app.MapGet("/api/export/device/{deviceId}", async (
     int deviceId,
     [FromQuery] int connectionId,
+    [FromQuery] bool includeAlternates,
     HttpContext httpContext,
     DeviceExportHelper exportHelper,
     TemplateMatchingService templateMatcher,
+    TemplateService templateService,
     UserManager<ApplicationUser> userManager) =>
 {
     try
@@ -196,6 +198,18 @@ app.MapGet("/api/export/device/{deviceId}", async (
         // Get template match
         var templateMatch = await templateMatcher.FindTemplateForDeviceAsync(exportData.Device, user);
         exportData.MatchedTemplate = templateMatch.Template;
+
+        // Get alternate templates if requested
+        object? alternateTemplates = null;
+        if (includeAlternates && !string.IsNullOrEmpty(exportData.Device.ProductType))
+        {
+            var filterResult = await templateService.GetTemplatesForExportAsync(
+                connectionId,
+                exportData.Device.ProductType
+            );
+
+            alternateTemplates = BuildTemplateOptionsArray(filterResult, templateMatch.Template.Id);
+        }
 
         return Results.Ok(new
         {
@@ -253,7 +267,8 @@ app.MapGet("/api/export/device/{deviceId}", async (
                     pageHeight = templateMatch.Template.PageHeight,
                     matchReason = templateMatch.MatchReason,
                     confidence = templateMatch.Confidence
-                }
+                },
+                alternateTemplates = alternateTemplates // NEW: Include alternate templates if requested
             }
         });
     }
@@ -317,6 +332,93 @@ app.MapGet("/api/templates/match", async (
     catch (ArgumentException)
     {
         return Results.NotFound();
+    }
+}).RequireAuthorization();
+
+// Bulk export template selection endpoint (Phase 6)
+app.MapGet("/api/templates/for-bulk-export", async (
+    [FromQuery] int[] deviceIds,
+    [FromQuery] int connectionId,
+    HttpContext httpContext,
+    QRStickersDbContext db,
+    TemplateMatchingService templateMatcher,
+    TemplateService templateService,
+    UserManager<ApplicationUser> userManager) =>
+{
+    try
+    {
+        var user = await userManager.GetUserAsync(httpContext.User);
+        if (user == null)
+            return Results.Unauthorized();
+
+        if (deviceIds == null || deviceIds.Length == 0)
+            return Results.BadRequest(new { error = "No device IDs provided" });
+
+        // Verify connection ownership
+        var connection = await db.Connections
+            .FirstOrDefaultAsync(c => c.Id == connectionId && c.UserId == user.Id);
+
+        if (connection == null)
+            return Results.NotFound(new { error = "Connection not found or access denied" });
+
+        // Fetch all devices
+        var devices = await db.CachedDevices
+            .Where(d => deviceIds.Contains(d.Id) && d.ConnectionId == connectionId)
+            .ToListAsync();
+
+        if (devices.Count != deviceIds.Length)
+            return Results.NotFound(new { error = "Some devices not found or not owned by user" });
+
+        // Build template options for each device
+        var result = new Dictionary<int, object>();
+
+        foreach (var device in devices)
+        {
+            // Get matched template
+            var matchResult = await templateMatcher.FindTemplateForDeviceAsync(device, user);
+
+            // Get alternates if device has ProductType
+            object[] alternates = Array.Empty<object>();
+            if (!string.IsNullOrEmpty(device.ProductType))
+            {
+                var filterResult = await templateService.GetTemplatesForExportAsync(
+                    connectionId,
+                    device.ProductType
+                );
+
+                alternates = BuildTemplateOptionsArray(filterResult, matchResult.Template.Id);
+            }
+
+            result[device.Id] = new
+            {
+                deviceId = device.Id,
+                deviceName = device.Name,
+                productType = device.ProductType ?? "unknown",
+                matchedTemplate = new
+                {
+                    id = matchResult.Template.Id,
+                    name = matchResult.Template.Name,
+                    templateJson = matchResult.Template.TemplateJson,
+                    pageWidth = matchResult.Template.PageWidth,
+                    pageHeight = matchResult.Template.PageHeight
+                },
+                alternateTemplates = alternates
+            };
+        }
+
+        return Results.Ok(new
+        {
+            success = true,
+            data = result
+        });
+    }
+    catch (UnauthorizedAccessException)
+    {
+        return Results.Forbid();
+    }
+    catch (Exception ex)
+    {
+        return Results.StatusCode(500);
     }
 }).RequireAuthorization();
 
@@ -592,5 +694,80 @@ app.MapRazorPages();
 
 // Map SignalR hub for real-time sync status updates
 app.MapHub<SyncStatusHub>("/syncStatusHub");
+
+// ===================== HELPER FUNCTIONS =====================
+
+/// <summary>
+/// Builds an array of template options from filter result for API response
+/// </summary>
+static object[] BuildTemplateOptionsArray(TemplateFilterResult filterResult, int matchedTemplateId)
+{
+    var options = new List<object>();
+
+    // Add recommended template (if different from matched)
+    if (filterResult.RecommendedTemplate != null &&
+        filterResult.RecommendedTemplate.Id != matchedTemplateId)
+    {
+        options.Add(new
+        {
+            template = new
+            {
+                id = filterResult.RecommendedTemplate.Id,
+                name = filterResult.RecommendedTemplate.Name,
+                templateJson = filterResult.RecommendedTemplate.TemplateJson,
+                pageWidth = filterResult.RecommendedTemplate.PageWidth,
+                pageHeight = filterResult.RecommendedTemplate.PageHeight
+            },
+            category = "recommended",
+            isRecommended = true,
+            isCompatible = true,
+            compatibilityNote = "Default template for this device type"
+        });
+    }
+
+    // Add compatible templates
+    foreach (var template in filterResult.CompatibleTemplates)
+    {
+        if (template.Id == matchedTemplateId) continue; // Skip matched
+
+        options.Add(new
+        {
+            template = new
+            {
+                id = template.Id,
+                name = template.Name,
+                templateJson = template.TemplateJson,
+                pageWidth = template.PageWidth,
+                pageHeight = template.PageHeight
+            },
+            category = "compatible",
+            isRecommended = false,
+            isCompatible = true,
+            compatibilityNote = "Compatible with this device type"
+        });
+    }
+
+    // Add incompatible templates (with warning)
+    foreach (var template in filterResult.IncompatibleTemplates)
+    {
+        options.Add(new
+        {
+            template = new
+            {
+                id = template.Id,
+                name = template.Name,
+                templateJson = template.TemplateJson,
+                pageWidth = template.PageWidth,
+                pageHeight = template.PageHeight
+            },
+            category = "incompatible",
+            isRecommended = false,
+            isCompatible = false,
+            compatibilityNote = "Not designed for this device type"
+        });
+    }
+
+    return options.ToArray();
+}
 
 app.Run();

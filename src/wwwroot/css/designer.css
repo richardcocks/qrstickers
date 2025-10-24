@@ -1287,3 +1287,183 @@ input[type="color"].form-control {
         flex-direction: column;
     }
 }
+
+/* ==================================================================
+   Template Selection Styling (Phase 6)
+   Export Modal Template Selector Enhancements
+   ================================================================== */
+
+/* Template selector dropdown styling */
+.template-selector {
+    width: 100%;
+    padding: 8px 12px;
+    border: 2px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: inherit;
+    background-color: white;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+}
+
+.template-selector:hover {
+    border-color: #1976d2;
+}
+
+.template-selector:focus {
+    outline: none;
+    border-color: #1976d2;
+    box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+}
+
+/* Device template selector in bulk export */
+.device-template-selector {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: inherit;
+    background-color: white;
+    transition: border-color 0.2s ease;
+    cursor: pointer;
+}
+
+.device-template-selector:hover {
+    border-color: #1976d2;
+}
+
+.device-template-selector:focus {
+    outline: none;
+    border-color: #1976d2;
+    box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.1);
+}
+
+/* Template optgroup styling */
+.template-selector optgroup,
+.device-template-selector optgroup {
+    font-weight: 700;
+    font-style: normal;
+    color: #333;
+    padding: 4px 0;
+}
+
+/* Individual option styling within groups */
+.template-selector optgroup option,
+.device-template-selector optgroup option {
+    font-weight: 400;
+    padding-left: 10px;
+}
+
+/* Currently matched template highlight */
+.template-selector option[data-category="matched"],
+.device-template-selector option[data-category="matched"] {
+    font-weight: 600;
+    background-color: #e3f2fd;
+}
+
+/* Compatibility note text */
+.form-text {
+    display: block;
+    margin-top: 6px;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.text-muted {
+    color: #666;
+}
+
+.text-warning {
+    color: #f57c00;
+    font-weight: 500;
+}
+
+/* Form select styling */
+.form-select {
+    display: block;
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.5;
+    color: #333;
+    background-color: #fff;
+    background-clip: padding-box;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-select:focus {
+    border-color: #1976d2;
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(25, 118, 210, 0.25);
+}
+
+/* Apply to All section styling */
+.apply-all-section {
+    background: #f5f5f5;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.apply-all-section h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    margin: 0 0 10px 0;
+}
+
+.apply-all-section small {
+    display: block;
+    margin-top: 8px;
+    font-size: 12px;
+    color: #666;
+    font-style: italic;
+}
+
+/* Device cards with template selectors */
+.device-card {
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 12px;
+    margin-bottom: 10px;
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.device-card:hover {
+    border-color: #bbb;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+/* Responsive adjustments for template selectors */
+@media (max-width: 768px) {
+    .device-card {
+        display: block !important;
+    }
+
+    .device-card > div {
+        margin-bottom: 10px;
+    }
+
+    .device-template-selector {
+        width: 100%;
+    }
+
+    .apply-all-section {
+        padding: 12px;
+    }
+
+    .apply-all-section > div {
+        flex-direction: column;
+    }
+
+    .apply-all-section button {
+        width: 100%;
+        margin-top: 8px;
+    }
+}

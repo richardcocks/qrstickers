@@ -1,7 +1,7 @@
 # Phase 6: Template Selection During Export
 
-**Status:** Planned
-**Dependencies:** Phase 6 Prerequisite (ProductType Template Filtering)
+**Status:** In Progress (Part A Completed, API Enhancements Completed, UI Pending)
+**Dependencies:** Phase 6 Prerequisite (ProductType Template Filtering) ✅ Completed
 **Feature Type:** Enhancement (Export Workflow)
 
 ## Overview
@@ -116,6 +116,45 @@ This feature adds **template selection capability** to the export workflow, allo
 5. **Smart Filtering** - Recommended → Compatible → Incompatible grouping
 
 ## Implementation Plan
+
+### Part A: ConnectionDefaults Filtering (COMPLETED)
+
+**Status:** ✅ Implemented
+**Purpose:** Update the ConnectionDefaults page to filter templates by ProductType compatibility
+
+Before implementing export template selection, we updated the ConnectionDefaults page to only show compatible templates for each device type. This ensures users can't accidentally set incompatible templates as defaults.
+
+#### Changes Made
+
+**Backend (ConnectionDefaults.cshtml.cs):**
+- Added filtered template lists per ProductType:
+  - `SwitchTemplates`
+  - `ApplianceTemplates`
+  - `WirelessTemplates`
+  - `CameraTemplates`
+  - `SensorTemplates`
+  - `CellularGatewayTemplates`
+- Created `GetCompatibleTemplatesForProductType()` helper method
+- Each list only includes templates that are compatible with that ProductType (via `StickerTemplate.IsCompatibleWith()`)
+- Universal templates (null `CompatibleProductTypes`) are included in all lists
+
+**Frontend (ConnectionDefaults.cshtml):**
+- Updated all 6 ProductType dropdowns to use filtered template lists
+- Added "(Universal)" indicator for templates with null `CompatibleProductTypes`
+- Removed "-- None --" option (defaults are always required, seeded on connection creation)
+- Template labels show: `{Name} (System) (Universal)` as applicable
+
+**Important Note About Required Defaults:**
+- ConnectionDefaultTemplates are **always seeded** when a new connection is created
+- All 6 ProductTypes (switch, appliance, wireless, camera, sensor, cellularGateway) are mapped to system templates
+- The seeding logic is in:
+  - `src/Data/DemoAccountSeeder.cs` - For demo data seeding
+  - `src/Pages/Meraki/Callback.cshtml.cs` - For OAuth callback connection creation
+- Default mappings:
+  - Switches & Appliances → "Rack Mount Default" template
+  - Wireless, Cameras, Sensors, Cellular Gateways → "Ceiling/Wall Mount Default" template
+- Because defaults are always present, the UI does not offer a "None" option
+- Users can only switch between valid compatible templates
 
 ### Phase 1: API Enhancements
 

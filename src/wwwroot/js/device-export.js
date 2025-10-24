@@ -11,6 +11,8 @@ let deviceExportState = {
     currentDevice: null,
     currentExportData: null,
     currentTemplate: null,
+    originalMatchedTemplate: null, // Original matched template (for switching back)
+    alternateTemplates: null, // List of alternate template options
     deviceExportModal: null,
     previewCanvas: null,
     currentExportFormat: 'png',
@@ -48,7 +50,8 @@ async function openDeviceExportModal(deviceId, connectionId, deviceName) {
 
     try {
         // Fetch device export data from API (while modal still hidden)
-        const response = await fetch(`/api/export/device/${deviceId}?connectionId=${connectionId}`, {
+        // includeAlternates=true to get template selection options
+        const response = await fetch(`/api/export/device/${deviceId}?connectionId=${connectionId}&includeAlternates=true`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
@@ -70,6 +73,8 @@ async function openDeviceExportModal(deviceId, connectionId, deviceName) {
         deviceExportState.currentExportData = result.data;
         deviceExportState.currentDevice = result.data.device;
         deviceExportState.currentTemplate = result.data.matchedTemplate;
+        deviceExportState.originalMatchedTemplate = result.data.matchedTemplate; // Store original for switching back
+        deviceExportState.alternateTemplates = result.data.alternateTemplates || null;
 
         // Render modal UI
         renderDeviceExportModalUI();
@@ -179,16 +184,20 @@ function renderDeviceExportModalUI() {
     deviceInfo.querySelector('[data-field="device-model"]').textContent = device.model || 'N/A';
     deviceInfo.querySelector('[data-field="device-type"]').textContent = device.productType || 'Unknown';
 
-    // Template Information Section (use textContent for XSS prevention)
+    // Template Selection Section
     const templateInfo = modal.querySelector('#templateInfo');
+    const hasAlternates = deviceExportState.alternateTemplates && deviceExportState.alternateTemplates.length > 0;
+
     templateInfo.innerHTML = `
         <h3>Template</h3>
-        <div class="info-box">
-            <p><strong>Matched Template:</strong> <span data-field="template-name"></span></p>
+        <div class="form-section">
+            <label><strong>Select Template:</strong></label>
+            <select id="templateSelector" class="form-select template-selector" onchange="onTemplateChanged()">
+                ${renderTemplateOptions()}
+            </select>
+            <small id="templateCompatibilityNote" class="form-text text-muted"></small>
         </div>
     `;
-    // Populate with textContent (safe, like Razor's @Model.Property)
-    templateInfo.querySelector('[data-field="template-name"]').textContent = template.name;
 
     // Export Settings Section
     const exportSettings = modal.querySelector('#exportSettings');
@@ -244,6 +253,132 @@ function renderDeviceExportModalUI() {
 }
 
 /**
+ * Renders template selector dropdown options with grouping
+ * Groups: Currently Matched -> Recommended -> Compatible -> Not Recommended
+ */
+function renderTemplateOptions() {
+    const matchedTemplate = deviceExportState.currentTemplate;
+    const alternates = deviceExportState.alternateTemplates;
+
+    // Helper function to escape HTML (XSS prevention)
+    const escapeHtml = (text) => {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    };
+
+    let optionsHtml = '';
+
+    // Currently matched template (always first, selected by default)
+    optionsHtml += `<option value="${matchedTemplate.id}" selected data-category="matched">
+        ${escapeHtml(matchedTemplate.name)} (Currently Matched)
+    </option>`;
+
+    // If no alternates, return early
+    if (!alternates || alternates.length === 0) {
+        return optionsHtml;
+    }
+
+    // Group alternates by category
+    const recommended = alternates.filter(opt => opt.category === 'recommended');
+    const compatible = alternates.filter(opt => opt.category === 'compatible');
+    const incompatible = alternates.filter(opt => opt.category === 'incompatible');
+
+    // Recommended templates
+    if (recommended.length > 0) {
+        optionsHtml += '<optgroup label="⭐ Recommended">';
+        recommended.forEach(opt => {
+            optionsHtml += `<option value="${opt.template.id}"
+                data-category="recommended"
+                data-note="${escapeHtml(opt.compatibilityNote || '')}">
+                ${escapeHtml(opt.template.name)}
+            </option>`;
+        });
+        optionsHtml += '</optgroup>';
+    }
+
+    // Compatible templates
+    if (compatible.length > 0) {
+        optionsHtml += '<optgroup label="✓ Compatible">';
+        compatible.forEach(opt => {
+            optionsHtml += `<option value="${opt.template.id}"
+                data-category="compatible"
+                data-note="${escapeHtml(opt.compatibilityNote || '')}">
+                ${escapeHtml(opt.template.name)}
+            </option>`;
+        });
+        optionsHtml += '</optgroup>';
+    }
+
+    // Incompatible templates (with warning)
+    if (incompatible.length > 0) {
+        optionsHtml += '<optgroup label="⚠ Not Recommended">';
+        incompatible.forEach(opt => {
+            optionsHtml += `<option value="${opt.template.id}"
+                data-category="incompatible"
+                data-note="${escapeHtml(opt.compatibilityNote || '')}">
+                ${escapeHtml(opt.template.name)}
+            </option>`;
+        });
+        optionsHtml += '</optgroup>';
+    }
+
+    return optionsHtml;
+}
+
+/**
+ * Handler for template selection change
+ * Updates preview with newly selected template
+ */
+async function onTemplateChanged() {
+    const selector = document.getElementById('templateSelector');
+    if (!selector) return;
+
+    const selectedTemplateId = parseInt(selector.value);
+    const selectedOption = selector.options[selector.selectedIndex];
+    const category = selectedOption.dataset.category;
+    const note = selectedOption.dataset.note;
+
+    // Show compatibility note below dropdown
+    const noteElement = document.getElementById('templateCompatibilityNote');
+    if (noteElement) {
+        if (note) {
+            noteElement.textContent = note;
+            noteElement.className = category === 'incompatible'
+                ? 'form-text text-warning'
+                : 'form-text text-muted';
+        } else {
+            noteElement.textContent = '';
+        }
+    }
+
+    // Find the selected template
+    let selectedTemplate;
+
+    // Check if user selected the original matched template
+    if (selectedTemplateId === deviceExportState.originalMatchedTemplate.id) {
+        selectedTemplate = deviceExportState.originalMatchedTemplate;
+    } else {
+        // User selected an alternate template
+        const alternateOption = deviceExportState.alternateTemplates?.find(
+            opt => opt.template.id === selectedTemplateId
+        );
+        selectedTemplate = alternateOption?.template;
+    }
+
+    if (!selectedTemplate) {
+        console.error('[Device Export] Selected template not found');
+        return;
+    }
+
+    // Update current template in state
+    deviceExportState.currentTemplate = selectedTemplate;
+
+    // Re-render preview with newly selected template
+    await updateDeviceExportPreview();
+}
+
+/**
  * Handler for format change
  */
 function onExportFormatChanged() {
@@ -286,7 +421,7 @@ async function updateDeviceExportPreview() {
 
     try {
         const data = deviceExportState.currentExportData;
-        const template = data.matchedTemplate;
+        const template = deviceExportState.currentTemplate; // Use current template from state
         const templateJson = JSON.parse(template.templateJson || '{}');
 
         // Create device data map
