@@ -51,7 +51,7 @@ public class ImageUploadValidator
         if (connection == null)
         {
             _logger.LogWarning("Upload validation failed: Connection {ConnectionId} not found or access denied for user {UserId}",
-                connectionId, userId);
+                connectionId, SanitizeForLog(userId));
             return ValidationResult.Fail("Connection not found or access denied");
         }
 
@@ -123,7 +123,7 @@ public class ImageUploadValidator
         }
 
         _logger.LogInformation("Upload validation passed for image '{ImageName}' on connection {ConnectionId}",
-            name, connectionId);
+            SanitizeForLog(name), connectionId);
 
         return ValidationResult.Success(mimeType, sizeBytes);
     }
@@ -136,6 +136,25 @@ public class ImageUploadValidator
     {
         var match = Regex.Match(dataUri, @"^data:([^;]+);");
         return match.Success ? match.Groups[1].Value : string.Empty;
+    }
+
+    /// <summary>
+    /// Sanitizes a string for safe logging by removing newlines and control characters
+    /// Prevents log injection attacks where attackers inject fake log entries
+    /// </summary>
+    /// <param name="input">Raw user input</param>
+    /// <returns>Sanitized string safe for logging</returns>
+    private static string SanitizeForLog(string? input)
+    {
+        if (string.IsNullOrEmpty(input))
+            return string.Empty;
+
+        // Remove newlines, carriage returns, and control characters
+        // Keep printable ASCII and common Unicode characters
+        var sanitized = Regex.Replace(input, @"[\r\n\t\x00-\x1F\x7F-\x9F]", "");
+
+        // Truncate to reasonable length for logs (prevent log flooding)
+        return sanitized.Length > 200 ? sanitized.Substring(0, 200) + "..." : sanitized;
     }
 
     /// <summary>
