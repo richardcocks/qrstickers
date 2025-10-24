@@ -19,9 +19,11 @@ public abstract class Connection
 
     /// <summary>
     /// User-defined display name (e.g., "Work Meraki Account", "Home LogicMonitor")
+    /// Prevents log injection via newlines and control characters
     /// </summary>
     [Required]
     [MaxLength(100)]
+    [RegularExpression(@"^[a-zA-Z0-9\s\-_.()]+$", ErrorMessage = "Display name contains invalid characters. Allowed: letters, numbers, spaces, -_.()")]
     public string DisplayName { get; set; } = null!;
 
     /// <summary>

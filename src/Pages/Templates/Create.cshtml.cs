@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
+using QRStickers.Services;
 using System.Security.Claims;
 
 namespace QRStickers.Pages.Templates;
@@ -178,7 +179,7 @@ public class CreateModel : PageModel
             };
 
             _logger.LogInformation("Cloning template {SourceId} to new template '{Name}' for user {UserId}",
-                sourceTemplate.Id, Name, userId);
+                sourceTemplate.Id, LogSanitizer.Sanitize(Name), userId);
         }
         else
         {
@@ -196,7 +197,7 @@ public class CreateModel : PageModel
                 UpdatedAt = DateTime.UtcNow
             };
 
-            _logger.LogInformation("Creating new blank template '{Name}' for user {UserId}", Name, userId);
+            _logger.LogInformation("Creating new blank template '{Name}' for user {UserId}", LogSanitizer.Sanitize(Name), userId);
         }
 
         _db.StickerTemplates.Add(newTemplate);

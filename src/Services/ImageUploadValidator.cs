@@ -51,7 +51,7 @@ public class ImageUploadValidator
         if (connection == null)
         {
             _logger.LogWarning("Upload validation failed: Connection {ConnectionId} not found or access denied for user {UserId}",
-                connectionId, userId);
+                connectionId, LogSanitizer.Sanitize(userId));
             return ValidationResult.Fail("Connection not found or access denied");
         }
 
@@ -123,7 +123,7 @@ public class ImageUploadValidator
         }
 
         _logger.LogInformation("Upload validation passed for image '{ImageName}' on connection {ConnectionId}",
-            name, connectionId);
+            LogSanitizer.Sanitize(name), connectionId);
 
         return ValidationResult.Success(mimeType, sizeBytes);
     }

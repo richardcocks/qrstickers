@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
+using QRStickers.Services;
 using System.Security.Claims;
 
 namespace QRStickers.Pages.Templates;
@@ -148,7 +149,7 @@ public class DeleteModel : PageModel
         }
 
         _logger.LogInformation("Deleting template {Id} '{Name}' for user {UserId}",
-            template.Id, template.Name, userId);
+            template.Id, LogSanitizer.Sanitize(template.Name), userId);
 
         _db.StickerTemplates.Remove(template);
         await _db.SaveChangesAsync();

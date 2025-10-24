@@ -100,7 +100,7 @@ public class DeviceExportHelper
             UploadedImages = uploadedImages
         };
 
-        _logger.LogInformation($"[Export] Successfully retrieved export data for device {device.Name} ({device.Serial})");
+        _logger.LogInformation($"[Export] Successfully retrieved export data for device {LogSanitizer.Sanitize(device.Name)} ({LogSanitizer.Sanitize(device.Serial)})");
         return context;
     }
 

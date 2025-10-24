@@ -6,6 +6,7 @@ using Microsoft.Extensions.Caching.Memory;
 using System.Security.Claims;
 using System.Text.Json;
 using QRStickers.Meraki;
+using QRStickers.Services;
 
 namespace QRStickers.Pages.Meraki;
 
@@ -135,7 +136,7 @@ public class CallbackModel : PageModel
             await _db.SaveChangesAsync(); // Save to get connection ID
 
             _logger.LogInformation("Created new Meraki connection {ConnectionId} for user {UserId} with display name '{DisplayName}'",
-                connection.Id, userId, displayName);
+                connection.Id, userId, LogSanitizer.Sanitize(displayName));
 
             // Seed default template mappings for this connection
             await SeedConnectionDefaultTemplatesAsync(connection.Id);

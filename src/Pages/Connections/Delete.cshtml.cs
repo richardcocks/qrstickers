@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using QRStickers.Meraki;
+using QRStickers.Services;
 using System.Security.Claims;
 
 namespace QRStickers.Pages.Connections;
@@ -78,7 +79,7 @@ public class DeleteModel : PageModel
             await _db.SaveChangesAsync();
 
             _logger.LogInformation("Deleted connection {ConnectionId} ({DisplayName}) for user {UserId}",
-                connection.Id, connection.DisplayName, userId);
+                connection.Id, LogSanitizer.Sanitize(connection.DisplayName), userId);
 
             return RedirectToPage("/Connections/Index");
         }

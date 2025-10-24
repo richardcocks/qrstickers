@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using QRStickers.Meraki;
+using QRStickers.Services;
 
 namespace QRStickers.Pages.Identity.Account.Manage;
 
@@ -148,7 +149,7 @@ public class IndexModel : PageModel
 
         try
         {
-            _logger.LogInformation("User {UserId} ({Email}) is deleting their account", user.Id, user.Email);
+            _logger.LogInformation("User {UserId} ({Email}) is deleting their account", user.Id, LogSanitizer.Sanitize(user.Email));
 
             // Load all connections to clear from token cache
             var connections = await _db.Connections
@@ -172,7 +173,7 @@ public class IndexModel : PageModel
                 return Page();
             }
 
-            _logger.LogInformation("User {UserId} ({Email}) successfully deleted their account", user.Id, user.Email);
+            _logger.LogInformation("User {UserId} ({Email}) successfully deleted their account", user.Id, LogSanitizer.Sanitize(user.Email));
 
             // Sign out the user
             await _signInManager.SignOutAsync();

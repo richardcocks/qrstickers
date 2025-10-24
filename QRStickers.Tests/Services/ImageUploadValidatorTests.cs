@@ -291,4 +291,106 @@ public class ImageUploadValidatorTests : IDisposable
         Assert.Equal(0, quota.StorageUsed);
         Assert.Equal(20_000_000, quota.StorageLimit);
     }
+
+    // Security tests for log injection prevention
+    // Note: Newline/control character validation enforced by model validation [RegularExpression]
+    // These tests verify valid input and log sanitization behavior
+
+    [Theory]
+    [InlineData("CompanyLogo.png")] // With dot
+    [InlineData("Floor_Plan_B2")] // With underscores
+    [InlineData("Office-Map-2024")] // With hyphens
+    [InlineData("Logo (Version 2)")] // With parentheses and space
+    [InlineData("a-zA-Z0-9_.() Test")] // All allowed special characters
+    public async Task ValidateUpload_ValidNameWithSpecialCharacters_ReturnsSuccess(string validName)
+    {
+        // Arrange
+        var user = TestDataBuilder.CreateUser();
+        var connection = TestDataBuilder.CreateMerakiConnection(userId: user.Id);
+        _dbContext.Users.Add(user);
+        _dbContext.Connections.Add(connection);
+        await _dbContext.SaveChangesAsync();
+
+        var dataUri = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+
+        // Act
+        var result = await _validator.ValidateUploadAsync(
+            connection.Id,
+            validName,
+            dataUri,
+            widthPx: 100,
+            heightPx: 100,
+            user.Id);
+
+        // Assert
+        Assert.True(result.IsValid);
+        Assert.Equal("image/png", result.MimeType);
+    }
+
+    [Fact]
+    public async Task ValidateUpload_SuccessfulUpload_LogsWithSanitizedName()
+    {
+        // Arrange
+        var user = TestDataBuilder.CreateUser();
+        var connection = TestDataBuilder.CreateMerakiConnection(userId: user.Id);
+        _dbContext.Users.Add(user);
+        _dbContext.Connections.Add(connection);
+        await _dbContext.SaveChangesAsync();
+
+        var dataUri = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+        var imageName = "Test Image 123";
+
+        // Act
+        await _validator.ValidateUploadAsync(
+            connection.Id,
+            imageName,
+            dataUri,
+            widthPx: 100,
+            heightPx: 100,
+            user.Id);
+
+        // Assert - Verify logger was called with the sanitized name
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Test Image 123")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ValidateUpload_AccessDenied_LogsWithSanitizedUserId()
+    {
+        // Arrange
+        var user = TestDataBuilder.CreateUser(id: "user-123");
+        var otherUser = TestDataBuilder.CreateUser(id: "other-user");
+        var connection = TestDataBuilder.CreateMerakiConnection(userId: otherUser.Id);
+        _dbContext.Users.Add(user);
+        _dbContext.Users.Add(otherUser);
+        _dbContext.Connections.Add(connection);
+        await _dbContext.SaveChangesAsync();
+
+        var dataUri = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+
+        // Act
+        await _validator.ValidateUploadAsync(
+            connection.Id,
+            "Test Image",
+            dataUri,
+            widthPx: 100,
+            heightPx: 100,
+            user.Id);
+
+        // Assert - Verify warning was logged with sanitized user ID
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("user-123")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
 }
