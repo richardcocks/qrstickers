@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using System.Security.Claims;
 
 namespace QRStickers.Pages.Templates;
@@ -11,11 +12,13 @@ public class DesignerModel : PageModel
 {
     private readonly QRStickersDbContext _db;
     private readonly ILogger<DesignerModel> _logger;
+    private readonly IOptions<DesignerSettings> _designerSettings;
 
-    public DesignerModel(QRStickersDbContext db, ILogger<DesignerModel> logger)
+    public DesignerModel(QRStickersDbContext db, ILogger<DesignerModel> logger, IOptions<DesignerSettings> designerSettings)
     {
         _db = db;
         _logger = logger;
+        _designerSettings = designerSettings;
     }
 
     [BindProperty]
@@ -26,6 +29,12 @@ public class DesignerModel : PageModel
     public List<UploadedImage> UploadedImages { get; set; } = new();
     public bool IsEditMode { get; set; }
     public bool IsSystemTemplate { get; set; }
+
+    // Designer canvas margin settings
+    public int MarginTop => _designerSettings.Value.DefaultMargins.Top;
+    public int MarginLeft => _designerSettings.Value.DefaultMargins.Left;
+    public int MarginBottom => _designerSettings.Value.DefaultMargins.Bottom;
+    public int MarginRight => _designerSettings.Value.DefaultMargins.Right;
 
     /// <summary>
     /// Load existing template for editing, or create new template

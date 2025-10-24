@@ -68,11 +68,16 @@ function initCanvas(pageWidthMm, pageHeightMm) {
     const stickerWidth = mmToPx(pageWidthMm);
     const stickerHeight = mmToPx(pageHeightMm);
 
-    // Asymmetric canvas margins: compact on top/left (with rulers), spacious on bottom/right (for zoom buffer)
-    const marginTopLeft = 100;
-    const marginBottomRight = 500;
-    const canvasWidth = stickerWidth + marginTopLeft + marginBottomRight;
-    const canvasHeight = stickerHeight + marginTopLeft + marginBottomRight;
+    // Read canvas margins from data attributes (configured in appsettings.json)
+    const canvasElement = document.getElementById('designCanvas');
+    const marginTop = parseInt(canvasElement.dataset.marginTop) || 100;
+    const marginLeft = parseInt(canvasElement.dataset.marginLeft) || 100;
+    const marginBottom = parseInt(canvasElement.dataset.marginBottom) || 500;
+    const marginRight = parseInt(canvasElement.dataset.marginRight) || 500;
+
+    // Calculate canvas dimensions with asymmetric margins
+    const canvasWidth = stickerWidth + marginLeft + marginRight;
+    const canvasHeight = stickerHeight + marginTop + marginBottom;
 
     canvas = new fabric.Canvas('designCanvas', {
         width: canvasWidth,
@@ -87,9 +92,9 @@ function initCanvas(pageWidthMm, pageHeightMm) {
     canvas.selectionBorderColor = '#1976d2';
     canvas.selectionLineWidth = 2;
 
-    // Calculate boundary position (top-left aligned with margin)
-    boundaryLeft = marginTopLeft;
-    boundaryTop = marginTopLeft;
+    // Calculate boundary position (top-left corner of sticker)
+    boundaryLeft = marginLeft;
+    boundaryTop = marginTop;
 
     // Create sticker boundary rectangle with dashed border
     stickerBoundary = new fabric.Rect({
@@ -239,8 +244,14 @@ function drawRulers() {
     vCtx.textBaseline = 'middle';
 
     // Draw horizontal ruler (top)
-    // Start from boundary left (0mm at sticker edge)
-    for (let mm = 0; mm <= currentTemplate.pageWidth; mm++) {
+    // Cover full canvas range from left edge to right edge
+    // 0mm is at sticker edge (boundaryLeft), negative values in left margin, positive beyond sticker
+    const leftMarginMm = Math.ceil(pxToMm(boundaryLeft));
+    const rightMarginMm = Math.ceil(pxToMm(canvasWidth / currentZoom - boundaryLeft - mmToPx(currentTemplate.pageWidth)));
+    const horizontalStartMm = -leftMarginMm;
+    const horizontalEndMm = currentTemplate.pageWidth + rightMarginMm;
+
+    for (let mm = horizontalStartMm; mm <= horizontalEndMm; mm++) {
         const x = (boundaryLeft + mmToPx(mm)) * currentZoom;
 
         if (x < 0 || x > canvasWidth) continue; // Skip if outside canvas
@@ -265,8 +276,14 @@ function drawRulers() {
     }
 
     // Draw vertical ruler (left)
-    // Start from boundary top (0mm at sticker edge)
-    for (let mm = 0; mm <= currentTemplate.pageHeight; mm++) {
+    // Cover full canvas range from top edge to bottom edge
+    // 0mm is at sticker edge (boundaryTop), negative values in top margin, positive beyond sticker
+    const topMarginMm = Math.ceil(pxToMm(boundaryTop));
+    const bottomMarginMm = Math.ceil(pxToMm(canvasHeight / currentZoom - boundaryTop - mmToPx(currentTemplate.pageHeight)));
+    const verticalStartMm = -topMarginMm;
+    const verticalEndMm = currentTemplate.pageHeight + bottomMarginMm;
+
+    for (let mm = verticalStartMm; mm <= verticalEndMm; mm++) {
         const y = (boundaryTop + mmToPx(mm)) * currentZoom;
 
         if (y < 0 || y > canvasHeight) continue; // Skip if outside canvas

@@ -203,7 +203,11 @@
 
                 <!-- Main canvas -->
                 <div class="canvas-wrapper" id="canvasWrapper">
-                    <canvas id="designCanvas"></canvas>
+                    <canvas id="designCanvas"
+                            data-margin-top="@Model.MarginTop"
+                            data-margin-left="@Model.MarginLeft"
+                            data-margin-bottom="@Model.MarginBottom"
+                            data-margin-right="@Model.MarginRight"></canvas>
                     <div class="canvas-resize-handle" id="canvasResizeHandle" title="Drag to resize canvas"></div>
                 </div>
             </div>
