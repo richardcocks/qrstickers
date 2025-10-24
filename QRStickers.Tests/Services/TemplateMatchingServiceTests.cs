@@ -12,20 +12,17 @@ public class TemplateMatchingServiceTests : IDisposable
     private readonly QRStickersDbContext _dbContext;
     private readonly TemplateMatchingService _service;
     private readonly Mock<ILogger<TemplateMatchingService>> _mockLogger;
-    private readonly IMemoryCache _memoryCache;
 
     public TemplateMatchingServiceTests()
     {
         _dbContext = InMemoryDbContextFactory.Create();
         _mockLogger = new Mock<ILogger<TemplateMatchingService>>();
-        _memoryCache = new MemoryCache(new MemoryCacheOptions());
-        _service = new TemplateMatchingService(_dbContext, _mockLogger.Object, _memoryCache);
+        _service = new TemplateMatchingService(_dbContext, _mockLogger.Object);
     }
 
     public void Dispose()
     {
         _dbContext.Dispose();
-        _memoryCache.Dispose();
     }
 
     [Fact]
