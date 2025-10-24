@@ -7,6 +7,27 @@
     overflow: hidden;
 }
 
+/* Full-screen mode */
+.designer-container.fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 100vh;
+    width: 100vw;
+    z-index: 9999;
+}
+
+.designer-container.fullscreen .designer-sidebar {
+    display: none; /* Hide sidebars in full-screen mode */
+}
+
+.designer-container.fullscreen .designer-canvas-container {
+    flex: 1;
+    background: #2a2a2a; /* Darker background for focus */
+}
+
 /* Top Toolbar */
 .designer-toolbar {
     display: flex;
@@ -16,6 +37,8 @@
     border-bottom: 1px solid #ddd;
     padding: 10px 20px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    flex-wrap: wrap;
+    gap: 10px;
 }
 
 .toolbar-section {
@@ -35,14 +58,43 @@
     gap: 8px;
 }
 
-.btn-toolbar {
-    padding: 6px 12px;
-    background: #f5f5f5;
-    border: 1px solid #ccc;
+/* Base Button Styles */
+.btn {
+    padding: 8px 16px;
     border-radius: 4px;
     cursor: pointer;
     font-size: 14px;
-    transition: all 0.2s;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Button Variants */
+.btn-toolbar {
+    padding: 6px 12px;
+    background: #f5f5f5;
+    border-color: #ccc;
+    color: #333; /* Dark text for readability on light background */
 }
 
 .btn-toolbar:hover {
@@ -51,6 +103,39 @@
 }
 
 .btn-toolbar:active {
+    background: #d0d0d0;
+}
+
+.btn-primary {
+    background: #1976d2;
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    font-weight: 600;
+}
+
+.btn-primary:hover {
+    background: #1565c0;
+}
+
+.btn-primary:active {
+    background: #0d47a1;
+}
+
+.btn-secondary {
+    background: #f5f5f5;
+    color: #333;
+    border-color: #ccc;
+    padding: 8px 20px;
+    font-weight: 600;
+}
+
+.btn-secondary:hover {
+    background: #e0e0e0;
+    border-color: #999;
+}
+
+.btn-secondary:active {
     background: #d0d0d0;
 }
 
@@ -87,22 +172,6 @@
     border: 1px solid #ccc;
     border-radius: 4px;
     font-size: 14px;
-}
-
-.btn-primary {
-    background: #1976d2;
-    color: white;
-    padding: 8px 20px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 600;
-    transition: background 0.2s;
-}
-
-.btn-primary:hover {
-    background: #1565c0;
 }
 
 /* Main Content Area (3-column layout) */
@@ -200,7 +269,44 @@
     padding: 20px;
 }
 
+/* Ruler Container - CSS Grid layout */
+.ruler-container {
+    display: grid;
+    grid-template-columns: 30px 1fr;
+    grid-template-rows: 30px 1fr;
+    gap: 0;
+}
+
+.ruler-corner {
+    grid-area: 1 / 1 / 2 / 2;
+    background: #d8d8d8;
+    border-right: 1px solid #bbb;
+    border-bottom: 1px solid #bbb;
+}
+
+.ruler-horizontal {
+    grid-area: 1 / 2 / 2 / 3;
+    background: #d8d8d8;
+    border-bottom: 1px solid #bbb;
+    overflow: hidden;
+    position: relative;
+}
+
+.ruler-vertical {
+    grid-area: 2 / 1 / 3 / 2;
+    background: #d8d8d8;
+    border-right: 1px solid #bbb;
+    overflow: hidden;
+    position: relative;
+}
+
+.ruler-horizontal canvas,
+.ruler-vertical canvas {
+    display: block;
+}
+
 .canvas-wrapper {
+    grid-area: 2 / 2 / 3 / 3;
     background-color: white;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     border: 1px solid #ccc;
@@ -216,6 +322,39 @@
     max-width: none !important;
     width: auto !important;
     height: auto !important;
+}
+
+/* Canvas Resize Handle */
+.canvas-resize-handle {
+    position: absolute;
+    bottom: -1px;
+    right: -1px;
+    width: 20px;
+    height: 20px;
+    background: linear-gradient(135deg, transparent 50%, #1976d2 50%);
+    cursor: nwse-resize;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+    z-index: 100;
+}
+
+.canvas-resize-handle:hover {
+    opacity: 1;
+}
+
+.canvas-resize-handle::after {
+    content: '';
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 12px;
+    height: 12px;
+    background-image:
+        linear-gradient(to right, white 1px, transparent 1px),
+        linear-gradient(to bottom, white 1px, transparent 1px);
+    background-size: 4px 4px;
+    background-position: 0 0;
+    opacity: 0.8;
 }
 
 /* Property Inspector */
@@ -287,11 +426,8 @@ input[type="color"].form-control {
     width: 100%;
     padding: 8px 12px;
     background: #f5f5f5;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    cursor: pointer;
+    border-color: #ccc;
     font-size: 12px;
-    transition: all 0.2s;
 }
 
 .btn-layer:hover {

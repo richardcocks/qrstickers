@@ -4,7 +4,7 @@
  */
 
 // Constants
-const MM_TO_PX_RATIO = 3.7795275591; // 96 DPI conversion (1mm = 3.7795275591px)
+const MM_TO_PX_RATIO = 5.669291339; // 144 DPI conversion (1mm = 5.669291339px) - for readable on-screen display
 
 /**
  * Convert millimeters to pixels for canvas rendering

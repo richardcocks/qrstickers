@@ -81,6 +81,10 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Cookie.SameSite = SameSiteMode.Lax;
 });
 
+// Configure designer settings
+builder.Services.Configure<DesignerSettings>(
+    builder.Configuration.GetSection("Designer"));
+
 // Add Razor Pages
 builder.Services.AddRazorPages();
 
