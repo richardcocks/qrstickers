@@ -237,14 +237,14 @@ function renderBulkExportModalContent() {
     modalBody.innerHTML = `
         <div class="apply-all-section" style="margin-bottom: 20px; padding: 15px; background: #f5f5f5; border-radius: 4px;">
             <h3 style="font-size: 16px; margin-bottom: 10px;">Quick Apply Template</h3>
-            <div style="display: flex; gap: 10px; align-items: stretch;">
-                <div style="flex: 1;">
-                    <select id="applyAllTemplateSelector" class="form-select" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%;">
-                        <option value="">-- Select a template to apply to all --</option>
-                        ${renderApplyAllTemplateOptions(exportData)}
-                    </select>
-                </div>
-                <button onclick="applyTemplateToAll()" class="btn-secondary" style="padding: 8px 16px; white-space: nowrap;">
+            <div>
+                <select id="applyAllTemplateSelector" class="form-select" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                    <option value="">-- Select a template to apply to all --</option>
+                    ${renderApplyAllTemplateOptions(exportData)}
+                </select>
+            </div>
+            <div style="margin-top: 10px;">
+                <button onclick="applyTemplateToAll()" class="btn-secondary" style="padding: 8px 16px;">
                     Apply to All
                 </button>
             </div>
