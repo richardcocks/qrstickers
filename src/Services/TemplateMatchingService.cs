@@ -26,7 +26,7 @@ public class TemplateMatchingService
         CachedDevice device,
         ApplicationUser user)
     {
-        _logger.LogInformation($"[Template] Matching template for device {device.Name} (ProductType: {device.ProductType})");
+        _logger.LogInformation($"[Template] Matching template for device {LogSanitizer.Sanitize(device.Name)} (ProductType: {LogSanitizer.Sanitize(device.ProductType)})");
 
         var result = await PerformTemplateMatchAsync(device, user);
 
@@ -50,7 +50,7 @@ public class TemplateMatchingService
 
             if (defaultMapping?.Template != null)
             {
-                _logger.LogInformation($"[Template] Found connection default: {defaultMapping.Template.Name} (ProductType: {device.ProductType})");
+                _logger.LogInformation($"[Template] Found connection default: {LogSanitizer.Sanitize(defaultMapping.Template.Name)} (ProductType: {LogSanitizer.Sanitize(device.ProductType)})");
                 return new TemplateMatchResult
                 {
                     Template = defaultMapping.Template,
@@ -70,7 +70,7 @@ public class TemplateMatchingService
 
         if (anyTemplate != null)
         {
-            _logger.LogWarning($"[Template] No default mapping found for ProductType '{device.ProductType}', using fallback: {anyTemplate.Name}");
+            _logger.LogWarning($"[Template] No default mapping found for ProductType '{LogSanitizer.Sanitize(device.ProductType)}', using fallback: {LogSanitizer.Sanitize(anyTemplate.Name)}");
             return new TemplateMatchResult
             {
                 Template = anyTemplate,

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using QRStickers.Services;
 using System.Security.Claims;
 
 namespace QRStickers.Pages.Templates;
@@ -206,7 +207,7 @@ public class DesignerModel : PageModel
             Template.CreatedAt = DateTime.UtcNow;
             Template.UpdatedAt = DateTime.UtcNow;
             _db.StickerTemplates.Add(Template);
-            _logger.LogInformation("Creating new template '{Name}' for user {UserId}", Template.Name, userId);
+            _logger.LogInformation("Creating new template '{Name}' for user {UserId}", LogSanitizer.Sanitize(Template.Name), userId);
         }
         else
         {
@@ -246,7 +247,7 @@ public class DesignerModel : PageModel
             existingTemplate.UpdatedAt = DateTime.UtcNow;
 
             _logger.LogInformation("Updating template {Id} '{Name}' for user {UserId}",
-                existingTemplate.Id, existingTemplate.Name, userId);
+                existingTemplate.Id, LogSanitizer.Sanitize(existingTemplate.Name), userId);
         }
 
         await _db.SaveChangesAsync();

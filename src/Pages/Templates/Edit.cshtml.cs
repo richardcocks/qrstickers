@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
+using QRStickers.Services;
 using System.Security.Claims;
 
 namespace QRStickers.Pages.Templates;
@@ -151,7 +152,7 @@ public class EditModel : PageModel
         await _db.SaveChangesAsync();
 
         _logger.LogInformation("User {UserId} updated template {TemplateId} '{TemplateName}'",
-            userId, template.Id, template.Name);
+            userId, template.Id, LogSanitizer.Sanitize(template.Name));
 
         TempData["SuccessMessage"] = $"Template '{template.Name}' updated successfully!";
         return RedirectToPage("/Templates/Index");

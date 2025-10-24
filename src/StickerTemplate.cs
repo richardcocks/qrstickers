@@ -18,9 +18,11 @@ public class StickerTemplate
 
     /// <summary>
     /// Template name (e.g., "Rack Mount Switch Label", "AP Ceiling Label")
+    /// Prevents log injection via newlines and control characters
     /// </summary>
     [Required]
     [MaxLength(200)]
+    [RegularExpression(@"^[a-zA-Z0-9\s\-_.()]+$", ErrorMessage = "Template name contains invalid characters. Allowed: letters, numbers, spaces, -_.()")]
     public string Name { get; set; } = null!;
 
     /// <summary>
