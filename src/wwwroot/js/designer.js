@@ -116,6 +116,9 @@ function initCanvas(pageWidthMm, pageHeightMm) {
 
     // Initialize grid background
     updateGridBackground();
+
+    // Draw rulers
+    drawRulers();
 }
 
 /**
@@ -171,6 +174,119 @@ function updateStickerBoundary() {
 }
 
 /**
+ * Draw rulers around the canvas (mm measurements)
+ * TODO: Add inches/mm toggle for localization
+ */
+function drawRulers() {
+    if (!canvas || !currentTemplate) return;
+
+    const hRulerCanvas = document.getElementById('rulerHorizontalCanvas');
+    const vRulerCanvas = document.getElementById('rulerVerticalCanvas');
+
+    if (!hRulerCanvas || !vRulerCanvas) return;
+
+    const canvasWidth = canvas.getWidth();
+    const canvasHeight = canvas.getHeight();
+
+    // Set ruler canvas dimensions (account for device pixel ratio for crisp rendering)
+    const dpr = window.devicePixelRatio || 1;
+
+    // Horizontal ruler
+    hRulerCanvas.width = canvasWidth * dpr;
+    hRulerCanvas.height = 30 * dpr;
+    hRulerCanvas.style.width = canvasWidth + 'px';
+    hRulerCanvas.style.height = '30px';
+
+    // Vertical ruler
+    vRulerCanvas.width = 30 * dpr;
+    vRulerCanvas.height = canvasHeight * dpr;
+    vRulerCanvas.style.width = '30px';
+    vRulerCanvas.style.height = canvasHeight + 'px';
+
+    const hCtx = hRulerCanvas.getContext('2d');
+    const vCtx = vRulerCanvas.getContext('2d');
+
+    // Scale for device pixel ratio
+    hCtx.scale(dpr, dpr);
+    vCtx.scale(dpr, dpr);
+
+    // Clear rulers
+    hCtx.clearRect(0, 0, canvasWidth, 30);
+    vCtx.clearRect(0, 0, 30, canvasHeight);
+
+    // Draw ruler backgrounds
+    hCtx.fillStyle = '#d8d8d8';
+    hCtx.fillRect(0, 0, canvasWidth, 30);
+    vCtx.fillStyle = '#d8d8d8';
+    vCtx.fillRect(0, 0, 30, canvasHeight);
+
+    // Styling
+    hCtx.strokeStyle = '#666';
+    hCtx.fillStyle = '#333';
+    hCtx.font = '9px Arial';
+    hCtx.textAlign = 'center';
+    hCtx.textBaseline = 'top';
+
+    vCtx.strokeStyle = '#666';
+    vCtx.fillStyle = '#333';
+    vCtx.font = '9px Arial';
+    vCtx.textAlign = 'right';
+    vCtx.textBaseline = 'middle';
+
+    // Draw horizontal ruler (top)
+    // Start from boundary left (0mm at sticker edge)
+    for (let mm = 0; mm <= currentTemplate.pageWidth; mm++) {
+        const x = (boundaryLeft + mmToPx(mm)) * currentZoom;
+
+        if (x < 0 || x > canvasWidth) continue; // Skip if outside canvas
+
+        let tickHeight;
+        if (mm % 10 === 0) {
+            // Major tick (10mm) - full height with label
+            tickHeight = 10;
+            hCtx.fillText(mm.toString(), x, 12);
+        } else if (mm % 5 === 0) {
+            // Minor tick (5mm) - half height
+            tickHeight = 6;
+        } else {
+            // Micro tick (1mm) - quarter height
+            tickHeight = 3;
+        }
+
+        hCtx.beginPath();
+        hCtx.moveTo(x, 30 - tickHeight);
+        hCtx.lineTo(x, 30);
+        hCtx.stroke();
+    }
+
+    // Draw vertical ruler (left)
+    // Start from boundary top (0mm at sticker edge)
+    for (let mm = 0; mm <= currentTemplate.pageHeight; mm++) {
+        const y = (boundaryTop + mmToPx(mm)) * currentZoom;
+
+        if (y < 0 || y > canvasHeight) continue; // Skip if outside canvas
+
+        let tickWidth;
+        if (mm % 10 === 0) {
+            // Major tick (10mm) - full width with label
+            tickWidth = 10;
+            vCtx.fillText(mm.toString(), 28, y);
+        } else if (mm % 5 === 0) {
+            // Minor tick (5mm) - half width
+            tickWidth = 6;
+        } else {
+            // Micro tick (1mm) - quarter width
+            tickWidth = 3;
+        }
+
+        vCtx.beginPath();
+        vCtx.moveTo(30 - tickWidth, y);
+        vCtx.lineTo(30, y);
+        vCtx.stroke();
+    }
+}
+
+/**
  * Initialize toolbar controls
  */
 function initToolbar() {
@@ -180,6 +296,7 @@ function initToolbar() {
         canvas.setZoom(currentZoom);
         updateZoomDisplay();
         updateGridBackground();
+        drawRulers();
     });
 
     document.getElementById('btnZoomOut').addEventListener('click', () => {
@@ -187,6 +304,7 @@ function initToolbar() {
         canvas.setZoom(currentZoom);
         updateZoomDisplay();
         updateGridBackground();
+        drawRulers();
     });
 
     document.getElementById('btnZoomReset').addEventListener('click', () => {
@@ -194,6 +312,7 @@ function initToolbar() {
         canvas.setZoom(1);
         updateZoomDisplay();
         updateGridBackground();
+        drawRulers();
     });
 
     // Grid toggle
@@ -212,6 +331,7 @@ function initToolbar() {
         if (newWidth >= 10 && newWidth <= 500) {
             currentTemplate.pageWidth = newWidth;
             updateStickerBoundary();
+            drawRulers();
             updateStatus(`Page width set to ${newWidth}mm`);
         }
     });
@@ -221,6 +341,7 @@ function initToolbar() {
         if (newHeight >= 10 && newHeight <= 500) {
             currentTemplate.pageHeight = newHeight;
             updateStickerBoundary();
+            drawRulers();
             updateStatus(`Page height set to ${newHeight}mm`);
         }
     });
@@ -665,8 +786,11 @@ function initCanvasEvents() {
     // Mouse move (update cursor position)
     canvas.on('mouse:move', function(e) {
         const pointer = canvas.getPointer(e.e);
-        const xMm = pxToMm(pointer.x).toFixed(1);
-        const yMm = pxToMm(pointer.y).toFixed(1);
+        // Calculate sticker-relative coordinates (0,0 = sticker boundary edge)
+        const relativeX = pointer.x - boundaryLeft;
+        const relativeY = pointer.y - boundaryTop;
+        const xMm = pxToMm(relativeX).toFixed(1);
+        const yMm = pxToMm(relativeY).toFixed(1);
         document.getElementById('cursorPos').textContent = `X: ${xMm}mm, Y: ${yMm}mm`;
     });
 
@@ -694,6 +818,7 @@ function initCanvasEvents() {
             canvas.setZoom(currentZoom);
             updateZoomDisplay();
             updateGridBackground();
+            drawRulers();
         }
 
         if (e.ctrlKey && (e.key === '-' || e.key === '_')) {
@@ -702,6 +827,7 @@ function initCanvasEvents() {
             canvas.setZoom(currentZoom);
             updateZoomDisplay();
             updateGridBackground();
+            drawRulers();
         }
 
         if (e.ctrlKey && e.key === '0') {
@@ -710,6 +836,7 @@ function initCanvasEvents() {
             canvas.setZoom(1);
             updateZoomDisplay();
             updateGridBackground();
+            drawRulers();
         }
 
         // Copy (Ctrl+C)

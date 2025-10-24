@@ -179,10 +179,26 @@
             </div>
         </div>
 
-        <!-- Center: Canvas -->
+        <!-- Center: Canvas with Rulers -->
         <div class="designer-canvas-container">
-            <div class="canvas-wrapper" id="canvasWrapper">
-                <canvas id="designCanvas"></canvas>
+            <div class="ruler-container">
+                <!-- Top-left corner spacer -->
+                <div class="ruler-corner"></div>
+
+                <!-- Horizontal ruler (top) -->
+                <div class="ruler-horizontal" id="rulerHorizontal">
+                    <canvas id="rulerHorizontalCanvas"></canvas>
+                </div>
+
+                <!-- Vertical ruler (left) -->
+                <div class="ruler-vertical" id="rulerVertical">
+                    <canvas id="rulerVerticalCanvas"></canvas>
+                </div>
+
+                <!-- Main canvas -->
+                <div class="canvas-wrapper" id="canvasWrapper">
+                    <canvas id="designCanvas"></canvas>
+                </div>
             </div>
         </div>
 

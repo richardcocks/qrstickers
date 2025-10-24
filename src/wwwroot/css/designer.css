@@ -267,7 +267,44 @@
     padding: 20px;
 }
 
+/* Ruler Container - CSS Grid layout */
+.ruler-container {
+    display: grid;
+    grid-template-columns: 30px 1fr;
+    grid-template-rows: 30px 1fr;
+    gap: 0;
+}
+
+.ruler-corner {
+    grid-area: 1 / 1 / 2 / 2;
+    background: #d8d8d8;
+    border-right: 1px solid #bbb;
+    border-bottom: 1px solid #bbb;
+}
+
+.ruler-horizontal {
+    grid-area: 1 / 2 / 2 / 3;
+    background: #d8d8d8;
+    border-bottom: 1px solid #bbb;
+    overflow: hidden;
+    position: relative;
+}
+
+.ruler-vertical {
+    grid-area: 2 / 1 / 3 / 2;
+    background: #d8d8d8;
+    border-right: 1px solid #bbb;
+    overflow: hidden;
+    position: relative;
+}
+
+.ruler-horizontal canvas,
+.ruler-vertical canvas {
+    display: block;
+}
+
 .canvas-wrapper {
+    grid-area: 2 / 2 / 3 / 3;
     background-color: white;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     border: 1px solid #ccc;
