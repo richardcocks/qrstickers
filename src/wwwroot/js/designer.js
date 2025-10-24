@@ -2139,7 +2139,7 @@ function loadPreviewTemplateObjects(templateJson, canvas, scale) {
                 if (obj.type === 'qrcode' && obj.properties?.dataSource) {
                     const dataSource = obj.properties.dataSource.toLowerCase();
 
-                    if (dataSource === 'device.qrcode' || dataSource === 'network.qrcode') {
+                    if (dataSource === 'device.qrcode' || dataSource === 'network.qrcode' || dataSource === 'organization.qrcode') {
                         // Use placeholder value for QR code data
                         const qrDataUri = placeholders[dataSource];
 

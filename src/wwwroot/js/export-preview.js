@@ -313,7 +313,7 @@ function loadTemplateObjectsToCanvas(templateJson, canvas, placeholders) {
                 // Replace QR code placeholder with real image if we have QR data
                 if (obj.type === 'qrcode' && obj.properties?.dataSource) {
                     const dataSource = obj.properties.dataSource.toLowerCase();
-                    if (dataSource === 'device.qrcode' || dataSource === 'network.qrcode') {
+                    if (dataSource === 'device.qrcode' || dataSource === 'network.qrcode' || dataSource === 'organization.qrcode') {
                         // Use real QR code from properties.data (export mode) or previewData (preview mode)
                         // or fall back to PLACEHOLDER_VALUES
                         const qrDataUri = obj.properties.data || obj.previewData || PLACEHOLDER_VALUES[dataSource];
@@ -467,7 +467,7 @@ async function createAndRenderPreviewCanvas(
     exportOptions = { dpi: 96, background: 'white' }) {
 
     // Calculate canvas dimensions
-    const pxPerMm = 3.779527559; // Standard screen DPI (96 DPI)
+    const pxPerMm = MM_TO_PX_RATIO; // Use same DPI as designer (144 DPI from fabric-extensions.js)
     const canvasWidth = pageWidthMm * pxPerMm;
     const canvasHeight = pageHeightMm * pxPerMm;
 
