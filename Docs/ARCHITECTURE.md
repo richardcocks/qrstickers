@@ -398,8 +398,10 @@ Track usage (TemplateUsageHistory)
 ### Input Validation
 
 - **XSS Protection** - All user input sanitized before rendering (see `SECURITY_FIX_XSS_VULNERABILITIES.md`)
+- **Log Injection Protection** - `LogSanitizer` utility removes newlines and control characters from all logged data (see `SECURITY_FIX_LOG_INJECTION.md`)
 - **File Upload Validation** - Image type and size validation in `ImageProcessingService`
 - **SQL Injection Prevention** - Parameterized queries via EF Core
+- **String Length Constraints** - Database-level `MaxLength` validation on all user inputs (see `SECURITY_FIX_DOS_PROTECTION.md`)
 
 ### Rate Limiting
 
