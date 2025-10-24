@@ -237,7 +237,7 @@ function renderBulkExportModalContent() {
     modalBody.innerHTML = `
         <div class="apply-all-section" style="margin-bottom: 20px; padding: 15px; background: #f5f5f5; border-radius: 4px;">
             <h3 style="font-size: 16px; margin-bottom: 10px;">Quick Apply Template</h3>
-            <div style="display: flex; gap: 10px; align-items: flex-start;">
+            <div style="display: flex; gap: 10px; align-items: stretch;">
                 <div style="flex: 1;">
                     <select id="applyAllTemplateSelector" class="form-select" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%;">
                         <option value="">-- Select a template to apply to all --</option>
@@ -811,6 +811,7 @@ async function startBulkExport() {
 
     // Hide options, show progress
     const modal = bulkExportState.bulkExportModal;
+    modal.querySelector('.apply-all-section').style.display = 'none'; // Hide quick apply section during export
     modal.querySelector('.export-options-section').style.display = 'none';
     modal.querySelector('.selected-devices-section').style.display = 'none';
     modal.querySelector('#exportProgressSection').style.display = 'block';

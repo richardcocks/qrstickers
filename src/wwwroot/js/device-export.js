@@ -611,7 +611,7 @@ function replacePlaceholders(text, dataMap) {
 async function downloadDeviceExport() {
     try {
         const data = deviceExportState.currentExportData;
-        const template = data.matchedTemplate;
+        const template = deviceExportState.currentTemplate; // Use current template from state
         const templateJson = JSON.parse(template.templateJson || '{}');
         const device = data.device;
 
