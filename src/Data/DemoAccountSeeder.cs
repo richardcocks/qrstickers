@@ -9,7 +9,7 @@ namespace QRStickers.Data;
 /// </summary>
 public static class DemoAccountSeeder
 {
-    private const string DemoEmail = "demo@qrstickers.com";
+    private const string DemoEmail = "demo@qrstickers.example.com";
     private const string DemoPassword = "Demo123!"; // Simple password for demo purposes
     private const string DemoDisplayName = "Demo User";
     private const string DemoConnectionName = "Demo Account";
