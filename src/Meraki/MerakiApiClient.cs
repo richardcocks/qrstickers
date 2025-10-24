@@ -14,6 +14,7 @@ public class MerakiApiClient
     private readonly ILogger<MerakiApiClient> _logger;
     private const string TokenEndpoint = "https://as.meraki.com/oauth/token";
     private const string ApiBaseUrl = "https://api.meraki.com/api/v1";
+    private const int DefaultPageSize = 1000; // Meraki API maximum
 
     public MerakiApiClient(HttpClient httpClient, IConfiguration config, ILogger<MerakiApiClient> logger)
     {
@@ -140,7 +141,7 @@ public class MerakiApiClient
     public async Task<List<Organization>?> GetOrganizationsAsync(string accessToken)
     {
         var allOrgs = new List<Organization>();
-        string? nextPageUrl = $"{ApiBaseUrl}/organizations?perPage=1000";
+        string? nextPageUrl = $"{ApiBaseUrl}/organizations?perPage={DefaultPageSize}";
 
         while (!string.IsNullOrWhiteSpace(nextPageUrl))
         {
@@ -165,7 +166,8 @@ public class MerakiApiClient
             }
         }
 
-        _logger.LogInformation("Fetched {Count} organizations across {Pages} pages", allOrgs.Count, (allOrgs.Count / 1000) + 1);
+        var pageCount = allOrgs.Count == 0 ? 0 : (allOrgs.Count + DefaultPageSize - 1) / DefaultPageSize;
+        _logger.LogInformation("Fetched {Count} organizations across {Pages} pages", allOrgs.Count, pageCount);
         return allOrgs;
     }
 
@@ -206,7 +208,7 @@ public class MerakiApiClient
     public async Task<List<Network>?> GetNetworksAsync(string accessToken, string organizationId)
     {
         var allNetworks = new List<Network>();
-        string? nextPageUrl = $"{ApiBaseUrl}/organizations/{organizationId}/networks?perPage=1000";
+        string? nextPageUrl = $"{ApiBaseUrl}/organizations/{organizationId}/networks?perPage={DefaultPageSize}";
 
         while (!string.IsNullOrWhiteSpace(nextPageUrl))
         {
@@ -231,8 +233,9 @@ public class MerakiApiClient
             }
         }
 
+        var pageCount = allNetworks.Count == 0 ? 0 : (allNetworks.Count + DefaultPageSize - 1) / DefaultPageSize;
         _logger.LogInformation("Fetched {Count} networks for organization {OrganizationId} across {Pages} pages",
-            allNetworks.Count, organizationId, (allNetworks.Count / 1000) + 1);
+            allNetworks.Count, organizationId, pageCount);
         return allNetworks;
     }
 
@@ -273,7 +276,7 @@ public class MerakiApiClient
     public async Task<List<Device>?> GetOrganizationDevicesAsync(string accessToken, string organizationId)
     {
         var allDevices = new List<Device>();
-        string? nextPageUrl = $"{ApiBaseUrl}/organizations/{organizationId}/devices?perPage=1000";
+        string? nextPageUrl = $"{ApiBaseUrl}/organizations/{organizationId}/devices?perPage={DefaultPageSize}";
 
         while (!string.IsNullOrWhiteSpace(nextPageUrl))
         {
@@ -298,8 +301,9 @@ public class MerakiApiClient
             }
         }
 
+        var pageCount = allDevices.Count == 0 ? 0 : (allDevices.Count + DefaultPageSize - 1) / DefaultPageSize;
         _logger.LogInformation("Fetched {Count} devices for organization {OrganizationId} across {Pages} pages",
-            allDevices.Count, organizationId, (allDevices.Count / 1000) + 1);
+            allDevices.Count, organizationId, pageCount);
         return allDevices;
     }
 
