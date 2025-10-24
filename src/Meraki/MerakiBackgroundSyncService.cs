@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
-namespace QRStickers;
+namespace QRStickers.Meraki;
 
 /// <summary>
 /// Background service that periodically syncs Meraki data for all users

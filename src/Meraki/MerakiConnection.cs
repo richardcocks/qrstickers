@@ -1,4 +1,4 @@
-namespace QRStickers;
+namespace QRStickers.Meraki;
 
 /// <summary>
 /// Represents a Meraki OAuth connection for a user
