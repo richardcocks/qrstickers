@@ -176,30 +176,7 @@ public class MerakiApiClient
     /// </summary>
     private async Task<PaginatedResponse<Organization>?> GetOrganizationsPageAsync(string accessToken, string url)
     {
-        var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
-
-        try
-        {
-            var response = await _httpClient.SendAsync(request);
-            response.EnsureSuccessStatusCode();
-
-            // Parse Link header for pagination
-            var linkHeader = response.Headers.TryGetValues("Link", out var linkValues)
-                ? linkValues.FirstOrDefault()
-                : null;
-            var pageInfo = LinkHeaderParser.Parse(linkHeader);
-
-            // Parse response body
-            var organizations = await response.Content.ReadFromJsonAsync<List<Organization>>();
-
-            return new PaginatedResponse<Organization>(organizations ?? new List<Organization>(), pageInfo);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Exception while retrieving Meraki organizations");
-            return null;
-        }
+        return await FetchPageAsync<Organization>(accessToken, url, "organizations");
     }
 
     /// <summary>
@@ -244,30 +221,7 @@ public class MerakiApiClient
     /// </summary>
     private async Task<PaginatedResponse<Network>?> GetNetworksPageAsync(string accessToken, string url)
     {
-        var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
-
-        try
-        {
-            var response = await _httpClient.SendAsync(request);
-            response.EnsureSuccessStatusCode();
-
-            // Parse Link header for pagination
-            var linkHeader = response.Headers.TryGetValues("Link", out var linkValues)
-                ? linkValues.FirstOrDefault()
-                : null;
-            var pageInfo = LinkHeaderParser.Parse(linkHeader);
-
-            // Parse response body
-            var networks = await response.Content.ReadFromJsonAsync<List<Network>>();
-
-            return new PaginatedResponse<Network>(networks ?? new List<Network>(), pageInfo);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Exception while retrieving Meraki networks");
-            return null;
-        }
+        return await FetchPageAsync<Network>(accessToken, url, "networks");
     }
 
     /// <summary>
@@ -312,6 +266,22 @@ public class MerakiApiClient
     /// </summary>
     private async Task<PaginatedResponse<Device>?> GetOrganizationDevicesPageAsync(string accessToken, string url)
     {
+        return await FetchPageAsync<Device>(accessToken, url, "devices");
+    }
+
+    /// <summary>
+    /// Generic helper to fetch a single page of Meraki resources
+    /// </summary>
+    /// <typeparam name="T">The type of resource to fetch</typeparam>
+    /// <param name="accessToken">OAuth access token</param>
+    /// <param name="url">Full URL for the API request</param>
+    /// <param name="resourceType">Resource type name for logging (e.g., "organizations")</param>
+    /// <returns>Paginated response or null on error</returns>
+    private async Task<PaginatedResponse<T>?> FetchPageAsync<T>(
+        string accessToken,
+        string url,
+        string resourceType)
+    {
         var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
 
@@ -327,13 +297,13 @@ public class MerakiApiClient
             var pageInfo = LinkHeaderParser.Parse(linkHeader);
 
             // Parse response body
-            var devices = await response.Content.ReadFromJsonAsync<List<Device>>();
+            var items = await response.Content.ReadFromJsonAsync<List<T>>();
 
-            return new PaginatedResponse<Device>(devices ?? new List<Device>(), pageInfo);
+            return new PaginatedResponse<T>(items ?? new List<T>(), pageInfo);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Exception while retrieving Meraki devices");
+            _logger.LogError(ex, "Exception while retrieving Meraki {ResourceType}", resourceType);
             return null;
         }
     }
