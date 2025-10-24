@@ -18,6 +18,7 @@ let clipboard = null; // Clipboard for copy/paste functionality
 let undoStack = []; // Undo history stack (limit to 50 states)
 let redoStack = []; // Redo history stack
 let isUndoRedoAction = false; // Flag to prevent saving state during undo/redo
+let isLoadingTemplate = false; // Flag to prevent change tracking during initial template load
 
 /**
  * Initialize the designer
@@ -759,16 +760,22 @@ function initCanvasEvents() {
 
     // Track changes for unsaved changes warning and undo/redo
     canvas.on('object:added', function() {
-        hasUnsavedChanges = true;
-        saveCanvasState();
+        if (!isLoadingTemplate) {
+            hasUnsavedChanges = true;
+            saveCanvasState();
+        }
     });
     canvas.on('object:modified', function() {
-        hasUnsavedChanges = true;
-        saveCanvasState();
+        if (!isLoadingTemplate) {
+            hasUnsavedChanges = true;
+            saveCanvasState();
+        }
     });
     canvas.on('object:removed', function() {
-        hasUnsavedChanges = true;
-        saveCanvasState();
+        if (!isLoadingTemplate) {
+            hasUnsavedChanges = true;
+            saveCanvasState();
+        }
     });
 
     // Object modified (for snap to grid)
@@ -1136,11 +1143,15 @@ function saveTemplate() {
  * Load template design from JSON
  */
 function loadTemplateDesign(templateJsonString) {
+    // Set loading flag to prevent change tracking during initial load
+    isLoadingTemplate = true;
+
     try {
         const templateData = JSON.parse(templateJsonString);
 
         if (!templateData.objects || !Array.isArray(templateData.objects)) {
             console.warn('No objects found in template');
+            isLoadingTemplate = false;
             return;
         }
 
@@ -1268,9 +1279,19 @@ function loadTemplateDesign(templateJsonString) {
 
         canvas.renderAll();
         updateStatus('Template loaded successfully');
+
+        // Clear loading flag
+        isLoadingTemplate = false;
+
+        // Reset unsaved changes flag (this is the initial state, not a change)
+        hasUnsavedChanges = false;
+
+        // Save initial state to undo stack
+        saveCanvasState();
     } catch (error) {
         console.error('Error loading template:', error);
         updateStatus('Error loading template');
+        isLoadingTemplate = false;
     }
 }
 
