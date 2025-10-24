@@ -185,13 +185,10 @@ function renderDeviceExportModalUI() {
         <h3>Template</h3>
         <div class="info-box">
             <p><strong>Matched Template:</strong> <span data-field="template-name"></span></p>
-            <p><strong>Match Reason:</strong> <span class="match-badge match-${template.matchReason}" data-field="match-reason"></span></p>
-            <p><strong>Confidence:</strong> ${Math.round(template.confidence * 100)}%</p>
         </div>
     `;
     // Populate with textContent (safe, like Razor's @Model.Property)
     templateInfo.querySelector('[data-field="template-name"]').textContent = template.name;
-    templateInfo.querySelector('[data-field="match-reason"]').textContent = formatMatchReason(template.matchReason);
 
     // Export Settings Section
     const exportSettings = modal.querySelector('#exportSettings');
@@ -585,20 +582,6 @@ function closeDeviceExportModal() {
 
     deviceExportState.currentExportData = null;
     deviceExportState.currentDevice = null;
-}
-
-/**
- * Format match reason for display
- */
-function formatMatchReason(reason) {
-    const reasons = {
-        'model_match': '✓ Model Match',
-        'type_match': '✓ Type Match',
-        'user_default': '⚙ User Default',
-        'system_default': '⚙ System Default',
-        'fallback': '⚠ Fallback'
-    };
-    return reasons[reason] || reason;
 }
 
 /**

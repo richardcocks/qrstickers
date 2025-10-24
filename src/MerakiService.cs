@@ -7,7 +7,7 @@ namespace QRStickers;
 /// Scoped service that provides Meraki API access with automatic token refresh.
 /// Handles OAuth token management per connection.
 /// </summary>
-public class MerakiService
+public class MerakiService : IMerakiService
 {
     private readonly int _connectionId;
     private readonly MerakiApiClient _apiClient;

@@ -196,7 +196,6 @@
                     </div>
                     <div class="template-cell">
                         <select asp-for="SwitchTemplateId" data-product-type="switch" class="template-select">
-                            <option value="">No default (use fallback)</option>
                             @foreach (var template in Model.AvailableTemplates)
                             {
                                 <option value="@template.Id">
@@ -215,7 +214,6 @@
                     </div>
                     <div class="template-cell">
                         <select asp-for="ApplianceTemplateId" data-product-type="appliance" class="template-select">
-                            <option value="">No default (use fallback)</option>
                             @foreach (var template in Model.AvailableTemplates)
                             {
                                 <option value="@template.Id">
@@ -234,7 +232,6 @@
                     </div>
                     <div class="template-cell">
                         <select asp-for="WirelessTemplateId" data-product-type="wireless" class="template-select">
-                            <option value="">No default (use fallback)</option>
                             @foreach (var template in Model.AvailableTemplates)
                             {
                                 <option value="@template.Id">
@@ -253,7 +250,6 @@
                     </div>
                     <div class="template-cell">
                         <select asp-for="CameraTemplateId" data-product-type="camera" class="template-select">
-                            <option value="">No default (use fallback)</option>
                             @foreach (var template in Model.AvailableTemplates)
                             {
                                 <option value="@template.Id">
@@ -272,7 +268,6 @@
                     </div>
                     <div class="template-cell">
                         <select asp-for="SensorTemplateId" data-product-type="sensor" class="template-select">
-                            <option value="">No default (use fallback)</option>
                             @foreach (var template in Model.AvailableTemplates)
                             {
                                 <option value="@template.Id">
@@ -291,7 +286,6 @@
                     </div>
                     <div class="template-cell">
                         <select asp-for="CellularGatewayTemplateId" data-product-type="cellularGateway" class="template-select">
-                            <option value="">No default (use fallback)</option>
                             @foreach (var template in Model.AvailableTemplates)
                             {
                                 <option value="@template.Id">

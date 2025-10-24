@@ -127,7 +127,7 @@ public class MerakiSyncOrchestrator
         }
     }
 
-    private async Task SyncOrganizationsAsync(int connectionId, MerakiService merakiService)
+    private async Task SyncOrganizationsAsync(int connectionId, IMerakiService merakiService)
     {
         _logger.LogInformation("Syncing organizations for connection {ConnectionId}", connectionId);
 
@@ -207,7 +207,7 @@ public class MerakiSyncOrchestrator
         _logger.LogInformation("Synced {Count} organizations for connection {ConnectionId}", apiOrgs.Count, connectionId);
     }
 
-    private async Task SyncNetworksAsync(int connectionId, MerakiService merakiService)
+    private async Task SyncNetworksAsync(int connectionId, IMerakiService merakiService)
     {
         _logger.LogInformation("Syncing networks for connection {ConnectionId}", connectionId);
 
@@ -312,7 +312,7 @@ public class MerakiSyncOrchestrator
         _logger.LogInformation("Synced {Count} networks for connection {ConnectionId}", allApiNetworks.Count, connectionId);
     }
 
-    private async Task SyncDevicesAsync(int connectionId, MerakiService merakiService)
+    private async Task SyncDevicesAsync(int connectionId, IMerakiService merakiService)
     {
         _logger.LogInformation("Syncing devices for connection {ConnectionId}", connectionId);
 

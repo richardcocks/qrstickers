@@ -356,9 +356,6 @@ function renderDeviceList(devices, exportDataList) {
                 </div>
                 <div style="text-align: right; font-size: 0.85em;">
                     <div style="color: #666;">Template: <span data-field="template-name"></span></div>
-                    <div style="margin-top: 4px;">
-                        <span class="match-badge match-${matchReason}" style="padding: 2px 8px; border-radius: 3px; font-size: 0.8em; background: ${getMatchBadgeColor(matchReason)}; color: white;" data-field="match-info"></span>
-                    </div>
                 </div>
             </div>
         `;
@@ -367,40 +364,11 @@ function renderDeviceList(devices, exportDataList) {
         card.querySelector('[data-field="device-name"]').textContent = device.name;
         card.querySelector('[data-field="device-serial"]').textContent = device.serial;
         card.querySelector('[data-field="template-name"]').textContent = template?.name || 'Unknown';
-        card.querySelector('[data-field="match-info"]').textContent = `${formatMatchReason(matchReason)} (${confidence}%)`;
 
         fragment.appendChild(card);
     });
 
     return fragment;
-}
-
-/**
- * Get badge color for match reason
- */
-function getMatchBadgeColor(reason) {
-    const colors = {
-        'model_match': '#4CAF50',
-        'type_match': '#2196F3',
-        'user_default': '#FF9800',
-        'system_default': '#9E9E9E',
-        'fallback': '#f44336'
-    };
-    return colors[reason] || '#9E9E9E';
-}
-
-/**
- * Format match reason for display
- */
-function formatMatchReason(reason) {
-    const reasons = {
-        'model_match': '✓ Model',
-        'type_match': '✓ Type',
-        'user_default': '⚙ User Default',
-        'system_default': '⚙ System Default',
-        'fallback': '⚠ Fallback'
-    };
-    return reasons[reason] || reason;
 }
 
 /**

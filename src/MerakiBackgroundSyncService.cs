@@ -67,10 +67,15 @@ public class MerakiBackgroundSyncService : BackgroundService
         using var scope = _serviceProvider.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<QRStickersDbContext>();
 
-        // Get all connections with valid OAuth tokens
+        // Get all connections with valid OAuth tokens (excluding demo connections)
         var connectionIds = await db.MerakiOAuthTokens
             .Where(t => t.RefreshTokenExpiresAt > DateTime.UtcNow) // Only sync connections with valid refresh tokens
-            .Select(t => t.ConnectionId)
+            .Join(db.Connections,
+                token => token.ConnectionId,
+                conn => conn.Id,
+                (token, conn) => new { token.ConnectionId, conn.IsDemo })
+            .Where(x => !x.IsDemo) // Skip demo connections (they use fake data, don't need syncing)
+            .Select(x => x.ConnectionId)
             .Distinct()
             .ToListAsync();
 

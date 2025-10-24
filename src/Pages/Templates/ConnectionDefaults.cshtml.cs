@@ -132,12 +132,12 @@ public class ConnectionDefaultsModel : PageModel
             .ToListAsync();
 
         // Update or create defaults for each ProductType
-        await UpdateOrCreateDefaultAsync(existingDefaults, "switch", SwitchTemplateId);
-        await UpdateOrCreateDefaultAsync(existingDefaults, "appliance", ApplianceTemplateId);
-        await UpdateOrCreateDefaultAsync(existingDefaults, "wireless", WirelessTemplateId);
-        await UpdateOrCreateDefaultAsync(existingDefaults, "camera", CameraTemplateId);
-        await UpdateOrCreateDefaultAsync(existingDefaults, "sensor", SensorTemplateId);
-        await UpdateOrCreateDefaultAsync(existingDefaults, "cellularGateway", CellularGatewayTemplateId);
+        await UpdateOrCreateDefaultAsync(SelectedConnectionId, existingDefaults, "switch", SwitchTemplateId);
+        await UpdateOrCreateDefaultAsync(SelectedConnectionId, existingDefaults, "appliance", ApplianceTemplateId);
+        await UpdateOrCreateDefaultAsync(SelectedConnectionId, existingDefaults, "wireless", WirelessTemplateId);
+        await UpdateOrCreateDefaultAsync(SelectedConnectionId, existingDefaults, "camera", CameraTemplateId);
+        await UpdateOrCreateDefaultAsync(SelectedConnectionId, existingDefaults, "sensor", SensorTemplateId);
+        await UpdateOrCreateDefaultAsync(SelectedConnectionId, existingDefaults, "cellularGateway", CellularGatewayTemplateId);
 
         await _db.SaveChangesAsync();
 
@@ -171,7 +171,7 @@ public class ConnectionDefaultsModel : PageModel
             .ToListAsync();
 
         // Update or create default for this ProductType
-        await UpdateOrCreateDefaultAsync(existingDefaults, productType, templateId);
+        await UpdateOrCreateDefaultAsync(connectionId, existingDefaults, productType, templateId);
         await _db.SaveChangesAsync();
 
         _logger.LogInformation("User {UserId} updated default template for {ProductType} on connection {ConnectionId}",
@@ -180,7 +180,7 @@ public class ConnectionDefaultsModel : PageModel
         return new JsonResult(new { success = true, message = "Default saved successfully" });
     }
 
-    private async Task UpdateOrCreateDefaultAsync(List<ConnectionDefaultTemplate> existingDefaults, string productType, int? templateId)
+    private async Task UpdateOrCreateDefaultAsync(int connectionId, List<ConnectionDefaultTemplate> existingDefaults, string productType, int? templateId)
     {
         var existing = existingDefaults.FirstOrDefault(d => d.ProductType == productType);
 
@@ -195,7 +195,7 @@ public class ConnectionDefaultsModel : PageModel
             // Create new
             _db.ConnectionDefaultTemplates.Add(new ConnectionDefaultTemplate
             {
-                ConnectionId = SelectedConnectionId,
+                ConnectionId = connectionId,
                 ProductType = productType,
                 TemplateId = templateId,
                 CreatedAt = DateTime.UtcNow,
