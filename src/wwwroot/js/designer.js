@@ -8,14 +8,12 @@ let currentTemplate;
 let isEditMode = false;
 let isSystemTemplate = false;
 let gridSize = 5; // mm
-let currentZoom = 1.5; // Start at 150% for better readability
+let currentZoom = 1; // Start at 100% (144 DPI makes it naturally readable)
 let stickerBoundary = null; // Reference to the boundary rectangle
 let boundaryLeft = 0; // Boundary position
 let boundaryTop = 0;
 let uploadedImages = []; // Uploaded custom images for this connection
 let hasUnsavedChanges = false; // Track unsaved changes for unload warning
-let baseCanvasWidth = 0; // Base canvas width (at 100% zoom)
-let baseCanvasHeight = 0; // Base canvas height (at 100% zoom)
 let clipboard = null; // Clipboard for copy/paste functionality
 let undoStack = []; // Undo history stack (limit to 50 states)
 let redoStack = []; // Redo history stack
@@ -66,14 +64,10 @@ function initCanvas(pageWidthMm, pageHeightMm) {
     const stickerWidth = mmToPx(pageWidthMm);
     const stickerHeight = mmToPx(pageHeightMm);
 
-    // Smart canvas sizing: sticker + 200px margin on each side (reduces excess grid)
-    const margin = 200;
+    // Tight canvas sizing: sticker + 100px margin on each side
+    const margin = 100;
     const canvasWidth = stickerWidth + (margin * 2);
     const canvasHeight = stickerHeight + (margin * 2);
-
-    // Store base dimensions (at 100% zoom)
-    baseCanvasWidth = canvasWidth;
-    baseCanvasHeight = canvasHeight;
 
     canvas = new fabric.Canvas('designCanvas', {
         width: canvasWidth,
@@ -117,9 +111,7 @@ function initCanvas(pageWidthMm, pageHeightMm) {
     document.getElementById('pageWidth').value = pageWidthMm;
     document.getElementById('pageHeight').value = pageHeightMm;
 
-    // Apply initial zoom (150% for better readability)
-    canvas.setZoom(currentZoom);
-    resizeCanvasForZoom();
+    // Update zoom display to show 100%
     updateZoomDisplay();
 
     // Initialize grid background
@@ -179,45 +171,6 @@ function updateStickerBoundary() {
 }
 
 /**
- * Resize canvas dynamically based on zoom level
- * Prevents content from going off-edge at higher zoom levels
- */
-function resizeCanvasForZoom() {
-    if (!canvas || !baseCanvasWidth || !baseCanvasHeight) return;
-
-    // Calculate new canvas dimensions based on zoom (with minimum scaling)
-    // At 100% zoom, canvas = base size
-    // At 200% zoom, canvas = base * 1.5 (grows but not proportionally)
-    // This provides more room without making the canvas excessively large
-    const zoomFactor = Math.max(1, currentZoom * 0.75 + 0.25);
-
-    const newWidth = Math.round(baseCanvasWidth * zoomFactor);
-    const newHeight = Math.round(baseCanvasHeight * zoomFactor);
-
-    // Resize the Fabric.js canvas
-    canvas.setDimensions({
-        width: newWidth,
-        height: newHeight
-    });
-
-    // Recalculate boundary position to keep sticker centered
-    const stickerWidth = mmToPx(currentTemplate.pageWidth);
-    const stickerHeight = mmToPx(currentTemplate.pageHeight);
-    boundaryLeft = (newWidth - stickerWidth) / 2;
-    boundaryTop = (newHeight - stickerHeight) / 2;
-
-    // Update boundary rectangle position
-    if (stickerBoundary) {
-        stickerBoundary.set({
-            left: boundaryLeft,
-            top: boundaryTop
-        });
-    }
-
-    canvas.renderAll();
-}
-
-/**
  * Initialize toolbar controls
  */
 function initToolbar() {
@@ -225,7 +178,6 @@ function initToolbar() {
     document.getElementById('btnZoomIn').addEventListener('click', () => {
         currentZoom = Math.min(currentZoom + 0.1, 3);
         canvas.setZoom(currentZoom);
-        resizeCanvasForZoom();
         updateZoomDisplay();
         updateGridBackground();
     });
@@ -233,7 +185,6 @@ function initToolbar() {
     document.getElementById('btnZoomOut').addEventListener('click', () => {
         currentZoom = Math.max(currentZoom - 0.1, 0.1);
         canvas.setZoom(currentZoom);
-        resizeCanvasForZoom();
         updateZoomDisplay();
         updateGridBackground();
     });
@@ -241,7 +192,6 @@ function initToolbar() {
     document.getElementById('btnZoomReset').addEventListener('click', () => {
         currentZoom = 1;
         canvas.setZoom(1);
-        resizeCanvasForZoom();
         updateZoomDisplay();
         updateGridBackground();
     });
@@ -742,7 +692,6 @@ function initCanvasEvents() {
             e.preventDefault();
             currentZoom = Math.min(currentZoom + 0.1, 3);
             canvas.setZoom(currentZoom);
-            resizeCanvasForZoom();
             updateZoomDisplay();
             updateGridBackground();
         }
@@ -751,7 +700,6 @@ function initCanvasEvents() {
             e.preventDefault();
             currentZoom = Math.max(currentZoom - 0.1, 0.1);
             canvas.setZoom(currentZoom);
-            resizeCanvasForZoom();
             updateZoomDisplay();
             updateGridBackground();
         }
@@ -760,7 +708,6 @@ function initCanvasEvents() {
             e.preventDefault();
             currentZoom = 1;
             canvas.setZoom(1);
-            resizeCanvasForZoom();
             updateZoomDisplay();
             updateGridBackground();
         }
