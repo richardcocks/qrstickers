@@ -7,6 +7,27 @@
     overflow: hidden;
 }
 
+/* Full-screen mode */
+.designer-container.fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 100vh;
+    width: 100vw;
+    z-index: 9999;
+}
+
+.designer-container.fullscreen .designer-sidebar {
+    display: none; /* Hide sidebars in full-screen mode */
+}
+
+.designer-container.fullscreen .designer-canvas-container {
+    flex: 1;
+    background: #2a2a2a; /* Darker background for focus */
+}
+
 /* Top Toolbar */
 .designer-toolbar {
     display: flex;
@@ -35,14 +56,42 @@
     gap: 8px;
 }
 
-.btn-toolbar {
-    padding: 6px 12px;
-    background: #f5f5f5;
-    border: 1px solid #ccc;
+/* Base Button Styles */
+.btn {
+    padding: 8px 16px;
     border-radius: 4px;
     cursor: pointer;
     font-size: 14px;
-    transition: all 0.2s;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Button Variants */
+.btn-toolbar {
+    padding: 6px 12px;
+    background: #f5f5f5;
+    border-color: #ccc;
 }
 
 .btn-toolbar:hover {
@@ -51,6 +100,39 @@
 }
 
 .btn-toolbar:active {
+    background: #d0d0d0;
+}
+
+.btn-primary {
+    background: #1976d2;
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    font-weight: 600;
+}
+
+.btn-primary:hover {
+    background: #1565c0;
+}
+
+.btn-primary:active {
+    background: #0d47a1;
+}
+
+.btn-secondary {
+    background: #f5f5f5;
+    color: #333;
+    border-color: #ccc;
+    padding: 8px 20px;
+    font-weight: 600;
+}
+
+.btn-secondary:hover {
+    background: #e0e0e0;
+    border-color: #999;
+}
+
+.btn-secondary:active {
     background: #d0d0d0;
 }
 
@@ -87,22 +169,6 @@
     border: 1px solid #ccc;
     border-radius: 4px;
     font-size: 14px;
-}
-
-.btn-primary {
-    background: #1976d2;
-    color: white;
-    padding: 8px 20px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 600;
-    transition: background 0.2s;
-}
-
-.btn-primary:hover {
-    background: #1565c0;
 }
 
 /* Main Content Area (3-column layout) */
@@ -287,11 +353,8 @@ input[type="color"].form-control {
     width: 100%;
     padding: 8px 12px;
     background: #f5f5f5;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    cursor: pointer;
+    border-color: #ccc;
     font-size: 12px;
-    transition: all 0.2s;
 }
 
 .btn-layer:hover {

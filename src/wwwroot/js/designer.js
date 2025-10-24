@@ -8,11 +8,18 @@ let currentTemplate;
 let isEditMode = false;
 let isSystemTemplate = false;
 let gridSize = 5; // mm
-let currentZoom = 1;
+let currentZoom = 1.5; // Start at 150% for better readability
 let stickerBoundary = null; // Reference to the boundary rectangle
 let boundaryLeft = 0; // Boundary position
 let boundaryTop = 0;
 let uploadedImages = []; // Uploaded custom images for this connection
+let hasUnsavedChanges = false; // Track unsaved changes for unload warning
+let baseCanvasWidth = 0; // Base canvas width (at 100% zoom)
+let baseCanvasHeight = 0; // Base canvas height (at 100% zoom)
+let clipboard = null; // Clipboard for copy/paste functionality
+let undoStack = []; // Undo history stack (limit to 50 states)
+let redoStack = []; // Redo history stack
+let isUndoRedoAction = false; // Flag to prevent saving state during undo/redo
 
 /**
  * Initialize the designer
@@ -59,9 +66,14 @@ function initCanvas(pageWidthMm, pageHeightMm) {
     const stickerWidth = mmToPx(pageWidthMm);
     const stickerHeight = mmToPx(pageHeightMm);
 
-    // Make canvas larger than sticker (3x or minimum 800x600)
-    const canvasWidth = Math.max(stickerWidth * 3, 800);
-    const canvasHeight = Math.max(stickerHeight * 3, 600);
+    // Smart canvas sizing: sticker + 200px margin on each side (reduces excess grid)
+    const margin = 200;
+    const canvasWidth = stickerWidth + (margin * 2);
+    const canvasHeight = stickerHeight + (margin * 2);
+
+    // Store base dimensions (at 100% zoom)
+    baseCanvasWidth = canvasWidth;
+    baseCanvasHeight = canvasHeight;
 
     canvas = new fabric.Canvas('designCanvas', {
         width: canvasWidth,
@@ -104,6 +116,11 @@ function initCanvas(pageWidthMm, pageHeightMm) {
     // Sync input fields with actual sticker dimensions
     document.getElementById('pageWidth').value = pageWidthMm;
     document.getElementById('pageHeight').value = pageHeightMm;
+
+    // Apply initial zoom (150% for better readability)
+    canvas.setZoom(currentZoom);
+    resizeCanvasForZoom();
+    updateZoomDisplay();
 
     // Initialize grid background
     updateGridBackground();
@@ -162,6 +179,45 @@ function updateStickerBoundary() {
 }
 
 /**
+ * Resize canvas dynamically based on zoom level
+ * Prevents content from going off-edge at higher zoom levels
+ */
+function resizeCanvasForZoom() {
+    if (!canvas || !baseCanvasWidth || !baseCanvasHeight) return;
+
+    // Calculate new canvas dimensions based on zoom (with minimum scaling)
+    // At 100% zoom, canvas = base size
+    // At 200% zoom, canvas = base * 1.5 (grows but not proportionally)
+    // This provides more room without making the canvas excessively large
+    const zoomFactor = Math.max(1, currentZoom * 0.75 + 0.25);
+
+    const newWidth = Math.round(baseCanvasWidth * zoomFactor);
+    const newHeight = Math.round(baseCanvasHeight * zoomFactor);
+
+    // Resize the Fabric.js canvas
+    canvas.setDimensions({
+        width: newWidth,
+        height: newHeight
+    });
+
+    // Recalculate boundary position to keep sticker centered
+    const stickerWidth = mmToPx(currentTemplate.pageWidth);
+    const stickerHeight = mmToPx(currentTemplate.pageHeight);
+    boundaryLeft = (newWidth - stickerWidth) / 2;
+    boundaryTop = (newHeight - stickerHeight) / 2;
+
+    // Update boundary rectangle position
+    if (stickerBoundary) {
+        stickerBoundary.set({
+            left: boundaryLeft,
+            top: boundaryTop
+        });
+    }
+
+    canvas.renderAll();
+}
+
+/**
  * Initialize toolbar controls
  */
 function initToolbar() {
@@ -169,6 +225,7 @@ function initToolbar() {
     document.getElementById('btnZoomIn').addEventListener('click', () => {
         currentZoom = Math.min(currentZoom + 0.1, 3);
         canvas.setZoom(currentZoom);
+        resizeCanvasForZoom();
         updateZoomDisplay();
         updateGridBackground();
     });
@@ -176,6 +233,7 @@ function initToolbar() {
     document.getElementById('btnZoomOut').addEventListener('click', () => {
         currentZoom = Math.max(currentZoom - 0.1, 0.1);
         canvas.setZoom(currentZoom);
+        resizeCanvasForZoom();
         updateZoomDisplay();
         updateGridBackground();
     });
@@ -183,6 +241,7 @@ function initToolbar() {
     document.getElementById('btnZoomReset').addEventListener('click', () => {
         currentZoom = 1;
         canvas.setZoom(1);
+        resizeCanvasForZoom();
         updateZoomDisplay();
         updateGridBackground();
     });
@@ -218,6 +277,9 @@ function initToolbar() {
 
     // Save button
     document.getElementById('btnSave').addEventListener('click', saveTemplate);
+
+    // Full-screen toggle button
+    document.getElementById('btnFullscreen').addEventListener('click', toggleFullscreen);
 
     // Layer ordering buttons
     document.getElementById('btnBringToFront').addEventListener('click', () => {
@@ -624,6 +686,20 @@ function initCanvasEvents() {
     canvas.on('selection:updated', updatePropertyInspector);
     canvas.on('selection:cleared', clearPropertyInspector);
 
+    // Track changes for unsaved changes warning and undo/redo
+    canvas.on('object:added', function() {
+        hasUnsavedChanges = true;
+        saveCanvasState();
+    });
+    canvas.on('object:modified', function() {
+        hasUnsavedChanges = true;
+        saveCanvasState();
+    });
+    canvas.on('object:removed', function() {
+        hasUnsavedChanges = true;
+        saveCanvasState();
+    });
+
     // Object modified (for snap to grid)
     canvas.on('object:moving', function(e) {
         if (document.getElementById('chkSnapToGrid').checked) {
@@ -659,6 +735,163 @@ function initCanvasEvents() {
         if (e.ctrlKey && e.key === 's') {
             e.preventDefault();
             saveTemplate();
+        }
+
+        // Zoom shortcuts
+        if (e.ctrlKey && (e.key === '+' || e.key === '=')) {
+            e.preventDefault();
+            currentZoom = Math.min(currentZoom + 0.1, 3);
+            canvas.setZoom(currentZoom);
+            resizeCanvasForZoom();
+            updateZoomDisplay();
+            updateGridBackground();
+        }
+
+        if (e.ctrlKey && (e.key === '-' || e.key === '_')) {
+            e.preventDefault();
+            currentZoom = Math.max(currentZoom - 0.1, 0.1);
+            canvas.setZoom(currentZoom);
+            resizeCanvasForZoom();
+            updateZoomDisplay();
+            updateGridBackground();
+        }
+
+        if (e.ctrlKey && e.key === '0') {
+            e.preventDefault();
+            currentZoom = 1;
+            canvas.setZoom(1);
+            resizeCanvasForZoom();
+            updateZoomDisplay();
+            updateGridBackground();
+        }
+
+        // Copy (Ctrl+C)
+        if (e.ctrlKey && e.key === 'c') {
+            const activeObject = canvas.getActiveObject();
+            if (activeObject) {
+                e.preventDefault();
+                // Clone the object for clipboard
+                activeObject.clone(function(cloned) {
+                    clipboard = cloned;
+                    updateStatus('Object copied to clipboard');
+                });
+            }
+        }
+
+        // Paste (Ctrl+V)
+        if (e.ctrlKey && e.key === 'v') {
+            if (clipboard) {
+                e.preventDefault();
+                // Clone the clipboard object and add to canvas
+                clipboard.clone(function(clonedObj) {
+                    canvas.discardActiveObject();
+                    // Offset the pasted object slightly (10mm down and right)
+                    clonedObj.set({
+                        left: clonedObj.left + mmToPx(10),
+                        top: clonedObj.top + mmToPx(10),
+                        evented: true
+                    });
+                    if (clonedObj.type === 'activeSelection') {
+                        // Handle multiple selected objects
+                        clonedObj.canvas = canvas;
+                        clonedObj.forEachObject(function(obj) {
+                            canvas.add(obj);
+                        });
+                        clonedObj.setCoords();
+                    } else {
+                        canvas.add(clonedObj);
+                    }
+                    clipboard.top += mmToPx(10);
+                    clipboard.left += mmToPx(10);
+                    canvas.setActiveObject(clonedObj);
+                    canvas.requestRenderAll();
+                    updateStatus('Object pasted');
+                });
+            }
+        }
+
+        // Duplicate (Ctrl+D)
+        if (e.ctrlKey && e.key === 'd') {
+            const activeObject = canvas.getActiveObject();
+            if (activeObject) {
+                e.preventDefault();
+                // Clone and immediately add to canvas
+                activeObject.clone(function(clonedObj) {
+                    canvas.discardActiveObject();
+                    // Offset the duplicate (10mm down and right)
+                    clonedObj.set({
+                        left: clonedObj.left + mmToPx(10),
+                        top: clonedObj.top + mmToPx(10),
+                        evented: true
+                    });
+                    if (clonedObj.type === 'activeSelection') {
+                        // Handle multiple selected objects
+                        clonedObj.canvas = canvas;
+                        clonedObj.forEachObject(function(obj) {
+                            canvas.add(obj);
+                        });
+                        clonedObj.setCoords();
+                    } else {
+                        canvas.add(clonedObj);
+                    }
+                    canvas.setActiveObject(clonedObj);
+                    canvas.requestRenderAll();
+                    updateStatus('Object duplicated');
+                });
+            }
+        }
+
+        // Arrow key nudging (1mm or 10mm with Shift)
+        const activeObject = canvas.getActiveObject();
+        if (activeObject && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+            e.preventDefault();
+            const nudgeAmount = e.shiftKey ? mmToPx(10) : mmToPx(1);
+
+            switch(e.key) {
+                case 'ArrowUp':
+                    activeObject.set('top', activeObject.top - nudgeAmount);
+                    break;
+                case 'ArrowDown':
+                    activeObject.set('top', activeObject.top + nudgeAmount);
+                    break;
+                case 'ArrowLeft':
+                    activeObject.set('left', activeObject.left - nudgeAmount);
+                    break;
+                case 'ArrowRight':
+                    activeObject.set('left', activeObject.left + nudgeAmount);
+                    break;
+            }
+
+            activeObject.setCoords();
+            canvas.requestRenderAll();
+            updateStatus(`Object nudged ${e.shiftKey ? '10mm' : '1mm'}`);
+        }
+
+        // Undo (Ctrl+Z)
+        if (e.ctrlKey && e.key === 'z' && !e.shiftKey) {
+            e.preventDefault();
+            undo();
+        }
+
+        // Redo (Ctrl+Y or Ctrl+Shift+Z)
+        if (e.ctrlKey && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+            e.preventDefault();
+            redo();
+        }
+
+        // Full-screen toggle (F11)
+        if (e.key === 'F11') {
+            e.preventDefault();
+            toggleFullscreen();
+        }
+    });
+
+    // Warn user about unsaved changes before leaving page
+    window.addEventListener('beforeunload', function(e) {
+        if (hasUnsavedChanges) {
+            e.preventDefault();
+            e.returnValue = ''; // Modern browsers show generic message
+            return ''; // For older browsers
         }
     });
 }
@@ -801,6 +1034,7 @@ function saveTemplate() {
     .then(response => {
         if (response.ok) {
             updateStatus('Template saved successfully');
+            hasUnsavedChanges = false; // Clear unsaved changes flag
             // Update browser URL if this was a new template (ID will be in redirect)
             if (!isEditMode && response.redirected) {
                 const redirectUrl = new URL(response.url);
@@ -989,10 +1223,243 @@ function updateZoomDisplay() {
 }
 
 /**
+ * Toggle full-screen mode
+ */
+function toggleFullscreen() {
+    const designerContainer = document.querySelector('.designer-container');
+    const isFullscreen = designerContainer.classList.contains('fullscreen');
+
+    if (isFullscreen) {
+        designerContainer.classList.remove('fullscreen');
+        document.getElementById('btnFullscreen').innerHTML = '⛶ Full-Screen';
+        updateStatus('Exited full-screen mode');
+    } else {
+        designerContainer.classList.add('fullscreen');
+        document.getElementById('btnFullscreen').innerHTML = '⛶ Exit Full-Screen';
+        updateStatus('Entered full-screen mode');
+    }
+
+    // Trigger canvas resize to fit new container size
+    canvas.renderAll();
+}
+
+/**
  * Update status bar
  */
 function updateStatus(message) {
     document.getElementById('statusText').textContent = message;
+}
+
+/**
+ * Save current canvas state to undo stack
+ */
+function saveCanvasState() {
+    if (isUndoRedoAction) return; // Don't save during undo/redo operations
+
+    // Serialize canvas state (excluding boundary)
+    const state = canvasToTemplateJson(
+        canvas,
+        parseFloat(document.getElementById('pageWidth').value),
+        parseFloat(document.getElementById('pageHeight').value)
+    );
+
+    undoStack.push(JSON.stringify(state));
+
+    // Limit undo stack to 50 states
+    if (undoStack.length > 50) {
+        undoStack.shift();
+    }
+
+    // Clear redo stack when new action is performed
+    redoStack = [];
+}
+
+/**
+ * Undo last action
+ */
+function undo() {
+    if (undoStack.length === 0) {
+        updateStatus('Nothing to undo');
+        return;
+    }
+
+    isUndoRedoAction = true;
+
+    // Save current state to redo stack before undoing
+    const currentState = canvasToTemplateJson(
+        canvas,
+        parseFloat(document.getElementById('pageWidth').value),
+        parseFloat(document.getElementById('pageHeight').value)
+    );
+    redoStack.push(JSON.stringify(currentState));
+
+    // Pop last state from undo stack
+    const previousState = undoStack.pop();
+
+    // Restore previous state
+    restoreCanvasState(previousState);
+
+    isUndoRedoAction = false;
+    updateStatus('Undo successful');
+}
+
+/**
+ * Redo last undone action
+ */
+function redo() {
+    if (redoStack.length === 0) {
+        updateStatus('Nothing to redo');
+        return;
+    }
+
+    isUndoRedoAction = true;
+
+    // Save current state to undo stack before redoing
+    const currentState = canvasToTemplateJson(
+        canvas,
+        parseFloat(document.getElementById('pageWidth').value),
+        parseFloat(document.getElementById('pageHeight').value)
+    );
+    undoStack.push(JSON.stringify(currentState));
+
+    // Pop last state from redo stack
+    const nextState = redoStack.pop();
+
+    // Restore next state
+    restoreCanvasState(nextState);
+
+    isUndoRedoAction = false;
+    updateStatus('Redo successful');
+}
+
+/**
+ * Restore canvas state from JSON string
+ */
+function restoreCanvasState(stateJson) {
+    const state = JSON.parse(stateJson);
+
+    // Clear current canvas objects (except boundary)
+    const objects = canvas.getObjects().filter(obj => obj.name !== 'stickerBoundary');
+    objects.forEach(obj => canvas.remove(obj));
+
+    // Reload objects from state
+    if (state.objects && Array.isArray(state.objects)) {
+        state.objects.forEach(obj => {
+            let fabricObject;
+
+            switch (obj.type) {
+                case 'qrcode':
+                    fabricObject = createQRCode({
+                        left: mmToPx(obj.left) + boundaryLeft,
+                        top: mmToPx(obj.top) + boundaryTop,
+                        width: mmToPx(obj.width || 30),
+                        height: mmToPx(obj.height || 30),
+                        dataSource: obj.properties?.dataSource || 'device.Serial',
+                        eccLevel: obj.properties?.eccLevel || 'Q'
+                    });
+                    break;
+
+                case 'text':
+                case 'i-text':
+                    fabricObject = createBoundText({
+                        left: mmToPx(obj.left) + boundaryLeft,
+                        top: mmToPx(obj.top) + boundaryTop,
+                        text: obj.text || '',
+                        dataSource: obj.properties?.dataSource || '',
+                        fontFamily: obj.fontFamily || 'Arial',
+                        fontSize: obj.fontSize || 16,
+                        fontWeight: obj.fontWeight || 'normal',
+                        fill: obj.fill || '#000000'
+                    });
+                    break;
+
+                case 'image':
+                    if (obj.properties?.customImageId) {
+                        const customImageData = uploadedImages.find(img => img.id === obj.properties.customImageId);
+                        if (customImageData) {
+                            fabric.Image.fromURL(customImageData.dataUri, function(img) {
+                                const left = mmToPx(obj.left) + boundaryLeft;
+                                const top = mmToPx(obj.top) + boundaryTop;
+                                const width = mmToPx(obj.width || 50);
+                                const height = mmToPx(obj.height || 50);
+
+                                img.set({
+                                    left: left,
+                                    top: top,
+                                    scaleX: width / img.width,
+                                    scaleY: height / img.height,
+                                    angle: obj.angle || 0
+                                });
+
+                                img.set('customImageId', obj.properties.customImageId);
+                                img.set('customImageName', obj.properties.customImageName);
+                                img.set('dataSource', obj.properties.dataSource);
+                                img.set('type', 'image');
+
+                                canvas.add(img);
+                                canvas.renderAll();
+                            }, { crossOrigin: 'anonymous' });
+                            fabricObject = null;
+                        } else {
+                            fabricObject = createImagePlaceholder({
+                                left: mmToPx(obj.left) + boundaryLeft,
+                                top: mmToPx(obj.top) + boundaryTop,
+                                width: mmToPx(obj.width || 50),
+                                height: mmToPx(obj.height || 50),
+                                dataSource: obj.properties?.dataSource || '',
+                                src: obj.src || ''
+                            });
+                        }
+                    } else {
+                        fabricObject = createImagePlaceholder({
+                            left: mmToPx(obj.left) + boundaryLeft,
+                            top: mmToPx(obj.top) + boundaryTop,
+                            width: mmToPx(obj.width || 50),
+                            height: mmToPx(obj.height || 50),
+                            dataSource: obj.properties?.dataSource || '',
+                            src: obj.src || ''
+                        });
+                    }
+                    break;
+
+                case 'rect':
+                    fabricObject = createRectangle({
+                        left: mmToPx(obj.left) + boundaryLeft,
+                        top: mmToPx(obj.top) + boundaryTop,
+                        width: mmToPx(obj.width || 50),
+                        height: mmToPx(obj.height || 50),
+                        fill: obj.fill || 'transparent',
+                        stroke: obj.stroke || '#000000',
+                        strokeWidth: obj.strokeWidth || 1
+                    });
+                    break;
+
+                case 'line':
+                    const x1 = mmToPx(obj.left) + boundaryLeft;
+                    const y1 = mmToPx(obj.top) + boundaryTop;
+                    const x2 = x1 + mmToPx(obj.width || 50);
+                    const y2 = y1;
+                    fabricObject = createLine({
+                        x1: x1,
+                        y1: y1,
+                        x2: x2,
+                        y2: y2,
+                        stroke: obj.stroke || '#000000',
+                        strokeWidth: obj.strokeWidth || 1
+                    });
+                    break;
+            }
+
+            if (fabricObject) {
+                if (obj.angle) {
+                    fabricObject.set('angle', obj.angle);
+                }
+                canvas.add(fabricObject);
+            }
+        });
+    }
+
+    canvas.renderAll();
 }
 
 /**
