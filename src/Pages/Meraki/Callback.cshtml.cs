@@ -14,15 +14,15 @@ public class CallbackModel : PageModel
 {
     private readonly MerakiApiClient _merakiClient;
     private readonly QRStickersDbContext _db;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<CallbackModel> _logger;
     private readonly IMemoryCache _cache;
 
-    public CallbackModel(MerakiApiClient merakiClient, QRStickersDbContext db, IServiceProvider serviceProvider, ILogger<CallbackModel> logger, IMemoryCache cache)
+    public CallbackModel(MerakiApiClient merakiClient, QRStickersDbContext db, IServiceScopeFactory scopeFactory, ILogger<CallbackModel> logger, IMemoryCache cache)
     {
         _merakiClient = merakiClient;
         _db = db;
-        _serviceProvider = serviceProvider;
+        _scopeFactory = scopeFactory;
         _logger = logger;
         _cache = cache;
     }
@@ -160,7 +160,7 @@ public class CallbackModel : PageModel
             {
                 try
                 {
-                    using var scope = _serviceProvider.CreateScope();
+                    using var scope = _scopeFactory.CreateScope();
                     var syncOrchestrator = scope.ServiceProvider.GetRequiredService<MerakiSyncOrchestrator>();
                     await syncOrchestrator.SyncConnectionDataAsync(connectionId);
                 }
