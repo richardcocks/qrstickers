@@ -1,6 +1,6 @@
 using QRStickers.Services;
 
-namespace QRStickers;
+namespace QRStickers.Meraki;
 
 /// <summary>
 /// Demo version of MerakiService that returns fake/placeholder data

@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using QRStickers.Meraki;
 
-namespace QRStickers;
+namespace QRStickers.Meraki;
 
 /// <summary>
 /// Factory for creating MerakiService instances with connection-specific context

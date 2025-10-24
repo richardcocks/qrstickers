@@ -1,4 +1,4 @@
-namespace QRStickers;
+namespace QRStickers.Meraki;
 
 /// <summary>
 /// Interface for Meraki service implementations (real and demo)

@@ -1,10 +1,9 @@
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
-using QRStickers.Meraki;
 using QRStickers.Services;
 using System.Text.Json;
 
-namespace QRStickers;
+namespace QRStickers.Meraki;
 
 /// <summary>
 /// Orchestrates syncing Meraki data (organizations, networks, devices) from API to local cache
