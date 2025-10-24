@@ -37,6 +37,9 @@ public class CreateModel : PageModel
     [BindProperty]
     public int? CloneFromTemplateId { get; set; }
 
+    [BindProperty]
+    public List<string>? CompatibleProductTypes { get; set; }
+
     public List<Connection> UserConnections { get; set; } = new();
 
     public async Task<IActionResult> OnGetAsync(int? cloneFrom)
@@ -92,6 +95,7 @@ public class CreateModel : PageModel
             Description = sourceTemplate.Description;
             PageWidth = sourceTemplate.PageWidth;
             PageHeight = sourceTemplate.PageHeight;
+            CompatibleProductTypes = sourceTemplate.GetCompatibleProductTypes();
         }
 
         return Page();
@@ -178,6 +182,9 @@ public class CreateModel : PageModel
                 UpdatedAt = DateTime.UtcNow
             };
 
+            // Set ProductType compatibility
+            newTemplate.SetCompatibleProductTypes(CompatibleProductTypes);
+
             _logger.LogInformation("Cloning template {SourceId} to new template '{Name}' for user {UserId}",
                 sourceTemplate.Id, LogSanitizer.Sanitize(Name), userId);
         }
@@ -196,6 +203,9 @@ public class CreateModel : PageModel
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
+
+            // Set ProductType compatibility
+            newTemplate.SetCompatibleProductTypes(CompatibleProductTypes);
 
             _logger.LogInformation("Creating new blank template '{Name}' for user {UserId}", LogSanitizer.Sanitize(Name), userId);
         }

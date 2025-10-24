@@ -111,6 +111,7 @@ public class TemplateService
             PageHeight = sourceTemplate.PageHeight,
             IsSystemTemplate = false, // Always user template
             TemplateJson = sourceTemplate.TemplateJson,
+            CompatibleProductTypes = sourceTemplate.CompatibleProductTypes, // Copy ProductType compatibility
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -120,4 +121,106 @@ public class TemplateService
 
         return clonedTemplate;
     }
+
+    /// <summary>
+    /// Gets templates compatible with the specified ProductType for a connection.
+    /// Includes both explicitly compatible templates and universal templates (null compatibility).
+    /// </summary>
+    /// <param name="connectionId">The connection ID</param>
+    /// <param name="productType">The device ProductType (e.g., "wireless", "switch")</param>
+    /// <returns>List of compatible templates ordered by name</returns>
+    public async Task<List<StickerTemplate>> GetCompatibleTemplatesAsync(
+        int connectionId,
+        string productType)
+    {
+        // Get all templates for this connection (custom + system)
+        var allTemplates = await _db.StickerTemplates
+            .Where(t => t.ConnectionId == connectionId || t.IsSystemTemplate)
+            .ToListAsync();
+
+        // Filter to compatible templates using in-memory filtering
+        // (JSON column filtering is not easily done in SQL)
+        return allTemplates
+            .Where(t => t.IsCompatibleWith(productType))
+            .OrderBy(t => t.Name)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Gets templates with compatibility metadata for filtering in export UI.
+    /// Returns templates grouped by compatibility status.
+    /// </summary>
+    /// <param name="connectionId">The connection ID</param>
+    /// <param name="deviceProductType">The device ProductType</param>
+    /// <returns>Filter result with recommended, compatible, and incompatible templates</returns>
+    public async Task<TemplateFilterResult> GetTemplatesForExportAsync(
+        int connectionId,
+        string deviceProductType)
+    {
+        // Get recommended template (from ConnectionDefaultTemplate)
+        var recommendedTemplate = await GetRecommendedTemplateAsync(connectionId, deviceProductType);
+
+        // Get all available templates
+        var allTemplates = await _db.StickerTemplates
+            .Where(t => t.ConnectionId == connectionId || t.IsSystemTemplate)
+            .ToListAsync();
+
+        // Group templates by compatibility
+        var compatibleTemplates = allTemplates
+            .Where(t => t.IsCompatibleWith(deviceProductType) && t.Id != recommendedTemplate?.Id)
+            .OrderBy(t => t.Name)
+            .ToList();
+
+        var incompatibleTemplates = allTemplates
+            .Where(t => !t.IsCompatibleWith(deviceProductType))
+            .OrderBy(t => t.Name)
+            .ToList();
+
+        return new TemplateFilterResult
+        {
+            RecommendedTemplate = recommendedTemplate,
+            CompatibleTemplates = compatibleTemplates,
+            IncompatibleTemplates = incompatibleTemplates
+        };
+    }
+
+    /// <summary>
+    /// Gets the recommended template for a specific ProductType based on ConnectionDefaultTemplate mapping.
+    /// </summary>
+    /// <param name="connectionId">The connection ID</param>
+    /// <param name="productType">The device ProductType</param>
+    /// <returns>The recommended template, or null if no default is set</returns>
+    private async Task<StickerTemplate?> GetRecommendedTemplateAsync(int connectionId, string productType)
+    {
+        var defaultMapping = await _db.ConnectionDefaultTemplates
+            .Include(cdt => cdt.Template)
+            .FirstOrDefaultAsync(cdt =>
+                cdt.ConnectionId == connectionId &&
+                cdt.ProductType.ToLower() == productType.ToLower() &&
+                cdt.TemplateId != null);
+
+        return defaultMapping?.Template;
+    }
+}
+
+/// <summary>
+/// Result of template filtering for export UI, grouped by compatibility status.
+/// </summary>
+public class TemplateFilterResult
+{
+    public StickerTemplate? RecommendedTemplate { get; set; }
+    public List<StickerTemplate> CompatibleTemplates { get; set; } = new();
+    public List<StickerTemplate> IncompatibleTemplates { get; set; } = new();
+}
+
+/// <summary>
+/// Template option with compatibility metadata for export UI dropdowns.
+/// </summary>
+public class TemplateOption
+{
+    public StickerTemplate Template { get; set; } = null!;
+    public string Category { get; set; } = null!; // "recommended" | "compatible" | "incompatible"
+    public bool IsRecommended { get; set; }
+    public bool IsCompatible { get; set; }
+    public string? CompatibilityNote { get; set; }
 }

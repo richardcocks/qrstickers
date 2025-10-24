@@ -61,20 +61,53 @@ public class TemplateMatchingService
             }
         }
 
-        // 2. Fallback to any available template
-        var anyTemplate = await _db.StickerTemplates
+        // 2. Try compatible templates (NEW: filter by ProductType compatibility)
+        if (!string.IsNullOrEmpty(device.ProductType))
+        {
+            var allTemplates = await _db.StickerTemplates
+                .AsNoTracking()
+                .Where(t => t.ConnectionId == device.ConnectionId || t.ConnectionId == null)
+                .ToListAsync();
+
+            var compatibleTemplate = allTemplates
+                .FirstOrDefault(t => t.IsCompatibleWith(device.ProductType));
+
+            if (compatibleTemplate != null)
+            {
+                _logger.LogInformation($"[Template] Found compatible template: {LogSanitizer.Sanitize(compatibleTemplate.Name)} (ProductType: {LogSanitizer.Sanitize(device.ProductType)})");
+                return new TemplateMatchResult
+                {
+                    Template = compatibleTemplate,
+                    MatchReason = "compatible",
+                    Confidence = 0.6,
+                    MatchedBy = device.ProductType
+                };
+            }
+        }
+
+        // 3. Universal fallback (any template, with warning if incompatible)
+        var fallbackTemplate = await _db.StickerTemplates
             .AsNoTracking()
             .Where(t => t.ConnectionId == device.ConnectionId || t.ConnectionId == null)
             .OrderByDescending(t => t.IsSystemTemplate) // Prefer system templates as fallback
             .FirstOrDefaultAsync();
 
-        if (anyTemplate != null)
+        if (fallbackTemplate != null)
         {
-            _logger.LogWarning($"[Template] No default mapping found for ProductType '{LogSanitizer.Sanitize(device.ProductType)}', using fallback: {LogSanitizer.Sanitize(anyTemplate.Name)}");
+            var isCompatible = string.IsNullOrEmpty(device.ProductType) || fallbackTemplate.IsCompatibleWith(device.ProductType);
+            if (!isCompatible)
+            {
+                _logger.LogWarning($"[Template] Using incompatible fallback template '{LogSanitizer.Sanitize(fallbackTemplate.Name)}' for ProductType '{LogSanitizer.Sanitize(device.ProductType)}' (may not be optimized)");
+            }
+            else
+            {
+                _logger.LogWarning($"[Template] No default mapping found for ProductType '{LogSanitizer.Sanitize(device.ProductType)}', using fallback: {LogSanitizer.Sanitize(fallbackTemplate.Name)}");
+            }
+
             return new TemplateMatchResult
             {
-                Template = anyTemplate,
-                MatchReason = "fallback",
+                Template = fallbackTemplate,
+                MatchReason = isCompatible ? "fallback" : "fallback_incompatible",
                 Confidence = 0.1,
                 MatchedBy = "fallback"
             };
@@ -87,10 +120,16 @@ public class TemplateMatchingService
     /// <summary>
     /// Gets list of alternative templates that could work for this device
     /// </summary>
+    /// <param name="device">The device to find templates for</param>
+    /// <param name="user">The user</param>
+    /// <param name="excludeTemplateId">Optional template ID to exclude from results</param>
+    /// <param name="compatibleOnly">If true, only return templates compatible with device ProductType</param>
+    /// <returns>List of alternate templates</returns>
     public async Task<List<StickerTemplate>> GetAlternateTemplatesAsync(
         CachedDevice device,
         ApplicationUser user,
-        int? excludeTemplateId = null)
+        int? excludeTemplateId = null,
+        bool compatibleOnly = false)
     {
         // Get all templates (connection-specific + system)
         var templates = await _db.StickerTemplates
@@ -100,6 +139,14 @@ public class TemplateMatchingService
                 (excludeTemplateId == null || t.Id != excludeTemplateId)
             )
             .ToListAsync();
+
+        // Filter to compatible templates if requested
+        if (compatibleOnly && !string.IsNullOrEmpty(device.ProductType))
+        {
+            templates = templates
+                .Where(t => t.IsCompatibleWith(device.ProductType))
+                .ToList();
+        }
 
         return templates;
     }

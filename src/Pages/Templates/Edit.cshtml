@@ -193,6 +193,45 @@
                 <div class="help-text">Optional description to help identify this template</div>
             </div>
 
+            <div class="form-group">
+                <label>Compatible Device Types</label>
+                <div class="help-text" style="margin-bottom: 10px;">
+                    Select which Meraki device types this template is designed for. Leave all unchecked for universal templates that work with any device type.
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <div class="checkbox-group">
+                        <input type="checkbox" name="CompatibleProductTypes" value="wireless" id="type_wireless"
+                               @(Model.CompatibleProductTypes?.Contains("wireless") == true ? "checked" : "") />
+                        <label for="type_wireless" style="font-weight: normal; margin-bottom: 0;">Wireless (Access Points)</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" name="CompatibleProductTypes" value="switch" id="type_switch"
+                               @(Model.CompatibleProductTypes?.Contains("switch") == true ? "checked" : "") />
+                        <label for="type_switch" style="font-weight: normal; margin-bottom: 0;">Switches</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" name="CompatibleProductTypes" value="appliance" id="type_appliance"
+                               @(Model.CompatibleProductTypes?.Contains("appliance") == true ? "checked" : "") />
+                        <label for="type_appliance" style="font-weight: normal; margin-bottom: 0;">Appliances (Firewalls)</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" name="CompatibleProductTypes" value="camera" id="type_camera"
+                               @(Model.CompatibleProductTypes?.Contains("camera") == true ? "checked" : "") />
+                        <label for="type_camera" style="font-weight: normal; margin-bottom: 0;">Cameras</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" name="CompatibleProductTypes" value="sensor" id="type_sensor"
+                               @(Model.CompatibleProductTypes?.Contains("sensor") == true ? "checked" : "") />
+                        <label for="type_sensor" style="font-weight: normal; margin-bottom: 0;">Sensors</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" name="CompatibleProductTypes" value="cellularGateway" id="type_cellular"
+                               @(Model.CompatibleProductTypes?.Contains("cellularGateway") == true ? "checked" : "") />
+                        <label for="type_cellular" style="font-weight: normal; margin-bottom: 0;">Cellular Gateways</label>
+                    </div>
+                </div>
+            </div>
+
         </div>
 
         <!-- Form Actions -->
