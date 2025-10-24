@@ -324,6 +324,39 @@
     height: auto !important;
 }
 
+/* Canvas Resize Handle */
+.canvas-resize-handle {
+    position: absolute;
+    bottom: -1px;
+    right: -1px;
+    width: 20px;
+    height: 20px;
+    background: linear-gradient(135deg, transparent 50%, #1976d2 50%);
+    cursor: nwse-resize;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+    z-index: 100;
+}
+
+.canvas-resize-handle:hover {
+    opacity: 1;
+}
+
+.canvas-resize-handle::after {
+    content: '';
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 12px;
+    height: 12px;
+    background-image:
+        linear-gradient(to right, white 1px, transparent 1px),
+        linear-gradient(to bottom, white 1px, transparent 1px);
+    background-size: 4px 4px;
+    background-position: 0 0;
+    opacity: 0.8;
+}
+
 /* Property Inspector */
 .property-inspector {
     padding: 15px;

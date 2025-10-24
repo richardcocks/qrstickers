@@ -48,6 +48,9 @@ function initDesigner(templateData, editMode, systemTemplate, images) {
     // Initialize canvas event listeners
     initCanvasEvents();
 
+    // Initialize canvas resize functionality
+    initCanvasResize();
+
     // Initialize export modal
     initExportModal();
 
@@ -65,10 +68,11 @@ function initCanvas(pageWidthMm, pageHeightMm) {
     const stickerWidth = mmToPx(pageWidthMm);
     const stickerHeight = mmToPx(pageHeightMm);
 
-    // Tight canvas sizing: sticker + 100px margin on each side
-    const margin = 100;
-    const canvasWidth = stickerWidth + (margin * 2);
-    const canvasHeight = stickerHeight + (margin * 2);
+    // Asymmetric canvas margins: compact on top/left (with rulers), spacious on bottom/right (for zoom buffer)
+    const marginTopLeft = 100;
+    const marginBottomRight = 500;
+    const canvasWidth = stickerWidth + marginTopLeft + marginBottomRight;
+    const canvasHeight = stickerHeight + marginTopLeft + marginBottomRight;
 
     canvas = new fabric.Canvas('designCanvas', {
         width: canvasWidth,
@@ -83,9 +87,9 @@ function initCanvas(pageWidthMm, pageHeightMm) {
     canvas.selectionBorderColor = '#1976d2';
     canvas.selectionLineWidth = 2;
 
-    // Calculate boundary position (centered)
-    boundaryLeft = (canvasWidth - stickerWidth) / 2;
-    boundaryTop = (canvasHeight - stickerHeight) / 2;
+    // Calculate boundary position (top-left aligned with margin)
+    boundaryLeft = marginTopLeft;
+    boundaryTop = marginTopLeft;
 
     // Create sticker boundary rectangle with dashed border
     stickerBoundary = new fabric.Rect({
@@ -975,6 +979,75 @@ function initCanvasEvents() {
             return ''; // For older browsers
         }
     });
+}
+
+/**
+ * Initialize canvas resize functionality
+ */
+function initCanvasResize() {
+    const resizeHandle = document.getElementById('canvasResizeHandle');
+    if (!resizeHandle) return;
+
+    let isResizing = false;
+    let startX, startY;
+    let startCanvasWidth, startCanvasHeight;
+
+    resizeHandle.addEventListener('mousedown', function(e) {
+        e.preventDefault();
+        isResizing = true;
+
+        // Record starting position and canvas size
+        startX = e.clientX;
+        startY = e.clientY;
+        startCanvasWidth = canvas.getWidth();
+        startCanvasHeight = canvas.getHeight();
+
+        // Add global mouse move and mouse up handlers
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+
+        updateStatus('Resizing canvas...');
+    });
+
+    function onMouseMove(e) {
+        if (!isResizing) return;
+
+        // Calculate delta from start position
+        const deltaX = e.clientX - startX;
+        const deltaY = e.clientY - startY;
+
+        // Calculate new canvas dimensions (minimum size: sticker + 100px margins)
+        const stickerWidth = mmToPx(currentTemplate.pageWidth);
+        const stickerHeight = mmToPx(currentTemplate.pageHeight);
+        const minWidth = stickerWidth + 200; // 100px on each side minimum
+        const minHeight = stickerHeight + 200;
+
+        const newWidth = Math.max(startCanvasWidth + deltaX, minWidth);
+        const newHeight = Math.max(startCanvasHeight + deltaY, minHeight);
+
+        // Update canvas dimensions
+        canvas.setDimensions({
+            width: newWidth,
+            height: newHeight
+        });
+
+        // Redraw rulers to match new canvas size
+        drawRulers();
+
+        canvas.renderAll();
+    }
+
+    function onMouseUp(e) {
+        if (!isResizing) return;
+
+        isResizing = false;
+
+        // Remove global handlers
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+
+        updateStatus(`Canvas resized to ${canvas.getWidth()}×${canvas.getHeight()}px`);
+    }
 }
 
 /**
