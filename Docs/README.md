@@ -16,12 +16,13 @@ QRStickers is a web application that combines user authentication with a flexibl
 - **Token Management** - Automatic OAuth token refresh and secure per-connection database storage
 - **QR Code Generation** - Public API endpoint for generating QR codes with rate limiting
 
-### QR Sticker Designer & Export (Phases 2-5)
+### QR Sticker Designer & Export (Phases 2-6)
 - **Visual Template Designer** - Drag-and-drop canvas editor with Fabric.js for creating sticker templates
 - **Template Management** - Create, clone, edit, and delete templates with connection-specific storage
 - **Data Binding** - Dynamic placeholders ({{device.serial}}, {{device.name}}, etc.) for device data
 - **Device Export** - Export individual devices from Network page with real device data
 - **Intelligent Template Matching** - 6-level priority matching (Model → Type → ProductTypeFilter → User Default → System Default → Fallback)
+- **Template Switching** - Select alternate templates during export with compatibility filtering (Phase 6)
 - **Live Preview** - Real-time canvas preview with actual device data before export
 - **Multi-Format Export** - PNG (96/150/300 DPI) and SVG formats with white or transparent backgrounds
 - **Export History** - Automatic logging of all exports for analytics and audit trails
