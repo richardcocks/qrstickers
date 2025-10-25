@@ -1,0 +1,32 @@
+{
+  "name": "frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint src --ext .ts",
+    "format": "prettier --write \"src/**/*.ts\""
+  },
+  "devDependencies": {
+    "@types/fabric": "^5.3.10",
+    "@types/jszip": "^3.4.0",
+    "@vitest/ui": "^4.0.3",
+    "eslint": "^9.38.0",
+    "happy-dom": "^20.0.8",
+    "prettier": "^3.6.2",
+    "typescript": "~5.9.3",
+    "vite": "^7.1.7",
+    "vitest": "^4.0.3"
+  },
+  "dependencies": {
+    "fabric": "^6.7.1",
+    "jszip": "^3.10.1"
+  }
+}
