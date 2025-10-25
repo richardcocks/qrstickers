@@ -359,7 +359,7 @@ app.MapPost("/api/export/bulk-devices", async (
         if (request.DeviceIds.Length > 100)
             return Results.BadRequest(new { error = "Maximum 100 devices per request" });
 
-        logger.LogInformation($"[Bulk Export] Fetching data for {request.DeviceIds.Length} devices, connection {request.ConnectionId}");
+        logger.LogInformation("[Bulk Export] Fetching data for {DeviceCount} devices, connection {ConnectionId}", request.DeviceIds.Length, request.ConnectionId);
 
         // Verify connection ownership
         var connection = await db.Connections
@@ -439,7 +439,7 @@ app.MapPost("/api/export/bulk-devices", async (
             uploadedImages
         );
 
-        logger.LogInformation($"[Bulk Export] Successfully prepared data for {devices.Count} devices");
+        logger.LogInformation("[Bulk Export] Successfully prepared data for {DeviceCount} devices", devices.Count);
 
         return Results.Ok(new
         {

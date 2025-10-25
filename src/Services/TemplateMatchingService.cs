@@ -26,7 +26,7 @@ public class TemplateMatchingService
         CachedDevice device,
         ApplicationUser user)
     {
-        _logger.LogInformation($"[Template] Matching template for device {LogSanitizer.Sanitize(device.Name)} (ProductType: {LogSanitizer.Sanitize(device.ProductType)})");
+        _logger.LogInformation("[Template] Matching template for device {DeviceName} (ProductType: {ProductType})", LogSanitizer.Sanitize(device.Name), LogSanitizer.Sanitize(device.ProductType));
 
         var result = await PerformTemplateMatchAsync(device, user);
 
@@ -50,7 +50,7 @@ public class TemplateMatchingService
 
             if (defaultMapping?.Template != null)
             {
-                _logger.LogInformation($"[Template] Found connection default: {LogSanitizer.Sanitize(defaultMapping.Template.Name)} (ProductType: {LogSanitizer.Sanitize(device.ProductType)})");
+                _logger.LogInformation("[Template] Found connection default: {TemplateName} (ProductType: {ProductType})", LogSanitizer.Sanitize(defaultMapping.Template.Name), LogSanitizer.Sanitize(device.ProductType));
                 return new TemplateMatchResult
                 {
                     Template = defaultMapping.Template,
@@ -74,7 +74,7 @@ public class TemplateMatchingService
 
             if (compatibleTemplate != null)
             {
-                _logger.LogInformation($"[Template] Found compatible template: {LogSanitizer.Sanitize(compatibleTemplate.Name)} (ProductType: {LogSanitizer.Sanitize(device.ProductType)})");
+                _logger.LogInformation("[Template] Found compatible template: {TemplateName} (ProductType: {ProductType})", LogSanitizer.Sanitize(compatibleTemplate.Name), LogSanitizer.Sanitize(device.ProductType));
                 return new TemplateMatchResult
                 {
                     Template = compatibleTemplate,
@@ -97,11 +97,11 @@ public class TemplateMatchingService
             var isCompatible = string.IsNullOrEmpty(device.ProductType) || fallbackTemplate.IsCompatibleWith(device.ProductType);
             if (!isCompatible)
             {
-                _logger.LogWarning($"[Template] Using incompatible fallback template '{LogSanitizer.Sanitize(fallbackTemplate.Name)}' for ProductType '{LogSanitizer.Sanitize(device.ProductType)}' (may not be optimized)");
+                _logger.LogWarning("[Template] Using incompatible fallback template '{TemplateName}' for ProductType '{ProductType}' (may not be optimized)", LogSanitizer.Sanitize(fallbackTemplate.Name), LogSanitizer.Sanitize(device.ProductType));
             }
             else
             {
-                _logger.LogWarning($"[Template] No default mapping found for ProductType '{LogSanitizer.Sanitize(device.ProductType)}', using fallback: {LogSanitizer.Sanitize(fallbackTemplate.Name)}");
+                _logger.LogWarning("[Template] No default mapping found for ProductType '{ProductType}', using fallback: {TemplateName}", LogSanitizer.Sanitize(device.ProductType), LogSanitizer.Sanitize(fallbackTemplate.Name));
             }
 
             return new TemplateMatchResult
@@ -113,7 +113,7 @@ public class TemplateMatchingService
             };
         }
 
-        _logger.LogError($"[Template] No templates available at all!");
+        _logger.LogError("[Template] No templates available at all!");
         throw new InvalidOperationException("No templates available for export");
     }
 

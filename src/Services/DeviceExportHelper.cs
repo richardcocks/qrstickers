@@ -27,7 +27,7 @@ public class DeviceExportHelper
         int connectionId,
         ApplicationUser user)
     {
-        _logger.LogInformation($"[Export] Retrieving export data for device {deviceId}, connection {connectionId}");
+        _logger.LogInformation("[Export] Retrieving export data for device {DeviceId}, connection {ConnectionId}", deviceId, connectionId);
 
         // Retrieve device with eager loading
         var device = await _db.CachedDevices
@@ -39,14 +39,14 @@ public class DeviceExportHelper
 
         if (device == null)
         {
-            _logger.LogWarning($"[Export] Device {deviceId} not found or doesn't belong to connection {connectionId}");
+            _logger.LogWarning("[Export] Device {DeviceId} not found or doesn't belong to connection {ConnectionId}", deviceId, connectionId);
             throw new ArgumentException($"Device {deviceId} not found");
         }
 
         // Verify user ownership (device's connection must belong to user)
         if (device.Connection?.UserId != user.Id)
         {
-            _logger.LogWarning($"[Export] Unauthorized access attempt: User {user.Id} tried to export device {deviceId} from connection {connectionId}");
+            _logger.LogWarning("[Export] Unauthorized access attempt: User {UserId} tried to export device {DeviceId} from connection {ConnectionId}", user.Id, deviceId, connectionId);
             throw new UnauthorizedAccessException($"You don't have permission to export this device");
         }
 
@@ -58,7 +58,7 @@ public class DeviceExportHelper
 
         if (connection == null)
         {
-            _logger.LogWarning($"[Export] Connection {connectionId} not found for user {user.Id}");
+            _logger.LogWarning("[Export] Connection {ConnectionId} not found for user {UserId}", connectionId, user.Id);
             throw new ArgumentException($"Connection {connectionId} not found");
         }
 
@@ -87,7 +87,7 @@ public class DeviceExportHelper
             .Where(i => i.ConnectionId == connectionId && !i.IsDeleted)
             .ToListAsync();
 
-        _logger.LogDebug($"[Export] Retrieved {uploadedImages.Count} uploaded images for connection {connectionId}");
+        _logger.LogDebug("[Export] Retrieved {ImageCount} uploaded images for connection {ConnectionId}", uploadedImages.Count, connectionId);
 
         // Build the export context
         var context = new DeviceExportContext
@@ -100,7 +100,7 @@ public class DeviceExportHelper
             UploadedImages = uploadedImages
         };
 
-        _logger.LogInformation($"[Export] Successfully retrieved export data for device {LogSanitizer.Sanitize(device.Name)} ({LogSanitizer.Sanitize(device.Serial)})");
+        _logger.LogInformation("[Export] Successfully retrieved export data for device {DeviceName} ({DeviceSerial})", LogSanitizer.Sanitize(device.Name), LogSanitizer.Sanitize(device.Serial));
         return context;
     }
 
@@ -110,14 +110,14 @@ public class DeviceExportHelper
     /// </summary>
     public async Task<Dictionary<string, string>> GetGlobalVariablesAsync(int connectionId)
     {
-        _logger.LogDebug($"[Export] Retrieving global variables for connection {connectionId}");
+        _logger.LogDebug("[Export] Retrieving global variables for connection {ConnectionId}", connectionId);
 
         var variables = await _db.GlobalVariables
             .AsNoTracking()
             .Where(v => v.ConnectionId == connectionId)
             .ToDictionaryAsync(v => v.VariableName, v => v.VariableValue);
 
-        _logger.LogDebug($"[Export] Retrieved {variables.Count} global variables for connection {connectionId}");
+        _logger.LogDebug("[Export] Retrieved {VariableCount} global variables for connection {ConnectionId}", variables.Count, connectionId);
         return variables;
     }
 
@@ -130,7 +130,7 @@ public class DeviceExportHelper
         if (imageIds == null || imageIds.Length == 0)
             return;
 
-        _logger.LogDebug($"[Export] Tracking usage for {imageIds.Length} images");
+        _logger.LogDebug("[Export] Tracking usage for {ImageCount} images", imageIds.Length);
 
         var images = await _db.UploadedImages
             .Where(i => imageIds.Contains(i.Id))
@@ -142,7 +142,7 @@ public class DeviceExportHelper
         }
 
         await _db.SaveChangesAsync();
-        _logger.LogDebug($"[Export] Updated LastUsedAt for {images.Count} images");
+        _logger.LogDebug("[Export] Updated LastUsedAt for {ImageCount} images", images.Count);
     }
 
     /// <summary>
@@ -154,7 +154,7 @@ public class DeviceExportHelper
         int connectionId,
         ApplicationUser user)
     {
-        _logger.LogInformation($"[Export] Retrieving bulk export data for {deviceIds.Length} devices");
+        _logger.LogInformation("[Export] Retrieving bulk export data for {DeviceCount} devices", deviceIds.Length);
 
         // Verify connection belongs to user
         var connection = await _db.Connections
@@ -177,14 +177,14 @@ public class DeviceExportHelper
 
         if (devices.Count == 0)
         {
-            _logger.LogWarning($"[Export] No devices found for bulk export");
+            _logger.LogWarning("[Export] No devices found for bulk export");
             throw new ArgumentException("No devices found");
         }
 
         // Verify all devices belong to user's connection
         if (devices.Any(d => d.Connection?.UserId != user.Id))
         {
-            _logger.LogWarning($"[Export] Unauthorized access attempt in bulk export");
+            _logger.LogWarning("[Export] Unauthorized access attempt in bulk export");
             throw new UnauthorizedAccessException("Some devices don't belong to you");
         }
 
@@ -226,7 +226,7 @@ public class DeviceExportHelper
             };
         }).ToList();
 
-        _logger.LogInformation($"[Export] Retrieved bulk export data for {contexts.Count} devices");
+        _logger.LogInformation("[Export] Retrieved bulk export data for {DeviceCount} devices", contexts.Count);
         return contexts;
     }
 }
