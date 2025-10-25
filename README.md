@@ -220,7 +220,7 @@ For questions, feature requests, or bug reports, please open an issue on GitHub.
 
 ## License
 
-QRStickers is open source software available for commercial and personal use. See LICENSE file for details.
+QRStickers is licensed under the MIT License. See [LICENSE](LICENSE) file for details.
 
 ---
 

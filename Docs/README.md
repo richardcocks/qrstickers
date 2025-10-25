@@ -415,4 +415,4 @@ Built on enterprise-grade patterns and technologies:
 
 ## License
 
-QRStickers is open source software available for commercial and personal use. See LICENSE file for details.
+QRStickers is licensed under the MIT License. See [LICENSE](../LICENSE) file for details.
