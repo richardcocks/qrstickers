@@ -408,9 +408,9 @@ Track usage (TemplateUsageHistory)
 - **QR Code API** - Token bucket algorithm (5000 tokens, 100/sec replenishment)
 - **Export API** - Per-user concurrency limits (future enhancement)
 
-## Learning Objectives
+## Technical Architecture & Implementation
 
-This architecture demonstrates:
+This architecture includes:
 
 ### Core Platform
 - ASP.NET Core Razor Pages architecture

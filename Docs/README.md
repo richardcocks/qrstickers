@@ -1,6 +1,6 @@
 # QR Stickers
 
-An ASP.NET Core learning project demonstrating Razor Pages, ASP.NET Identity authentication, OAuth 2.0 integration, multi-connection architecture, containerization, and cloud deployment.
+Professional device labeling solution for network infrastructure teams. Create custom QR code stickers for network devices with an intuitive visual designer, intelligent template matching, and multi-vendor support.
 
 ## Overview
 
@@ -365,9 +365,9 @@ If you prefer username/password authentication:
 - ✅ **Forever free** (renews monthly, no expiration)
 - ✅ **Monitor usage** in Azure Portal → SQL Database → Metrics
 
-## Learning Objectives
+## Technical Architecture & Implementation
 
-This project demonstrates:
+Built on enterprise-grade patterns and technologies:
 
 ### Core Platform Architecture
 - ASP.NET Core Razor Pages architecture
@@ -415,4 +415,4 @@ This project demonstrates:
 
 ## License
 
-This is a learning project for educational purposes.
+QRStickers is open source software available for commercial and personal use. See LICENSE file for details.

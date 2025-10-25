@@ -1,6 +1,6 @@
 # QRStickers
 
-An ASP.NET Core learning project demonstrating Razor Pages, ASP.NET Identity authentication, OAuth 2.0 integration, multi-connection architecture, containerization, and cloud deployment.
+Professional device labeling solution for network infrastructure teams. Create custom QR code stickers for network devices with an intuitive visual designer, intelligent template matching, and multi-vendor support.
 
 ## Overview
 
@@ -201,29 +201,26 @@ dotnet build --configuration Release
 
 See [SETUP.md](Docs/SETUP.md#troubleshooting) for common issues and solutions.
 
-## Learning Objectives
+## Technology Stack Highlights
 
-This project demonstrates:
-- ASP.NET Core Razor Pages architecture
-- ASP.NET Identity authentication
-- OAuth 2.0 authorization code flow
-- Multi-connection architecture with TPH inheritance
-- Entity Framework Core with SQL Server
-- Fabric.js canvas library for visual editors
-- Client-side rendering and data binding
-- SignalR for real-time updates
-- Azure deployment (Web Apps, Container Apps, SQL Database)
-- Managed identity for passwordless authentication
-- Docker containerization
-- GitHub Actions CI/CD
+QRStickers is built with modern, production-ready technologies:
+- **ASP.NET Core Razor Pages** - Server-rendered web application
+- **ASP.NET Identity** - Enterprise-grade user authentication
+- **OAuth 2.0** - Secure third-party integrations
+- **Entity Framework Core** - Database abstraction with SQL Server
+- **Fabric.js** - Professional canvas library for visual design
+- **SignalR** - Real-time progress tracking and updates
+- **Azure** - Cloud-native deployment and scaling
+- **Docker** - Containerization for any environment
+- **GitHub Actions** - Automated CI/CD pipelines
 
 ## Contributing
 
-This is a learning project. For questions or suggestions, please open an issue.
+For questions, feature requests, or bug reports, please open an issue on GitHub.
 
 ## License
 
-This is a learning project for educational purposes.
+QRStickers is open source software available for commercial and personal use. See LICENSE file for details.
 
 ---
 
