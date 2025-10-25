@@ -273,11 +273,11 @@ Development history and implementation details for each phase.
 
 ## Contributing
 
-This is a learning project. For questions or suggestions, please open an issue on the repository.
+For questions, feature requests, or bug reports, please open an issue on GitHub.
 
 ## License
 
-This is a learning project for educational purposes.
+QRStickers is licensed under the MIT License. See [LICENSE](../LICENSE) file for details.
 
 ---
 
