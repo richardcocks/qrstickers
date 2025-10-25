@@ -1,4 +1,6 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json;
 
 namespace QRStickers;
 
@@ -69,6 +71,65 @@ public class StickerTemplate
     /// </summary>
     public DateTime? LastUsedAt { get; set; }
 
+    /// <summary>
+    /// JSON array of compatible Meraki ProductTypes (e.g., ["wireless", "switch"])
+    /// NULL or empty array means compatible with ALL types (universal template)
+    /// </summary>
+    [Column(TypeName = "nvarchar(max)")]
+    public string? CompatibleProductTypes { get; set; }
+
     // Navigation properties
     public Connection? Connection { get; set; }
+
+    // Helper methods for ProductType compatibility
+
+    /// <summary>
+    /// Gets the list of compatible ProductTypes.
+    /// Returns null if template is compatible with all types (universal template).
+    /// </summary>
+    public List<string>? GetCompatibleProductTypes()
+    {
+        if (string.IsNullOrWhiteSpace(CompatibleProductTypes))
+            return null; // Universal template
+
+        try
+        {
+            return JsonSerializer.Deserialize<List<string>>(CompatibleProductTypes);
+        }
+        catch (JsonException)
+        {
+            // Invalid JSON - treat as universal template
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Sets the compatible ProductTypes for this template.
+    /// Pass null or empty list to make template universal.
+    /// </summary>
+    public void SetCompatibleProductTypes(List<string>? productTypes)
+    {
+        if (productTypes == null || productTypes.Count == 0)
+        {
+            CompatibleProductTypes = null;
+            return;
+        }
+
+        CompatibleProductTypes = JsonSerializer.Serialize(productTypes);
+    }
+
+    /// <summary>
+    /// Checks if this template is compatible with the given ProductType.
+    /// Returns true for universal templates (no restrictions).
+    /// </summary>
+    public bool IsCompatibleWith(string productType)
+    {
+        var compatibleTypes = GetCompatibleProductTypes();
+
+        // Null means universal (compatible with all)
+        if (compatibleTypes == null)
+            return true;
+
+        return compatibleTypes.Contains(productType, StringComparer.OrdinalIgnoreCase);
+    }
 }

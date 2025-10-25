@@ -138,12 +138,28 @@ async function openBulkExportModal() {
     modalBody.innerHTML = '<div style="padding: 40px; text-align: center;">Loading device information...</div>';
 
     try {
-        // Fetch template matches for all devices
-        const exportDataPromises = selected.map(device =>
-            fetchDeviceExportData(device.id, device.connectionId)
-        );
+        // Fetch template matches for all devices using bulk endpoint
+        const response = await fetch('/api/export/bulk-devices', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                deviceIds: selected.map(d => d.id),
+                connectionId: selected[0].connectionId // All devices from same connection
+            })
+        });
 
-        const exportDataResults = await Promise.all(exportDataPromises);
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || `API error ${response.status}`);
+        }
+
+        const bulkData = await response.json();
+
+        // Transform reference-based data to current structure
+        const exportDataResults = transformBulkData(bulkData.data, selected);
         bulkExportState.currentExportData = exportDataResults;
 
         // Render modal content
@@ -162,10 +178,87 @@ async function openBulkExportModal() {
 }
 
 /**
- * Fetches device export data from API
+ * Transforms reference-based bulk data into the format expected by the rest of the application
+ * Resolves template/network/org references to full objects
+ */
+function transformBulkData(bulkData, selectedDevices) {
+    const { devices, templates, networks, organizations, connection, globalVariables, uploadedImages, templateOptions } = bulkData;
+
+    return selectedDevices.map(selectedDevice => {
+        const device = devices[selectedDevice.id];
+        if (!device) {
+            console.warn(`[Bulk Export] Device ${selectedDevice.id} not found in bulk data`);
+            return null;
+        }
+
+        const matchedTemplate = templates[device.matchedTemplateRef];
+
+        // Resolve network reference to full object
+        let network = null;
+        if (device.networkRef && networks[device.networkRef]) {
+            const networkData = networks[device.networkRef];
+            network = {
+                id: networkData.id,
+                networkId: networkData.networkId,
+                name: networkData.name,
+                organizationId: networkData.organizationRef ? parseInt(networkData.organizationRef.replace('org_', '')) : null,
+                qrCode: networkData.qrCode
+            };
+        }
+
+        // Resolve organization reference to full object
+        let organization = null;
+        if (network && networks[device.networkRef]?.organizationRef) {
+            const orgRef = networks[device.networkRef].organizationRef;
+            if (organizations[orgRef]) {
+                const orgData = organizations[orgRef];
+                organization = {
+                    id: orgData.id,
+                    organizationId: orgData.organizationId,
+                    name: orgData.name,
+                    url: orgData.url,
+                    qrCode: orgData.qrCode
+                };
+            }
+        }
+
+        // Build alternate templates array
+        const alternateTemplates = (templateOptions[device.id] || []).map(opt => ({
+            template: templates[opt.templateRef],
+            category: opt.category,
+            isRecommended: opt.category === 'recommended',
+            isCompatible: opt.category !== 'incompatible',
+            compatibilityNote: opt.compatibilityNote
+        }));
+
+        return {
+            device: {
+                id: device.id,
+                name: device.name,
+                serial: device.serial,
+                model: device.model,
+                productType: device.productType,
+                networkId: device.networkId,
+                connectionId: device.connectionId,
+                qrCode: device.qrCode
+            },
+            network,
+            organization,
+            connection,
+            globalVariables,
+            uploadedImages: Object.values(uploadedImages),
+            matchedTemplate,
+            alternateTemplates
+        };
+    }).filter(result => result !== null); // Remove any null entries
+}
+
+/**
+ * Fetches device export data from API with alternate templates
+ * NOTE: This function is now deprecated in favor of bulk endpoint
  */
 async function fetchDeviceExportData(deviceId, connectionId) {
-    const response = await fetch(`/api/export/device/${deviceId}?connectionId=${connectionId}`, {
+    const response = await fetch(`/api/export/device/${deviceId}?connectionId=${connectionId}&includeAlternates=true`, {
         method: 'GET',
         headers: {
             'Accept': 'application/json',
@@ -235,6 +328,24 @@ function renderBulkExportModalContent() {
     // Render modal body
     const modalBody = modal.querySelector('.modal-body');
     modalBody.innerHTML = `
+        <div class="apply-all-section" style="margin-bottom: 20px; padding: 15px; background: #f5f5f5; border-radius: 4px;">
+            <h3 style="font-size: 16px; margin-bottom: 10px;">Quick Apply Template</h3>
+            <div>
+                <select id="applyAllTemplateSelector" class="form-select" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                    <option value="">-- Select a template to apply to all --</option>
+                    ${renderApplyAllTemplateOptions(exportData)}
+                </select>
+            </div>
+            <div style="margin-top: 10px;">
+                <button onclick="applyTemplateToAll()" class="btn-secondary" style="padding: 8px 16px;">
+                    Apply to All
+                </button>
+            </div>
+            <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">
+                This will override all device-specific template selections below.
+            </small>
+        </div>
+
         <div class="selected-devices-section" style="margin-bottom: 20px;">
             <h3>Selected Devices</h3>
             <div id="deviceListContainer" class="device-list"></div>
@@ -329,7 +440,7 @@ function renderBulkExportModalContent() {
 }
 
 /**
- * Renders device list cards
+ * Renders device list cards with template selectors
  * Uses textContent for user data to prevent XSS (consistent with Razor)
  */
 function renderDeviceList(devices, exportDataList) {
@@ -347,15 +458,21 @@ function renderDeviceList(devices, exportDataList) {
         card.style.cssText = 'padding: 12px; margin-bottom: 10px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px;';
 
         card.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 15px; align-items: center;">
                 <div>
                     <strong data-field="device-name"></strong>
                     <div style="font-size: 0.85em; color: #666; margin-top: 4px;">
                         <code data-field="device-serial"></code>
                     </div>
+                    <div style="font-size: 0.75em; color: #999; margin-top: 2px;">
+                        <span data-field="device-type"></span>
+                    </div>
                 </div>
-                <div style="text-align: right; font-size: 0.85em;">
-                    <div style="color: #666;">Template: <span data-field="template-name"></span></div>
+                <div>
+                    <label style="font-size: 0.85em; font-weight: 600; color: #555; margin-bottom: 4px; display: block;">Template:</label>
+                    <select class="device-template-selector" data-device-index="${index}" data-device-id="${device.id}" style="padding: 6px; border: 1px solid #ccc; border-radius: 4px; width: 100%; font-size: 0.9em;">
+                        ${renderDeviceTemplateOptions(exportData)}
+                    </select>
                 </div>
             </div>
         `;
@@ -363,12 +480,200 @@ function renderDeviceList(devices, exportDataList) {
         // Populate user data with textContent (safe, like Razor's @Model.Property)
         card.querySelector('[data-field="device-name"]').textContent = device.name;
         card.querySelector('[data-field="device-serial"]').textContent = device.serial;
-        card.querySelector('[data-field="template-name"]').textContent = template?.name || 'Unknown';
+        card.querySelector('[data-field="device-type"]').textContent = exportData?.device?.productType || 'Unknown';
 
         fragment.appendChild(card);
     });
 
     return fragment;
+}
+
+/**
+ * Renders template options for the "Apply to All" dropdown
+ * Collects all unique templates from all devices
+ */
+function renderApplyAllTemplateOptions(exportDataList) {
+    const escapeHtml = (text) => {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    };
+
+    // Collect all unique templates across all devices
+    const templateMap = new Map();
+
+    exportDataList.forEach(exportData => {
+        // Add matched template
+        const matched = exportData?.matchedTemplate;
+        if (matched && !templateMap.has(matched.id)) {
+            templateMap.set(matched.id, {
+                id: matched.id,
+                name: matched.name,
+                category: 'matched'
+            });
+        }
+
+        // Add alternates
+        const alternates = exportData?.alternateTemplates || [];
+        alternates.forEach(alt => {
+            const template = alt.template;
+            if (template && !templateMap.has(template.id)) {
+                templateMap.set(template.id, {
+                    id: template.id,
+                    name: template.name,
+                    category: alt.category
+                });
+            }
+        });
+    });
+
+    // Sort templates by name
+    const templates = Array.from(templateMap.values()).sort((a, b) =>
+        a.name.localeCompare(b.name)
+    );
+
+    // Render options
+    return templates.map(t =>
+        `<option value="${t.id}">${escapeHtml(t.name)}</option>`
+    ).join('');
+}
+
+/**
+ * Renders template options for a single device
+ * Includes matched template and alternates grouped by category
+ */
+function renderDeviceTemplateOptions(exportData) {
+    const escapeHtml = (text) => {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    };
+
+    const matchedTemplate = exportData?.matchedTemplate;
+    const alternates = exportData?.alternateTemplates || [];
+
+    let optionsHtml = '';
+
+    // Matched template (selected by default)
+    if (matchedTemplate) {
+        optionsHtml += `<option value="${matchedTemplate.id}" selected data-category="matched">
+            ${escapeHtml(matchedTemplate.name)} (Currently Matched)
+        </option>`;
+    }
+
+    // Group alternates by category
+    const recommended = alternates.filter(opt => opt.category === 'recommended');
+    const compatible = alternates.filter(opt => opt.category === 'compatible');
+    const incompatible = alternates.filter(opt => opt.category === 'incompatible');
+
+    // Recommended templates
+    if (recommended.length > 0) {
+        optionsHtml += '<optgroup label="⭐ Recommended">';
+        recommended.forEach(opt => {
+            optionsHtml += `<option value="${opt.template.id}" data-category="recommended">
+                ${escapeHtml(opt.template.name)}
+            </option>`;
+        });
+        optionsHtml += '</optgroup>';
+    }
+
+    // Compatible templates
+    if (compatible.length > 0) {
+        optionsHtml += '<optgroup label="✓ Compatible">';
+        compatible.forEach(opt => {
+            optionsHtml += `<option value="${opt.template.id}" data-category="compatible">
+                ${escapeHtml(opt.template.name)}
+            </option>`;
+        });
+        optionsHtml += '</optgroup>';
+    }
+
+    // Incompatible templates (with warning)
+    if (incompatible.length > 0) {
+        optionsHtml += '<optgroup label="⚠ Not Recommended">';
+        incompatible.forEach(opt => {
+            optionsHtml += `<option value="${opt.template.id}" data-category="incompatible">
+                ${escapeHtml(opt.template.name)}
+            </option>`;
+        });
+        optionsHtml += '</optgroup>';
+    }
+
+    return optionsHtml;
+}
+
+/**
+ * Gets the selected template for a device from the dropdown
+ * Falls back to matched template if selector not found
+ */
+function getSelectedTemplateForDevice(deviceIndex, exportData) {
+    const selector = document.querySelector(`.device-template-selector[data-device-index="${deviceIndex}"]`);
+    if (!selector) {
+        console.warn(`[Bulk Export] Template selector not found for device index ${deviceIndex}, using matched template`);
+        return exportData.matchedTemplate;
+    }
+
+    const selectedTemplateId = parseInt(selector.value);
+
+    // Check if it's the matched template
+    if (selectedTemplateId === exportData.matchedTemplate.id) {
+        return exportData.matchedTemplate;
+    }
+
+    // Search in alternates
+    const alternates = exportData.alternateTemplates || [];
+    const alternateOption = alternates.find(opt => opt.template.id === selectedTemplateId);
+
+    if (alternateOption) {
+        return alternateOption.template;
+    }
+
+    // Fallback to matched template if not found
+    console.warn(`[Bulk Export] Selected template ${selectedTemplateId} not found, using matched template`);
+    return exportData.matchedTemplate;
+}
+
+/**
+ * Applies the selected template to all devices
+ */
+function applyTemplateToAll() {
+    const applyAllSelector = document.getElementById('applyAllTemplateSelector');
+    const selectedTemplateId = applyAllSelector?.value;
+
+    if (!selectedTemplateId) {
+        alert('Please select a template to apply.');
+        return;
+    }
+
+    // Find all device template selectors
+    const deviceSelectors = document.querySelectorAll('.device-template-selector');
+
+    // Try to set each device selector to the selected template
+    let appliedCount = 0;
+    let notFoundCount = 0;
+
+    deviceSelectors.forEach(selector => {
+        // Check if this template exists in the dropdown options
+        const option = selector.querySelector(`option[value="${selectedTemplateId}"]`);
+
+        if (option) {
+            selector.value = selectedTemplateId;
+            appliedCount++;
+        } else {
+            notFoundCount++;
+        }
+    });
+
+    // Show feedback
+    if (appliedCount > 0) {
+        const message = notFoundCount > 0
+            ? `Applied template to ${appliedCount} device(s). Template not available for ${notFoundCount} device(s).`
+            : `Applied template to all ${appliedCount} device(s).`;
+
+        showNotification(message, 'success');
+    } else {
+        showNotification('Selected template is not compatible with any device.', 'error');
+    }
 }
 
 /**
@@ -412,8 +717,11 @@ function validateStickersForPageSize(exportDataList, pageSizeName) {
     const usableHeight = pageSize.height - (2 * verticalMarginMm);
 
     // Check each template (match server-side dual-orientation validation)
-    for (const exportData of exportDataList) {
-        const template = exportData.matchedTemplate;
+    for (let i = 0; i < exportDataList.length; i++) {
+        const exportData = exportDataList[i];
+
+        // Get selected template from dropdown (or matched template as fallback)
+        const template = getSelectedTemplateForDevice(i, exportData);
         if (!template) continue;
 
         const stickerWidth = template.pageWidth;
@@ -496,12 +804,15 @@ async function exportBulkAsPdf(selected, exportDataList, dpi, background) {
         updateProgress(i + 1, selected.length, device.name);
 
         try {
+            // Get selected template from dropdown (or matched template as fallback)
+            const selectedTemplate = getSelectedTemplateForDevice(i, exportData);
+
             // Create device data map
             const deviceDataMap = createDeviceDataMap(exportData);
 
             // Render device to blob (PNG only for PDF)
             const blob = await renderDeviceToBlob(
-                exportData.matchedTemplate,
+                selectedTemplate,
                 deviceDataMap,
                 'png',
                 { dpi, background }
@@ -513,14 +824,14 @@ async function exportBulkAsPdf(selected, exportDataList, dpi, background) {
             // Collect image data
             images.push({
                 imageBase64: base64.split(',')[1], // Remove "data:image/png;base64," prefix
-                widthMm: exportData.matchedTemplate.pageWidth,
-                heightMm: exportData.matchedTemplate.pageHeight,
+                widthMm: selectedTemplate.pageWidth,
+                heightMm: selectedTemplate.pageHeight,
                 deviceName: device.name,
                 deviceSerial: device.serial
             });
 
             // Track usage (fire-and-forget)
-            trackUsage(exportData.matchedTemplate.id, exportData.matchedTemplate.templateJson);
+            trackUsage(selectedTemplate.id, selectedTemplate.templateJson);
 
         } catch (error) {
             console.error(`[PDF Export] Failed to render device ${device.name}:`, error);
@@ -593,6 +904,7 @@ async function startBulkExport() {
 
     // Hide options, show progress
     const modal = bulkExportState.bulkExportModal;
+    modal.querySelector('.apply-all-section').style.display = 'none'; // Hide quick apply section during export
     modal.querySelector('.export-options-section').style.display = 'none';
     modal.querySelector('.selected-devices-section').style.display = 'none';
     modal.querySelector('#exportProgressSection').style.display = 'block';
@@ -623,12 +935,15 @@ async function startBulkExport() {
         updateProgress(i + 1, selected.length, device.name);
 
         try {
+            // Get selected template from dropdown (or matched template as fallback)
+            const selectedTemplate = getSelectedTemplateForDevice(i, exportData);
+
             // Create device data map
             const deviceDataMap = createDeviceDataMap(exportData);
 
             // Render device to blob
             const blob = await renderDeviceToBlob(
-                exportData.matchedTemplate,
+                selectedTemplate,
                 deviceDataMap,
                 format.includes('png') ? 'png' : 'svg',
                 { dpi, background }
@@ -642,7 +957,7 @@ async function startBulkExport() {
             exportedFiles.push(filename);
 
             // Track usage (fire-and-forget)
-            trackUsage(exportData.matchedTemplate.id, exportData.matchedTemplate.templateJson);
+            trackUsage(selectedTemplate.id, selectedTemplate.templateJson);
 
         } catch (error) {
             console.error(`[Bulk Export] Failed to export device ${device.name}:`, error);

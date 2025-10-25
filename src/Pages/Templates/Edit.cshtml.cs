@@ -28,6 +28,9 @@ public class EditModel : PageModel
     [BindProperty]
     public string? Description { get; set; }
 
+    [BindProperty]
+    public List<string>? CompatibleProductTypes { get; set; }
+
     // Read-only properties (cannot be edited)
     public int ConnectionId { get; set; }
     public string ConnectionDisplayName { get; set; } = null!;
@@ -78,6 +81,7 @@ public class EditModel : PageModel
         Id = template.Id;
         Name = template.Name;
         Description = template.Description;
+        CompatibleProductTypes = template.GetCompatibleProductTypes();
 
         // Read-only display values
         ConnectionId = template.ConnectionId.Value;
@@ -147,6 +151,7 @@ public class EditModel : PageModel
         // Update editable properties only
         template.Name = Name;
         template.Description = Description;
+        template.SetCompatibleProductTypes(CompatibleProductTypes);
         template.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();

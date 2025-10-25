@@ -107,6 +107,16 @@
         color: #666;
     }
 
+    .badge-product-type {
+        background: #e8f5e9;
+        color: #2e7d32;
+    }
+
+    .badge-universal {
+        background: #fff3e0;
+        color: #e65100;
+    }
+
     .template-description {
         color: #666;
         font-size: 14px;
@@ -267,6 +277,21 @@ else
                         <span class="badge badge-system">System</span>
                     }
                     <span class="badge badge-dimensions">@(template.PageWidth)×@(template.PageHeight)mm</span>
+
+                    @{
+                        var compatibleTypes = template.GetCompatibleProductTypes();
+                        if (compatibleTypes == null)
+                        {
+                            <span class="badge badge-universal" title="Compatible with all device types">Universal</span>
+                        }
+                        else if (compatibleTypes.Count > 0)
+                        {
+                            foreach (var productType in compatibleTypes)
+                            {
+                                <span class="badge badge-product-type">@productType</span>
+                            }
+                        }
+                    }
                 </div>
 
                 <div class="template-description">
