@@ -138,12 +138,28 @@ async function openBulkExportModal() {
     modalBody.innerHTML = '<div style="padding: 40px; text-align: center;">Loading device information...</div>';
 
     try {
-        // Fetch template matches for all devices
-        const exportDataPromises = selected.map(device =>
-            fetchDeviceExportData(device.id, device.connectionId)
-        );
+        // Fetch template matches for all devices using bulk endpoint
+        const response = await fetch('/api/export/bulk-devices', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                deviceIds: selected.map(d => d.id),
+                connectionId: selected[0].connectionId // All devices from same connection
+            })
+        });
 
-        const exportDataResults = await Promise.all(exportDataPromises);
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || `API error ${response.status}`);
+        }
+
+        const bulkData = await response.json();
+
+        // Transform reference-based data to current structure
+        const exportDataResults = transformBulkData(bulkData.data, selected);
         bulkExportState.currentExportData = exportDataResults;
 
         // Render modal content
@@ -162,7 +178,84 @@ async function openBulkExportModal() {
 }
 
 /**
+ * Transforms reference-based bulk data into the format expected by the rest of the application
+ * Resolves template/network/org references to full objects
+ */
+function transformBulkData(bulkData, selectedDevices) {
+    const { devices, templates, networks, organizations, connection, globalVariables, uploadedImages, templateOptions } = bulkData;
+
+    return selectedDevices.map(selectedDevice => {
+        const device = devices[selectedDevice.id];
+        if (!device) {
+            console.warn(`[Bulk Export] Device ${selectedDevice.id} not found in bulk data`);
+            return null;
+        }
+
+        const matchedTemplate = templates[device.matchedTemplateRef];
+
+        // Resolve network reference to full object
+        let network = null;
+        if (device.networkRef && networks[device.networkRef]) {
+            const networkData = networks[device.networkRef];
+            network = {
+                id: networkData.id,
+                networkId: networkData.networkId,
+                name: networkData.name,
+                organizationId: networkData.organizationRef ? parseInt(networkData.organizationRef.replace('org_', '')) : null,
+                qrCode: networkData.qrCode
+            };
+        }
+
+        // Resolve organization reference to full object
+        let organization = null;
+        if (network && networks[device.networkRef]?.organizationRef) {
+            const orgRef = networks[device.networkRef].organizationRef;
+            if (organizations[orgRef]) {
+                const orgData = organizations[orgRef];
+                organization = {
+                    id: orgData.id,
+                    organizationId: orgData.organizationId,
+                    name: orgData.name,
+                    url: orgData.url,
+                    qrCode: orgData.qrCode
+                };
+            }
+        }
+
+        // Build alternate templates array
+        const alternateTemplates = (templateOptions[device.id] || []).map(opt => ({
+            template: templates[opt.templateRef],
+            category: opt.category,
+            isRecommended: opt.category === 'recommended',
+            isCompatible: opt.category !== 'incompatible',
+            compatibilityNote: opt.compatibilityNote
+        }));
+
+        return {
+            device: {
+                id: device.id,
+                name: device.name,
+                serial: device.serial,
+                model: device.model,
+                productType: device.productType,
+                networkId: device.networkId,
+                connectionId: device.connectionId,
+                qrCode: device.qrCode
+            },
+            network,
+            organization,
+            connection,
+            globalVariables,
+            uploadedImages: Object.values(uploadedImages),
+            matchedTemplate,
+            alternateTemplates
+        };
+    }).filter(result => result !== null); // Remove any null entries
+}
+
+/**
  * Fetches device export data from API with alternate templates
+ * NOTE: This function is now deprecated in favor of bulk endpoint
  */
 async function fetchDeviceExportData(deviceId, connectionId) {
     const response = await fetch(`/api/export/device/${deviceId}?connectionId=${connectionId}&includeAlternates=true`, {

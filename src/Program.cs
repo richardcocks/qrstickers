@@ -335,15 +335,16 @@ app.MapGet("/api/templates/match", async (
     }
 }).RequireAuthorization();
 
-// Bulk export template selection endpoint (Phase 6)
-app.MapGet("/api/templates/for-bulk-export", async (
-    [FromQuery] int[] deviceIds,
-    [FromQuery] int connectionId,
+// Bulk device export data endpoint (Phase 6.1 - Performance Optimization)
+// Fetches export data for multiple devices in a single request with reference-based deduplication
+app.MapPost("/api/export/bulk-devices", async (
+    [FromBody] BulkDeviceExportRequest request,
     HttpContext httpContext,
     QRStickersDbContext db,
     TemplateMatchingService templateMatcher,
     TemplateService templateService,
-    UserManager<ApplicationUser> userManager) =>
+    UserManager<ApplicationUser> userManager,
+    ILogger<Program> logger) =>
 {
     try
     {
@@ -351,74 +352,105 @@ app.MapGet("/api/templates/for-bulk-export", async (
         if (user == null)
             return Results.Unauthorized();
 
-        if (deviceIds == null || deviceIds.Length == 0)
+        // Validate request
+        if (request.DeviceIds == null || request.DeviceIds.Length == 0)
             return Results.BadRequest(new { error = "No device IDs provided" });
+
+        if (request.DeviceIds.Length > 100)
+            return Results.BadRequest(new { error = "Maximum 100 devices per request" });
+
+        logger.LogInformation($"[Bulk Export] Fetching data for {request.DeviceIds.Length} devices, connection {request.ConnectionId}");
 
         // Verify connection ownership
         var connection = await db.Connections
-            .FirstOrDefaultAsync(c => c.Id == connectionId && c.UserId == user.Id);
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == request.ConnectionId && c.UserId == user.Id);
 
         if (connection == null)
             return Results.NotFound(new { error = "Connection not found or access denied" });
 
-        // Fetch all devices
+        // Fetch all devices in a single query with eager loading
         var devices = await db.CachedDevices
-            .Where(d => deviceIds.Contains(d.Id) && d.ConnectionId == connectionId)
+            .AsNoTracking()
+            .Where(d => request.DeviceIds.Contains(d.Id) && d.ConnectionId == request.ConnectionId)
             .ToListAsync();
 
-        if (devices.Count != deviceIds.Length)
-            return Results.NotFound(new { error = "Some devices not found or not owned by user" });
+        if (devices.Count != request.DeviceIds.Length)
+            return Results.NotFound(new { error = "Some devices not found or not owned by connection" });
 
-        // Build template options for each device
-        var result = new Dictionary<int, object>();
-
+        // Fetch template matches for all devices
+        var templateMatches = new Dictionary<int, TemplateMatchResult>();
         foreach (var device in devices)
         {
-            // Get matched template
-            var matchResult = await templateMatcher.FindTemplateForDeviceAsync(device, user);
-
-            // Get alternates if device has ProductType
-            object[] alternates = Array.Empty<object>();
-            if (!string.IsNullOrEmpty(device.ProductType))
-            {
-                var filterResult = await templateService.GetTemplatesForExportAsync(
-                    connectionId,
-                    device.ProductType
-                );
-
-                alternates = BuildTemplateOptionsArray(filterResult, matchResult.Template.Id);
-            }
-
-            result[device.Id] = new
-            {
-                deviceId = device.Id,
-                deviceName = device.Name,
-                productType = device.ProductType ?? "unknown",
-                matchedTemplate = new
-                {
-                    id = matchResult.Template.Id,
-                    name = matchResult.Template.Name,
-                    templateJson = matchResult.Template.TemplateJson,
-                    pageWidth = matchResult.Template.PageWidth,
-                    pageHeight = matchResult.Template.PageHeight
-                },
-                alternateTemplates = alternates
-            };
+            var match = await templateMatcher.FindTemplateForDeviceAsync(device, user);
+            templateMatches[device.Id] = match;
         }
+
+        // Group devices by ProductType and fetch templates once per type
+        var devicesByProductType = devices
+            .Where(d => !string.IsNullOrEmpty(d.ProductType))
+            .GroupBy(d => d.ProductType!)
+            .ToList();
+
+        var templatesByProductType = new Dictionary<string, TemplateFilterResult>();
+        foreach (var group in devicesByProductType)
+        {
+            var filterResult = await templateService.GetTemplatesForExportAsync(
+                request.ConnectionId,
+                group.Key
+            );
+            templatesByProductType[group.Key] = filterResult;
+        }
+
+        // Fetch networks and organizations in bulk
+        var networkIds = devices.Select(d => d.NetworkId).Distinct().ToList();
+        var networks = await db.CachedNetworks
+            .AsNoTracking()
+            .Where(n => networkIds.Contains(n.NetworkId) && n.ConnectionId == request.ConnectionId)
+            .ToListAsync();
+
+        var orgIds = networks.Select(n => n.OrganizationId).Distinct().ToList();
+        var organizations = await db.CachedOrganizations
+            .AsNoTracking()
+            .Where(o => orgIds.Contains(o.OrganizationId) && o.ConnectionId == request.ConnectionId)
+            .ToListAsync();
+
+        // Fetch global variables
+        var globalVariables = await db.GlobalVariables
+            .AsNoTracking()
+            .Where(gv => gv.ConnectionId == request.ConnectionId)
+            .ToDictionaryAsync(gv => gv.VariableName, gv => gv.VariableValue);
+
+        // Fetch uploaded images
+        var uploadedImages = await db.UploadedImages
+            .AsNoTracking()
+            .Where(i => i.ConnectionId == request.ConnectionId && !i.IsDeleted)
+            .ToListAsync();
+
+        // Build reference-based response
+        var response = BuildBulkExportResponse(
+            devices,
+            templateMatches,
+            templatesByProductType,
+            networks,
+            organizations,
+            connection,
+            globalVariables,
+            uploadedImages
+        );
+
+        logger.LogInformation($"[Bulk Export] Successfully prepared data for {devices.Count} devices");
 
         return Results.Ok(new
         {
             success = true,
-            data = result
+            data = response
         });
-    }
-    catch (UnauthorizedAccessException)
-    {
-        return Results.Forbid();
     }
     catch (Exception ex)
     {
-        return Results.StatusCode(500);
+        logger.LogError(ex, "[Bulk Export] Error fetching bulk device data: {ErrorMessage}", ex.Message);
+        return Results.Json(new { success = false, error = ex.Message }, statusCode: 500);
     }
 }).RequireAuthorization();
 
@@ -768,6 +800,219 @@ static object[] BuildTemplateOptionsArray(TemplateFilterResult filterResult, int
     }
 
     return options.ToArray();
+}
+
+/// <summary>
+/// Builds a reference-based bulk export response with deduplicated templates and shared data
+/// </summary>
+static object BuildBulkExportResponse(
+    List<CachedDevice> devices,
+    Dictionary<int, TemplateMatchResult> templateMatches,
+    Dictionary<string, TemplateFilterResult> templatesByProductType,
+    List<CachedNetwork> networks,
+    List<CachedOrganization> organizations,
+    Connection connection,
+    Dictionary<string, string> globalVariables,
+    List<UploadedImage> uploadedImages)
+{
+    // Build unique template dictionary
+    var templateDict = new Dictionary<int, object>();
+    var networkDict = new Dictionary<string, object>();
+    var orgDict = new Dictionary<string, object>();
+    var imageDict = new Dictionary<int, object>();
+
+    // Add all matched templates
+    foreach (var match in templateMatches.Values)
+    {
+        AddTemplateIfNotExists(templateDict, match.Template);
+    }
+
+    // Add all alternate templates (avoiding duplicates)
+    foreach (var filterResult in templatesByProductType.Values)
+    {
+        AddTemplateIfNotExists(templateDict, filterResult.RecommendedTemplate);
+
+        if (filterResult.CompatibleTemplates != null)
+        {
+            foreach (var t in filterResult.CompatibleTemplates)
+                AddTemplateIfNotExists(templateDict, t);
+        }
+
+        if (filterResult.IncompatibleTemplates != null)
+        {
+            foreach (var t in filterResult.IncompatibleTemplates)
+                AddTemplateIfNotExists(templateDict, t);
+        }
+    }
+
+    // Build network dictionary
+    foreach (var network in networks)
+    {
+        var networkRef = $"net_{network.Id}";
+        if (!networkDict.ContainsKey(networkRef))
+        {
+            networkDict[networkRef] = new
+            {
+                id = network.Id,
+                networkId = network.NetworkId,
+                name = network.Name,
+                organizationRef = $"org_{network.OrganizationId}",
+                qrCode = network.QRCodeDataUri
+            };
+        }
+    }
+
+    // Build organization dictionary
+    foreach (var org in organizations)
+    {
+        var orgRef = $"org_{org.Id}";
+        if (!orgDict.ContainsKey(orgRef))
+        {
+            orgDict[orgRef] = new
+            {
+                id = org.Id,
+                organizationId = org.OrganizationId,
+                name = org.Name,
+                url = org.Url,
+                qrCode = org.QRCodeDataUri
+            };
+        }
+    }
+
+    // Build image dictionary
+    foreach (var img in uploadedImages)
+    {
+        imageDict[img.Id] = new
+        {
+            id = img.Id,
+            name = img.Name,
+            dataUri = img.DataUri,
+            widthPx = img.WidthPx,
+            heightPx = img.HeightPx
+        };
+    }
+
+    // Build device dictionary with references
+    var deviceDict = new Dictionary<int, object>();
+    var templateOptionsDict = new Dictionary<int, object[]>();
+
+    foreach (var device in devices)
+    {
+        var matchedTemplate = templateMatches[device.Id].Template;
+        var matchedTemplateRef = $"tpl_{matchedTemplate.Id}";
+
+        // Find network for this device
+        var network = networks.FirstOrDefault(n => n.NetworkId == device.NetworkId);
+        var networkRef = network != null ? $"net_{network.Id}" : null;
+
+        deviceDict[device.Id] = new
+        {
+            id = device.Id,
+            name = device.Name,
+            serial = device.Serial,
+            model = device.Model,
+            productType = device.ProductType,
+            networkId = device.NetworkId,
+            connectionId = device.ConnectionId,
+            qrCode = device.QRCodeDataUri,
+            networkRef = networkRef,
+            matchedTemplateRef = matchedTemplateRef
+        };
+
+        // Build template options for this device
+        if (!string.IsNullOrEmpty(device.ProductType) &&
+            templatesByProductType.TryGetValue(device.ProductType, out var filterResult))
+        {
+            var options = new List<object>();
+
+            // Add recommended if different from matched
+            if (filterResult.RecommendedTemplate != null &&
+                filterResult.RecommendedTemplate.Id != matchedTemplate.Id)
+            {
+                options.Add(new
+                {
+                    templateRef = $"tpl_{filterResult.RecommendedTemplate.Id}",
+                    category = "recommended",
+                    compatibilityNote = "Default template for this device type"
+                });
+            }
+
+            // Add compatible templates
+            if (filterResult.CompatibleTemplates != null)
+            {
+                foreach (var t in filterResult.CompatibleTemplates)
+                {
+                    if (t.Id == matchedTemplate.Id) continue;
+                    options.Add(new
+                    {
+                        templateRef = $"tpl_{t.Id}",
+                        category = "compatible",
+                        compatibilityNote = "Compatible with this device type"
+                    });
+                }
+            }
+
+            // Add incompatible templates
+            if (filterResult.IncompatibleTemplates != null)
+            {
+                foreach (var t in filterResult.IncompatibleTemplates)
+                {
+                    options.Add(new
+                    {
+                        templateRef = $"tpl_{t.Id}",
+                        category = "incompatible",
+                        compatibilityNote = "Not designed for this device type"
+                    });
+                }
+            }
+
+            if (options.Count > 0)
+            {
+                templateOptionsDict[device.Id] = options.ToArray();
+            }
+        }
+    }
+
+    // Convert template dict to use "tpl_{id}" keys for consistency
+    var templateDictWithRefs = templateDict.ToDictionary(
+        kvp => $"tpl_{kvp.Key}",
+        kvp => kvp.Value
+    );
+
+    return new
+    {
+        devices = deviceDict,
+        templates = templateDictWithRefs,
+        networks = networkDict,
+        organizations = orgDict,
+        connection = new
+        {
+            id = connection.Id,
+            displayName = connection.DisplayName,
+            type = connection.GetType().Name
+        },
+        globalVariables = globalVariables,
+        uploadedImages = imageDict,
+        templateOptions = templateOptionsDict
+    };
+}
+
+/// <summary>
+/// Adds a template to the dictionary if it doesn't already exist
+/// </summary>
+static void AddTemplateIfNotExists(Dictionary<int, object> dict, StickerTemplate? template)
+{
+    if (template != null && !dict.ContainsKey(template.Id))
+    {
+        dict[template.Id] = new
+        {
+            id = template.Id,
+            name = template.Name,
+            templateJson = template.TemplateJson,
+            pageWidth = template.PageWidth,
+            pageHeight = template.PageHeight
+        };
+    }
 }
 
 app.Run();
