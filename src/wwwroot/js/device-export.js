@@ -756,3 +756,13 @@ if (document.readyState === 'loading') {
 } else {
     initDeviceExport();
 }
+
+// ESC key to close device export modal
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        if (deviceExportState.deviceExportModal &&
+            deviceExportState.deviceExportModal.style.display !== 'none') {
+            closeDeviceExportModal();
+        }
+    }
+});
