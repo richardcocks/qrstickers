@@ -210,23 +210,38 @@ Development history and implementation details for each phase.
 39. **[Phase 6 Progress Summary](Implementation/PHASE6_PROGRESS_SUMMARY.md)**
     - Phase 6 completion status
 
+### Architectural Improvements
+
+40. **[Controller Refactoring](Implementation/CONTROLLER_REFACTORING.md)** ⭐ **NEW**
+    - Migration from Minimal APIs to MVC Controllers
+    - 81% reduction in Program.cs size (1,025 → 195 lines)
+    - Improved code organization and testability
+    - Helper method extraction to services
+    - Complete endpoint mapping and testing guide
+
+41. **[Controller Quick Reference](CONTROLLER_QUICK_REFERENCE.md)** ⭐ **NEW**
+    - Quick reference guide for working with controllers
+    - Controller locations and routes
+    - Common patterns and examples
+    - Testing and debugging tips
+
 ---
 
 ## Security
 
-40. **[XSS Vulnerability Fixes](Security/SECURITY_FIX_XSS_VULNERABILITIES.md)**
+42. **[XSS Vulnerability Fixes](Security/SECURITY_FIX_XSS_VULNERABILITIES.md)**
     - Critical security fixes
     - XSS prevention measures
     - Input sanitization
 
-41. **[DoS Protection via String Length Constraints](Security/SECURITY_FIX_DOS_PROTECTION.md)**
+43. **[DoS Protection via String Length Constraints](Security/SECURITY_FIX_DOS_PROTECTION.md)**
     - String length constraint implementation
     - Defense in depth strategy
     - Database-level protection
     - Attack scenario mitigation
     - Configuration and monitoring
 
-42. **[Log Injection Protection](Security/SECURITY_FIX_LOG_INJECTION.md)**
+44. **[Log Injection Protection](Security/SECURITY_FIX_LOG_INJECTION.md)**
     - Log injection vulnerability fixes
     - LogSanitizer utility implementation
     - Input validation and sanitization

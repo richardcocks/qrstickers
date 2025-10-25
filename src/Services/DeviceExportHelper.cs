@@ -229,6 +229,295 @@ public class DeviceExportHelper
         _logger.LogInformation("[Export] Retrieved bulk export data for {DeviceCount} devices", contexts.Count);
         return contexts;
     }
+
+    /// <summary>
+    /// Builds an array of template options from filter result for API response
+    /// Used by export endpoints to provide alternate template options
+    /// </summary>
+    public static object[] BuildTemplateOptionsArray(TemplateFilterResult filterResult, int matchedTemplateId)
+    {
+        var options = new List<object>();
+
+        // Add recommended template (if different from matched)
+        if (filterResult.RecommendedTemplate != null &&
+            filterResult.RecommendedTemplate.Id != matchedTemplateId)
+        {
+            options.Add(new
+            {
+                template = new
+                {
+                    id = filterResult.RecommendedTemplate.Id,
+                    name = filterResult.RecommendedTemplate.Name,
+                    templateJson = filterResult.RecommendedTemplate.TemplateJson,
+                    pageWidth = filterResult.RecommendedTemplate.PageWidth,
+                    pageHeight = filterResult.RecommendedTemplate.PageHeight
+                },
+                category = "recommended",
+                isRecommended = true,
+                isCompatible = true,
+                compatibilityNote = "Default template for this device type"
+            });
+        }
+
+        // Add compatible templates
+        foreach (var template in filterResult.CompatibleTemplates)
+        {
+            if (template.Id == matchedTemplateId) continue; // Skip matched
+
+            options.Add(new
+            {
+                template = new
+                {
+                    id = template.Id,
+                    name = template.Name,
+                    templateJson = template.TemplateJson,
+                    pageWidth = template.PageWidth,
+                    pageHeight = template.PageHeight
+                },
+                category = "compatible",
+                isRecommended = false,
+                isCompatible = true,
+                compatibilityNote = "Compatible with this device type"
+            });
+        }
+
+        // Add incompatible templates (with warning)
+        foreach (var template in filterResult.IncompatibleTemplates)
+        {
+            options.Add(new
+            {
+                template = new
+                {
+                    id = template.Id,
+                    name = template.Name,
+                    templateJson = template.TemplateJson,
+                    pageWidth = template.PageWidth,
+                    pageHeight = template.PageHeight
+                },
+                category = "incompatible",
+                isRecommended = false,
+                isCompatible = false,
+                compatibilityNote = "Not designed for this device type"
+            });
+        }
+
+        return options.ToArray();
+    }
+
+    /// <summary>
+    /// Builds a reference-based bulk export response with deduplicated templates and shared data
+    /// Optimizes payload size by using reference keys instead of duplicating data
+    /// </summary>
+    public static object BuildBulkExportResponse(
+        List<CachedDevice> devices,
+        Dictionary<int, TemplateMatchResult> templateMatches,
+        Dictionary<string, TemplateFilterResult> templatesByProductType,
+        List<CachedNetwork> networks,
+        List<CachedOrganization> organizations,
+        Connection connection,
+        Dictionary<string, string> globalVariables,
+        List<UploadedImage> uploadedImages)
+    {
+        // Build unique template dictionary
+        var templateDict = new Dictionary<int, object>();
+        var networkDict = new Dictionary<string, object>();
+        var orgDict = new Dictionary<string, object>();
+        var imageDict = new Dictionary<int, object>();
+
+        // Add all matched templates
+        foreach (var match in templateMatches.Values)
+        {
+            AddTemplateIfNotExists(templateDict, match.Template);
+        }
+
+        // Add all alternate templates (avoiding duplicates)
+        foreach (var filterResult in templatesByProductType.Values)
+        {
+            AddTemplateIfNotExists(templateDict, filterResult.RecommendedTemplate);
+
+            if (filterResult.CompatibleTemplates != null)
+            {
+                foreach (var t in filterResult.CompatibleTemplates)
+                    AddTemplateIfNotExists(templateDict, t);
+            }
+
+            if (filterResult.IncompatibleTemplates != null)
+            {
+                foreach (var t in filterResult.IncompatibleTemplates)
+                    AddTemplateIfNotExists(templateDict, t);
+            }
+        }
+
+        // Build network dictionary
+        foreach (var network in networks)
+        {
+            var networkRef = $"net_{network.Id}";
+            if (!networkDict.ContainsKey(networkRef))
+            {
+                networkDict[networkRef] = new
+                {
+                    id = network.Id,
+                    networkId = network.NetworkId,
+                    name = network.Name,
+                    organizationRef = $"org_{network.OrganizationId}",
+                    qrCode = network.QRCodeDataUri
+                };
+            }
+        }
+
+        // Build organization dictionary
+        foreach (var org in organizations)
+        {
+            var orgRef = $"org_{org.Id}";
+            if (!orgDict.ContainsKey(orgRef))
+            {
+                orgDict[orgRef] = new
+                {
+                    id = org.Id,
+                    organizationId = org.OrganizationId,
+                    name = org.Name,
+                    url = org.Url,
+                    qrCode = org.QRCodeDataUri
+                };
+            }
+        }
+
+        // Build image dictionary
+        foreach (var img in uploadedImages)
+        {
+            imageDict[img.Id] = new
+            {
+                id = img.Id,
+                name = img.Name,
+                dataUri = img.DataUri,
+                widthPx = img.WidthPx,
+                heightPx = img.HeightPx
+            };
+        }
+
+        // Build device dictionary with references
+        var deviceDict = new Dictionary<int, object>();
+        var templateOptionsDict = new Dictionary<int, object[]>();
+
+        foreach (var device in devices)
+        {
+            var matchedTemplate = templateMatches[device.Id].Template;
+            var matchedTemplateRef = $"tpl_{matchedTemplate.Id}";
+
+            // Find network for this device
+            var network = networks.FirstOrDefault(n => n.NetworkId == device.NetworkId);
+            var networkRef = network != null ? $"net_{network.Id}" : null;
+
+            deviceDict[device.Id] = new
+            {
+                id = device.Id,
+                name = device.Name,
+                serial = device.Serial,
+                model = device.Model,
+                productType = device.ProductType,
+                networkId = device.NetworkId,
+                connectionId = device.ConnectionId,
+                qrCode = device.QRCodeDataUri,
+                networkRef = networkRef,
+                matchedTemplateRef = matchedTemplateRef
+            };
+
+            // Build template options for this device
+            if (!string.IsNullOrEmpty(device.ProductType) &&
+                templatesByProductType.TryGetValue(device.ProductType, out var filterResult))
+            {
+                var options = new List<object>();
+
+                // Add recommended if different from matched
+                if (filterResult.RecommendedTemplate != null &&
+                    filterResult.RecommendedTemplate.Id != matchedTemplate.Id)
+                {
+                    options.Add(new
+                    {
+                        templateRef = $"tpl_{filterResult.RecommendedTemplate.Id}",
+                        category = "recommended",
+                        compatibilityNote = "Default template for this device type"
+                    });
+                }
+
+                // Add compatible templates
+                if (filterResult.CompatibleTemplates != null)
+                {
+                    foreach (var t in filterResult.CompatibleTemplates)
+                    {
+                        if (t.Id == matchedTemplate.Id) continue;
+                        options.Add(new
+                        {
+                            templateRef = $"tpl_{t.Id}",
+                            category = "compatible",
+                            compatibilityNote = "Compatible with this device type"
+                        });
+                    }
+                }
+
+                // Add incompatible templates
+                if (filterResult.IncompatibleTemplates != null)
+                {
+                    foreach (var t in filterResult.IncompatibleTemplates)
+                    {
+                        options.Add(new
+                        {
+                            templateRef = $"tpl_{t.Id}",
+                            category = "incompatible",
+                            compatibilityNote = "Not designed for this device type"
+                        });
+                    }
+                }
+
+                if (options.Count > 0)
+                {
+                    templateOptionsDict[device.Id] = options.ToArray();
+                }
+            }
+        }
+
+        // Convert template dict to use "tpl_{id}" keys for consistency
+        var templateDictWithRefs = templateDict.ToDictionary(
+            kvp => $"tpl_{kvp.Key}",
+            kvp => kvp.Value
+        );
+
+        return new
+        {
+            devices = deviceDict,
+            templates = templateDictWithRefs,
+            networks = networkDict,
+            organizations = orgDict,
+            connection = new
+            {
+                id = connection.Id,
+                displayName = connection.DisplayName,
+                type = connection.GetType().Name
+            },
+            globalVariables = globalVariables,
+            uploadedImages = imageDict,
+            templateOptions = templateOptionsDict
+        };
+    }
+
+    /// <summary>
+    /// Adds a template to the dictionary if it doesn't already exist
+    /// Helper method for BuildBulkExportResponse
+    /// </summary>
+    private static void AddTemplateIfNotExists(Dictionary<int, object> dict, StickerTemplate? template)
+    {
+        if (template != null && !dict.ContainsKey(template.Id))
+        {
+            dict[template.Id] = new
+            {
+                id = template.Id,
+                name = template.Name,
+                templateJson = template.TemplateJson,
+                pageWidth = template.PageWidth,
+                pageHeight = template.PageHeight
+            };
+        }
+    }
 }
 
 /// <summary>
