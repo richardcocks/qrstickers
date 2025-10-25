@@ -150,6 +150,124 @@ public class TemplateMatchingService
 
         return templates;
     }
+
+    /// <summary>
+    /// Batch version of FindTemplateForDeviceAsync - optimized for bulk operations
+    /// Fetches connection defaults and templates once, then matches all devices in memory
+    /// </summary>
+    public async Task<Dictionary<int, TemplateMatchResult>> FindTemplatesForDevicesBatchAsync(
+        IEnumerable<CachedDevice> devices,
+        int connectionId,
+        ApplicationUser user)
+    {
+        var deviceList = devices.ToList();
+        if (!deviceList.Any())
+            return new Dictionary<int, TemplateMatchResult>();
+
+        _logger.LogInformation("[Template] Batch matching templates for {DeviceCount} devices", deviceList.Count);
+
+        // Fetch all connection defaults once
+        var connectionDefaults = await _db.ConnectionDefaultTemplates
+            .AsNoTracking()
+            .Include(d => d.Template)
+            .Where(d => d.ConnectionId == connectionId)
+            .Where(d => d.TemplateId != null)
+            .ToDictionaryAsync(
+                d => d.ProductType.ToLower(),
+                d => d.Template!
+            );
+
+        // Fetch all templates once (connection-specific + system)
+        var allTemplates = await _db.StickerTemplates
+            .AsNoTracking()
+            .Where(t => t.ConnectionId == connectionId || t.ConnectionId == null)
+            .ToListAsync();
+
+        // Match each device using cached data
+        var results = new Dictionary<int, TemplateMatchResult>();
+
+        foreach (var device in deviceList)
+        {
+            var result = MatchDeviceToTemplate(device, connectionDefaults, allTemplates);
+            results[device.Id] = result;
+        }
+
+        return results;
+    }
+
+    /// <summary>
+    /// Matches a single device to a template using pre-fetched data (in-memory matching)
+    /// </summary>
+    private TemplateMatchResult MatchDeviceToTemplate(
+        CachedDevice device,
+        Dictionary<string, StickerTemplate> connectionDefaults,
+        List<StickerTemplate> allTemplates)
+    {
+        // 1. Try connection default for this ProductType
+        if (!string.IsNullOrEmpty(device.ProductType) &&
+            connectionDefaults.TryGetValue(device.ProductType.ToLower(), out var defaultTemplate))
+        {
+            _logger.LogDebug("[Template] Matched device {DeviceId} to connection default: {TemplateName}",
+                device.Id, LogSanitizer.Sanitize(defaultTemplate.Name));
+
+            return new TemplateMatchResult
+            {
+                Template = defaultTemplate,
+                MatchReason = "connection_default",
+                Confidence = 1.0,
+                MatchedBy = device.ProductType
+            };
+        }
+
+        // 2. Try compatible templates
+        if (!string.IsNullOrEmpty(device.ProductType))
+        {
+            var compatibleTemplate = allTemplates
+                .FirstOrDefault(t => t.IsCompatibleWith(device.ProductType));
+
+            if (compatibleTemplate != null)
+            {
+                _logger.LogDebug("[Template] Matched device {DeviceId} to compatible template: {TemplateName}",
+                    device.Id, LogSanitizer.Sanitize(compatibleTemplate.Name));
+
+                return new TemplateMatchResult
+                {
+                    Template = compatibleTemplate,
+                    MatchReason = "compatible",
+                    Confidence = 0.6,
+                    MatchedBy = device.ProductType
+                };
+            }
+        }
+
+        // 3. Universal fallback
+        var fallbackTemplate = allTemplates
+            .OrderByDescending(t => t.IsSystemTemplate)
+            .FirstOrDefault();
+
+        if (fallbackTemplate != null)
+        {
+            var isCompatible = string.IsNullOrEmpty(device.ProductType) ||
+                fallbackTemplate.IsCompatibleWith(device.ProductType);
+
+            if (!isCompatible)
+            {
+                _logger.LogDebug("[Template] Matched device {DeviceId} to incompatible fallback: {TemplateName}",
+                    device.Id, LogSanitizer.Sanitize(fallbackTemplate.Name));
+            }
+
+            return new TemplateMatchResult
+            {
+                Template = fallbackTemplate,
+                MatchReason = isCompatible ? "fallback" : "fallback_incompatible",
+                Confidence = 0.1,
+                MatchedBy = "fallback"
+            };
+        }
+
+        _logger.LogError("[Template] No templates available for device {DeviceId}", device.Id);
+        throw new InvalidOperationException($"No templates available for device {device.Id}");
+    }
 }
 
 /// <summary>

@@ -459,4 +459,291 @@ public class TemplateMatchingServiceTests : IDisposable
         // Should return one of the compatible templates (whichever is found first)
         Assert.True(result.Template.Id == template1.Id || result.Template.Id == template2.Id);
     }
+
+    #region Batch Template Matching Tests
+
+    [Fact]
+    public async Task FindTemplatesForDevicesBatchAsync_WithConnectionDefaults_ReturnsCorrectTemplates()
+    {
+        // Arrange
+        var user = TestDataBuilder.CreateUser();
+        var connection = TestDataBuilder.CreateMerakiConnection(id: 1, userId: user.Id);
+
+        var switchTemplate = TestDataBuilder.CreateTemplate(id: 1, name: "Switch Template");
+        var wirelessTemplate = TestDataBuilder.CreateTemplate(id: 2, name: "Wireless Template");
+
+        var switchDefault = TestDataBuilder.CreateConnectionDefault(
+            id: 1, connectionId: connection.Id, productType: "switch", templateId: switchTemplate.Id);
+        var wirelessDefault = TestDataBuilder.CreateConnectionDefault(
+            id: 2, connectionId: connection.Id, productType: "wireless", templateId: wirelessTemplate.Id);
+
+        var devices = new List<CachedDevice>
+        {
+            TestDataBuilder.CreateDevice(id: 1, connectionId: connection.Id, serial: "Q1", productType: "switch"),
+            TestDataBuilder.CreateDevice(id: 2, connectionId: connection.Id, serial: "Q2", productType: "wireless"),
+            TestDataBuilder.CreateDevice(id: 3, connectionId: connection.Id, serial: "Q3", productType: "switch")
+        };
+
+        _dbContext.Users.Add(user);
+        _dbContext.Connections.Add(connection);
+        _dbContext.StickerTemplates.AddRange(switchTemplate, wirelessTemplate);
+        _dbContext.ConnectionDefaultTemplates.AddRange(switchDefault, wirelessDefault);
+        _dbContext.CachedDevices.AddRange(devices);
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        var results = await _service.FindTemplatesForDevicesBatchAsync(devices, connection.Id, user);
+
+        // Assert
+        Assert.Equal(3, results.Count);
+        Assert.Equal(switchTemplate.Id, results[1].Template.Id);
+        Assert.Equal(wirelessTemplate.Id, results[2].Template.Id);
+        Assert.Equal(switchTemplate.Id, results[3].Template.Id);
+        Assert.All(results.Values, r => Assert.Equal("connection_default", r.MatchReason));
+        Assert.All(results.Values, r => Assert.Equal(1.0, r.Confidence));
+    }
+
+    [Fact]
+    public async Task FindTemplatesForDevicesBatchAsync_TemplateDeduplication_ReturnsSameTemplateReference()
+    {
+        // Arrange
+        var user = TestDataBuilder.CreateUser();
+        var connection = TestDataBuilder.CreateMerakiConnection(id: 1, userId: user.Id);
+        var switchTemplate = TestDataBuilder.CreateTemplate(id: 1, name: "Switch Template");
+        var switchDefault = TestDataBuilder.CreateConnectionDefault(
+            connectionId: connection.Id, productType: "switch", templateId: switchTemplate.Id);
+
+        // Create 10 devices all with same ProductType
+        var devices = Enumerable.Range(1, 10)
+            .Select(i => TestDataBuilder.CreateDevice(
+                id: i,
+                connectionId: connection.Id,
+                serial: $"Q{i:D3}",
+                productType: "switch"))
+            .ToList();
+
+        _dbContext.Users.Add(user);
+        _dbContext.Connections.Add(connection);
+        _dbContext.StickerTemplates.Add(switchTemplate);
+        _dbContext.ConnectionDefaultTemplates.Add(switchDefault);
+        _dbContext.CachedDevices.AddRange(devices);
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        var results = await _service.FindTemplatesForDevicesBatchAsync(devices, connection.Id, user);
+
+        // Assert
+        Assert.Equal(10, results.Count);
+        var firstTemplate = results[1].Template;
+        Assert.All(results.Values, r => Assert.Same(firstTemplate, r.Template)); // Same reference
+        Assert.All(results.Values, r => Assert.Equal("connection_default", r.MatchReason));
+    }
+
+    [Fact]
+    public async Task FindTemplatesForDevicesBatchAsync_MixedProductTypes_MatchesCorrectly()
+    {
+        // Arrange
+        var user = TestDataBuilder.CreateUser();
+        var connection = TestDataBuilder.CreateMerakiConnection(id: 1, userId: user.Id);
+
+        var switchTemplate = TestDataBuilder.CreateTemplate(id: 1, name: "Switch Template");
+        switchTemplate.SetCompatibleProductTypes(new List<string> { "switch" });
+
+        var wirelessTemplate = TestDataBuilder.CreateTemplate(id: 2, name: "Wireless Template");
+        wirelessTemplate.SetCompatibleProductTypes(new List<string> { "wireless" });
+
+        var universalTemplate = TestDataBuilder.CreateTemplate(id: 3, name: "Universal Template", isSystemTemplate: true);
+        // No CompatibleProductTypes set = universal
+
+        var switchDefault = TestDataBuilder.CreateConnectionDefault(
+            connectionId: connection.Id, productType: "switch", templateId: switchTemplate.Id);
+
+        var devices = new List<CachedDevice>
+        {
+            TestDataBuilder.CreateDevice(id: 1, connectionId: connection.Id, serial: "S1", productType: "switch"), // Connection default
+            TestDataBuilder.CreateDevice(id: 2, connectionId: connection.Id, serial: "W1", productType: "wireless"), // Compatible
+            TestDataBuilder.CreateDevice(id: 3, connectionId: connection.Id, serial: "C1", productType: "camera"), // Fallback to universal
+            TestDataBuilder.CreateDevice(id: 4, connectionId: connection.Id, serial: "N1", productType: null) // Null ProductType
+        };
+
+        _dbContext.Users.Add(user);
+        _dbContext.Connections.Add(connection);
+        _dbContext.StickerTemplates.AddRange(switchTemplate, wirelessTemplate, universalTemplate);
+        _dbContext.ConnectionDefaultTemplates.Add(switchDefault);
+        _dbContext.CachedDevices.AddRange(devices);
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        var results = await _service.FindTemplatesForDevicesBatchAsync(devices, connection.Id, user);
+
+        // Assert
+        Assert.Equal(4, results.Count);
+
+        // Device 1: Switch with connection default
+        Assert.Equal(switchTemplate.Id, results[1].Template.Id);
+        Assert.Equal("connection_default", results[1].MatchReason);
+        Assert.Equal(1.0, results[1].Confidence);
+
+        // Device 2: Wireless with compatible template
+        Assert.Equal(wirelessTemplate.Id, results[2].Template.Id);
+        Assert.Equal("compatible", results[2].MatchReason);
+        Assert.Equal(0.6, results[2].Confidence);
+
+        // Device 3: Camera with universal fallback
+        Assert.Equal(universalTemplate.Id, results[3].Template.Id);
+        Assert.Equal("compatible", results[3].MatchReason); // Universal templates match as compatible
+        Assert.Equal(0.6, results[3].Confidence);
+
+        // Device 4: Null ProductType with universal fallback
+        Assert.Equal(universalTemplate.Id, results[4].Template.Id);
+        Assert.Equal("fallback", results[4].MatchReason);
+        Assert.Equal(0.1, results[4].Confidence);
+    }
+
+    [Fact]
+    public async Task FindTemplatesForDevicesBatchAsync_EmptyDeviceList_ReturnsEmptyDictionary()
+    {
+        // Arrange
+        var user = TestDataBuilder.CreateUser();
+        var connection = TestDataBuilder.CreateMerakiConnection(id: 1, userId: user.Id);
+        var devices = new List<CachedDevice>();
+
+        _dbContext.Users.Add(user);
+        _dbContext.Connections.Add(connection);
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        var results = await _service.FindTemplatesForDevicesBatchAsync(devices, connection.Id, user);
+
+        // Assert
+        Assert.NotNull(results);
+        Assert.Empty(results);
+    }
+
+    [Fact]
+    public async Task FindTemplatesForDevicesBatchAsync_NoTemplatesAvailable_ThrowsException()
+    {
+        // Arrange
+        var user = TestDataBuilder.CreateUser();
+        var connection = TestDataBuilder.CreateMerakiConnection(id: 1, userId: user.Id);
+        var devices = new List<CachedDevice>
+        {
+            TestDataBuilder.CreateDevice(id: 1, connectionId: connection.Id)
+        };
+
+        _dbContext.Users.Add(user);
+        _dbContext.Connections.Add(connection);
+        _dbContext.CachedDevices.AddRange(devices);
+        await _dbContext.SaveChangesAsync();
+        // No templates in database
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await _service.FindTemplatesForDevicesBatchAsync(devices, connection.Id, user));
+    }
+
+    [Fact]
+    public async Task FindTemplatesForDevicesBatchAsync_Performance50Devices_CompletesUnder500ms()
+    {
+        // Arrange
+        var user = TestDataBuilder.CreateUser();
+        var connection = TestDataBuilder.CreateMerakiConnection(id: 1, userId: user.Id);
+
+        var switchTemplate = TestDataBuilder.CreateTemplate(id: 1, name: "Switch Template");
+        var switchDefault = TestDataBuilder.CreateConnectionDefault(
+            connectionId: connection.Id, productType: "switch", templateId: switchTemplate.Id);
+
+        // Create 50 devices
+        var devices = Enumerable.Range(1, 50)
+            .Select(i => TestDataBuilder.CreateDevice(
+                id: i,
+                connectionId: connection.Id,
+                serial: $"Q{i:D3}",
+                productType: "switch"))
+            .ToList();
+
+        _dbContext.Users.Add(user);
+        _dbContext.Connections.Add(connection);
+        _dbContext.StickerTemplates.Add(switchTemplate);
+        _dbContext.ConnectionDefaultTemplates.Add(switchDefault);
+        _dbContext.CachedDevices.AddRange(devices);
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        var results = await _service.FindTemplatesForDevicesBatchAsync(devices, connection.Id, user);
+        stopwatch.Stop();
+
+        // Assert
+        Assert.Equal(50, results.Count);
+        Assert.True(stopwatch.ElapsedMilliseconds < 500,
+            $"Batch operation took {stopwatch.ElapsedMilliseconds}ms, expected < 500ms");
+    }
+
+    [Fact]
+    public async Task FindTemplatesForDevicesBatchAsync_CaseInsensitiveProductType_MatchesCorrectly()
+    {
+        // Arrange
+        var user = TestDataBuilder.CreateUser();
+        var connection = TestDataBuilder.CreateMerakiConnection(id: 1, userId: user.Id);
+        var switchTemplate = TestDataBuilder.CreateTemplate(id: 1, name: "Switch Template");
+        var switchDefault = TestDataBuilder.CreateConnectionDefault(
+            connectionId: connection.Id, productType: "switch", templateId: switchTemplate.Id); // lowercase
+
+        var devices = new List<CachedDevice>
+        {
+            TestDataBuilder.CreateDevice(id: 1, connectionId: connection.Id, serial: "Q1", productType: "SWITCH"), // UPPERCASE
+            TestDataBuilder.CreateDevice(id: 2, connectionId: connection.Id, serial: "Q2", productType: "Switch"), // Mixed case
+            TestDataBuilder.CreateDevice(id: 3, connectionId: connection.Id, serial: "Q3", productType: "switch")  // lowercase
+        };
+
+        _dbContext.Users.Add(user);
+        _dbContext.Connections.Add(connection);
+        _dbContext.StickerTemplates.Add(switchTemplate);
+        _dbContext.ConnectionDefaultTemplates.Add(switchDefault);
+        _dbContext.CachedDevices.AddRange(devices);
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        var results = await _service.FindTemplatesForDevicesBatchAsync(devices, connection.Id, user);
+
+        // Assert
+        Assert.Equal(3, results.Count);
+        Assert.All(results.Values, r => Assert.Equal(switchTemplate.Id, r.Template.Id));
+        Assert.All(results.Values, r => Assert.Equal("connection_default", r.MatchReason));
+    }
+
+    [Fact]
+    public async Task FindTemplatesForDevicesBatchAsync_IncompatibleTemplate_ReturnsFallbackIncompatible()
+    {
+        // Arrange
+        var user = TestDataBuilder.CreateUser();
+        var connection = TestDataBuilder.CreateMerakiConnection(id: 1, userId: user.Id);
+
+        var switchOnlyTemplate = TestDataBuilder.CreateTemplate(id: 1, name: "Switch Only Template", isSystemTemplate: true);
+        switchOnlyTemplate.SetCompatibleProductTypes(new List<string> { "switch" }); // Only compatible with switches
+
+        var devices = new List<CachedDevice>
+        {
+            TestDataBuilder.CreateDevice(id: 1, connectionId: connection.Id, serial: "W1", productType: "wireless"), // Incompatible
+            TestDataBuilder.CreateDevice(id: 2, connectionId: connection.Id, serial: "C1", productType: "camera")    // Incompatible
+        };
+
+        _dbContext.Users.Add(user);
+        _dbContext.Connections.Add(connection);
+        _dbContext.StickerTemplates.Add(switchOnlyTemplate);
+        _dbContext.CachedDevices.AddRange(devices);
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        var results = await _service.FindTemplatesForDevicesBatchAsync(devices, connection.Id, user);
+
+        // Assert
+        Assert.Equal(2, results.Count);
+        Assert.All(results.Values, r => Assert.Equal(switchOnlyTemplate.Id, r.Template.Id));
+        Assert.All(results.Values, r => Assert.Equal("fallback_incompatible", r.MatchReason));
+        Assert.All(results.Values, r => Assert.Equal(0.1, r.Confidence));
+    }
+
+    #endregion
 }

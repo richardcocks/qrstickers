@@ -378,13 +378,12 @@ app.MapPost("/api/export/bulk-devices", async (
         if (devices.Count != request.DeviceIds.Length)
             return Results.NotFound(new { error = "Some devices not found or not owned by connection" });
 
-        // Fetch template matches for all devices
-        var templateMatches = new Dictionary<int, TemplateMatchResult>();
-        foreach (var device in devices)
-        {
-            var match = await templateMatcher.FindTemplateForDeviceAsync(device, user);
-            templateMatches[device.Id] = match;
-        }
+        // Fetch template matches for all devices (batch optimized)
+        var templateMatches = await templateMatcher.FindTemplatesForDevicesBatchAsync(
+            devices,
+            request.ConnectionId,
+            user
+        );
 
         // Group devices by ProductType and fetch templates once per type
         var devicesByProductType = devices
