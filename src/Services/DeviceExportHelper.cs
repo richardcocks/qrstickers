@@ -575,7 +575,6 @@ public class DeviceExportContext
                 mac = string.Empty, // Not available in CachedDevice
                 model = Device.Model ?? string.Empty,
                 ipAddress = string.Empty, // Not available in CachedDevice
-                ipaddress = string.Empty, // Lowercase alias
                 type = DeriveDeviceType(Device.Model),
                 productType = Device.ProductType ?? string.Empty,
                 status = "synced", // Not available in CachedDevice

@@ -11,7 +11,7 @@ const PLACEHOLDER_VALUES = {
     'device.name': 'Example Switch',            // Descriptive name
     'device.mac': '00:1A:2B:3C:4D:5E',        // Valid MAC format
     'device.model': 'MS225-48FP',              // Actual Meraki model
-    'device.ipaddress': '192.168.1.10',        // Valid IP
+    'device.ipAddress': '192.168.1.10',        // Valid IP
     'device.tags': 'production, datacenter',   // Comma-separated
     'connection.name': 'Main Office',          // Business location
     'connection.displayname': 'HQ Network',    // User-friendly name

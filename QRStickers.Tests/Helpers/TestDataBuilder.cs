@@ -1,4 +1,5 @@
 using QRStickers.Meraki;
+using QRStickers.Services;
 
 namespace QRStickers.Tests.Helpers;
 
@@ -159,6 +160,88 @@ public static class TestDataBuilder
             Name = name,
             CreatedAt = DateTime.UtcNow,
             LastSyncedAt = DateTime.UtcNow
+        };
+    }
+
+    /// <summary>
+    /// Creates a test GlobalVariable
+    /// </summary>
+    public static GlobalVariable CreateGlobalVariable(
+        int id = 1,
+        int connectionId = 1,
+        string variableName = "company_name",
+        string variableValue = "Test Company")
+    {
+        return new GlobalVariable
+        {
+            Id = id,
+            ConnectionId = connectionId,
+            VariableName = variableName,
+            VariableValue = variableValue,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+    }
+
+    /// <summary>
+    /// Creates a test UploadedImage
+    /// </summary>
+    public static UploadedImage CreateUploadedImage(
+        int id = 1,
+        int connectionId = 1,
+        string name = "Test Image",
+        string dataUri = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+        int widthPx = 100,
+        int heightPx = 100,
+        bool isDeleted = false)
+    {
+        return new UploadedImage
+        {
+            Id = id,
+            ConnectionId = connectionId,
+            Name = name,
+            Description = "Test image description",
+            DataUri = dataUri,
+            WidthPx = widthPx,
+            HeightPx = heightPx,
+            MimeType = "image/png",
+            FileSizeBytes = 1024,
+            IsDeleted = isDeleted,
+            UploadedAt = DateTime.UtcNow
+        };
+    }
+
+    /// <summary>
+    /// Creates a test TemplateMatchResult
+    /// </summary>
+    public static TemplateMatchResult CreateTemplateMatchResult(
+        StickerTemplate? template = null,
+        string matchReason = "connection_default",
+        double confidence = 1.0,
+        string matchedBy = "switch")
+    {
+        return new TemplateMatchResult
+        {
+            Template = template ?? CreateTemplate(),
+            MatchReason = matchReason,
+            Confidence = confidence,
+            MatchedBy = matchedBy
+        };
+    }
+
+    /// <summary>
+    /// Creates a test TemplateFilterResult
+    /// </summary>
+    public static TemplateFilterResult CreateTemplateFilterResult(
+        StickerTemplate? recommendedTemplate = null,
+        List<StickerTemplate>? compatibleTemplates = null,
+        List<StickerTemplate>? incompatibleTemplates = null)
+    {
+        return new TemplateFilterResult
+        {
+            RecommendedTemplate = recommendedTemplate,
+            CompatibleTemplates = compatibleTemplates ?? new List<StickerTemplate>(),
+            IncompatibleTemplates = incompatibleTemplates ?? new List<StickerTemplate>()
         };
     }
 }
