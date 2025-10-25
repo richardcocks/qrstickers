@@ -694,8 +694,6 @@ async function logExportToHistory(deviceId, templateId, format, options) {
                 templateId: templateId
             })
         });
-
-        console.log(`[Usage Tracking] Tracked usage: template ${templateId}, ${imageIds.length} images`);
     } catch (error) {
         console.warn('[Usage Tracking] Failed to track usage:', error);
         // Silent failure - don't block export
