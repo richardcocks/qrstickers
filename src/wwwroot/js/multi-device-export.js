@@ -1140,3 +1140,13 @@ function closeBulkExportModal() {
     bulkExportState.currentExportData = [];
     bulkExportState.exportCancelled = false;
 }
+
+// ESC key to close bulk export modal
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        if (bulkExportState.bulkExportModal &&
+            bulkExportState.bulkExportModal.style.display !== 'none') {
+            closeBulkExportModal();
+        }
+    }
+});

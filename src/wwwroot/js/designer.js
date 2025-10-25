@@ -1875,6 +1875,23 @@ function initExportModal() {
     // Modal overlay click to close
     document.getElementById('exportModalOverlay').addEventListener('click', closeExportModal);
 
+    // ESC key to close modals
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            // Check custom image selector modal first
+            if (customImageSelectorModal && customImageSelectorModal.style.display !== 'none') {
+                closeCustomImageSelector();
+                return;
+            }
+
+            // Check export modal
+            const modal = document.getElementById('exportModal');
+            if (modal && modal.style.display !== 'none') {
+                closeExportModal();
+            }
+        }
+    });
+
     // Format selection change
     document.querySelectorAll('input[name="exportFormat"]').forEach(input => {
         input.addEventListener('change', function() {
