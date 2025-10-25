@@ -4,46 +4,17 @@
  * Provides export functionality for network devices
  */
 
-// Import Fabric.js extensions (needed for export preview)
-import { QRCode, registerQRCodeClass } from '../../core/fabric/QRCodeObject';
-import {
-  createQRCode,
-  createQRCodePlaceholder,
-  createBoundText,
-  createTextObject,
-  createImagePlaceholder,
-  createRectangle,
-  createLine,
-} from '../../core/fabric/factories';
 import { mmToPx, pxToMm } from '../../utils/units';
 
-console.log('✅ Devices module loaded');
+console.log('✅ Devices module loaded (new implementation)');
 
-// Register QRCode class with Fabric.js
-registerQRCodeClass();
-
-// Expose functions globally for backwards compatibility
-// This allows existing device-export.js and export-preview.js to use these functions
-(window as any).QRCode = QRCode;
-(window as any).createQRCode = createQRCode;
-(window as any).createQRCodePlaceholder = createQRCodePlaceholder;
-(window as any).createBoundText = createBoundText;
-(window as any).createTextObject = createTextObject;
-(window as any).createImagePlaceholder = createImagePlaceholder;
-(window as any).createRectangle = createRectangle;
-(window as any).createLine = createLine;
+// Expose utilities globally for backwards compatibility
 (window as any).mmToPx = mmToPx;
 (window as any).pxToMm = pxToMm;
 
-console.log('🔧 Fabric.js extensions registered globally');
-
 export function initDevices(config?: any): void {
   console.log('📱 Devices initializing...', config);
-  console.log('📦 Available fabric extensions:', {
-    QRCode: typeof QRCode,
-    createQRCode: typeof createQRCode,
-    mmToPx: typeof mmToPx,
-  });
+  // TODO: Wire up device export functionality
 }
 
 // Auto-initialize on DOM ready
