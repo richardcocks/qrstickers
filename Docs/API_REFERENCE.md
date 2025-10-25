@@ -2,6 +2,28 @@
 
 This document describes all API endpoints available in the QRStickers application.
 
+## Architecture
+
+All API endpoints are implemented using **ASP.NET Core MVC Controllers** (not Minimal APIs), providing:
+- Clear separation of concerns
+- Dependency injection via constructor
+- Standard `IActionResult` return types
+- XML documentation comments for OpenAPI/Swagger
+- Attribute-based routing
+
+**Controllers:**
+- `DeviceExportController` - Device export operations
+- `TemplateController` - Template matching
+- `ExportController` - PDF generation
+- `UsageController` - Usage tracking
+- `ImageController` - Image management
+
+**Location:** All controllers are located in `src/Controllers/`
+
+For implementation details, see [Controller Refactoring Documentation](Implementation/CONTROLLER_REFACTORING.md).
+
+---
+
 ## Authentication
 
 Most API endpoints require authentication via ASP.NET Identity cookie-based authentication.
