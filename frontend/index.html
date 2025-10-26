@@ -248,6 +248,7 @@
                     <button class="danger" onclick="removeSelected()">🗑️ Delete Selected</button>
                     <button class="secondary" onclick="clearCanvas()">Clear All</button>
                     <button class="secondary" onclick="toggleGrid()">⊞ Toggle Grid</button>
+                    <button class="secondary" id="btn-snap-grid" onclick="toggleSnapToGrid()">☐ Snap to Grid</button>
                     <button class="secondary" onclick="resetView()">⊙ Reset View</button>
                 </div>
 
@@ -544,6 +545,23 @@
         window.toggleGrid = () => {
             const isVisible = designer.toggleGrid();
             showStatus(`Grid ${isVisible ? 'shown' : 'hidden'}`, 'success');
+        };
+
+        // Toggle snap to grid
+        window.toggleSnapToGrid = () => {
+            const isEnabled = designer.toggleSnapToGrid();
+            const btn = document.getElementById('btn-snap-grid');
+
+            // Update button visual state
+            if (isEnabled) {
+                btn.classList.add('active');
+                btn.textContent = '☑ Snap to Grid';
+            } else {
+                btn.classList.remove('active');
+                btn.textContent = '☐ Snap to Grid';
+            }
+
+            showStatus(`Snap to grid ${isEnabled ? 'enabled' : 'disabled'}`, 'success');
         };
 
         // Set tool mode
