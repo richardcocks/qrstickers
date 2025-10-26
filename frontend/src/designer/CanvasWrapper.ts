@@ -92,6 +92,14 @@ export class CanvasWrapper {
       evented: false,
       excludeFromExport: true,
       name: 'stickerBoundary',
+      lockMovementX: true,
+      lockMovementY: true,
+      lockRotation: true,
+      lockScalingX: true,
+      lockScalingY: true,
+      hasControls: false,
+      hasBorders: false,
+      hoverCursor: 'default',
     });
 
     this.fabricCanvas.add(this.boundaryRect);
@@ -741,9 +749,10 @@ export class CanvasWrapper {
    */
   private enableMouseWheelZoom(): void {
     const canvasElement = this.fabricCanvas.getElement();
-    if (!canvasElement || typeof canvasElement.addEventListener !== 'function') return;
+    const container = canvasElement?.parentElement;
+    if (!container || typeof container.addEventListener !== 'function') return;
 
-    canvasElement.addEventListener('wheel', this.handleMouseWheel.bind(this), { passive: false });
+    container.addEventListener('wheel', this.handleMouseWheel.bind(this), { passive: false });
   }
 
   /**
