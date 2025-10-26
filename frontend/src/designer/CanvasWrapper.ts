@@ -74,7 +74,7 @@ export class CanvasWrapper {
     });
 
     this.fabricCanvas.add(this.boundaryRect);
-    this.fabricCanvas.sendToBack(this.boundaryRect);
+    this.fabricCanvas.sendObjectToBack(this.boundaryRect);
   }
 
   /**
@@ -128,7 +128,7 @@ export class CanvasWrapper {
     const boundary = this.boundaryRect;
     this.fabricCanvas.clear();
     this.fabricCanvas.add(boundary);
-    this.fabricCanvas.sendToBack(boundary);
+    this.fabricCanvas.sendObjectToBack(boundary);
   }
 
   /**

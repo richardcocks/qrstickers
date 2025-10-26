@@ -15,7 +15,6 @@
     "format": "prettier --write \"src/**/*.ts\""
   },
   "devDependencies": {
-    "@types/fabric": "^5.3.10",
     "@types/jszip": "^3.4.0",
     "@vitest/ui": "^4.0.3",
     "eslint": "^9.38.0",

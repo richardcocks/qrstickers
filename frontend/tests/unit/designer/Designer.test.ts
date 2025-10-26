@@ -19,7 +19,7 @@ vi.mock('fabric', () => {
     this.clear = vi.fn();
     this.on = vi.fn();
     this.off = vi.fn();
-    this.sendToBack = vi.fn();
+    this.sendObjectToBack = vi.fn();
     return this;
   };
 
