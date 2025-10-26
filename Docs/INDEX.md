@@ -76,47 +76,56 @@ Complete documentation for the QRStickers application.
    - Data binding system
    - Export pipeline
 
+9. **[Infinite Canvas Architecture](INFINITE_CANVAS.md)** ⭐ **NEW**
+   - Infinite canvas pattern explained
+   - Viewport transform system
+   - Pan limits calculation
+   - Grid rendering with transforms
+   - Coordinate systems (logical vs viewport)
+   - Working with the canvas (adding objects, testing)
+   - Migration from 4x enlarged canvas architecture
+
 ### API Reference
 
-9. **[Public Endpoints](API_REFERENCE.md#public-endpoints)**
-   - QR code generation API
+10. **[Public Endpoints](API_REFERENCE.md#public-endpoints)**
+    - QR code generation API
 
-10. **[Template Management](API_REFERENCE.md#template-management-endpoints)**
+11. **[Template Management](API_REFERENCE.md#template-management-endpoints)**
     - List, create, update, delete templates
     - Track template usage
 
-11. **[Template Matching](API_REFERENCE.md#template-matching-endpoints)**
+12. **[Template Matching](API_REFERENCE.md#template-matching-endpoints)**
     - Match template to device
     - Get alternate templates
 
-12. **[Export Endpoints](API_REFERENCE.md#export-endpoints)**
+13. **[Export Endpoints](API_REFERENCE.md#export-endpoints)**
     - Export single device
     - Export multiple devices (bulk)
     - Progress tracking with SignalR
 
-13. **[Custom Images](API_REFERENCE.md#custom-image-endpoints)**
+14. **[Custom Images](API_REFERENCE.md#custom-image-endpoints)**
     - Upload, list, delete images
     - Usage tracking
 
-14. **[Global Variables](API_REFERENCE.md#global-variables-endpoints)**
+15. **[Global Variables](API_REFERENCE.md#global-variables-endpoints)**
     - Create custom template variables
     - Manage per-connection variables
 
 ### Deployment
 
-15. **[Azure Deployment](DEPLOYMENT.md)**
+16. **[Azure Deployment](DEPLOYMENT.md)**
     - Azure Service Connector setup (passwordless)
     - Manual connection string setup
     - Docker deployment
     - Azure Container Apps
     - GitHub Actions CI/CD
 
-16. **[Azure SQL Database](DEPLOYMENT.md#azure-sql-database-free-tier)**
+17. **[Azure SQL Database](DEPLOYMENT.md#azure-sql-database-free-tier)**
     - Free tier setup and limits
     - Monitoring usage
     - Cost management
 
-17. **[Troubleshooting Deployment](DEPLOYMENT.md#troubleshooting)**
+18. **[Troubleshooting Deployment](DEPLOYMENT.md#troubleshooting)**
     - Database connection issues
     - Migration problems
     - OAuth callback failures
@@ -130,96 +139,96 @@ Development history and implementation details for each phase.
 
 ### Phase 2: Template Designer
 
-18. **[Phase 2 Progress](Implementation/Phase2-Designer-Progress.md)**
+19. **[Phase 2 Progress](Implementation/Phase2-Designer-Progress.md)**
     - Initial template designer implementation
     - Fabric.js integration
     - Canvas rendering
 
 ### Phase 3: Template Management
 
-18. **[Phase 3 Planning](Implementation/Phase3-Template-Management-Plan.md)**
+20. **[Phase 3 Planning](Implementation/Phase3-Template-Management-Plan.md)**
     - Template management system design
 
-19. **[Phase 3 Progress](Implementation/Phase3-TemplateManagement-Progress.md)**
+21. **[Phase 3 Progress](Implementation/Phase3-TemplateManagement-Progress.md)**
     - Template CRUD operations
     - Template list UI
 
 ### Phase 4: Export & Preview
 
-20. **[Phase 4 Export Planning](Implementation/Phase4-Export-Planning.md)**
+22. **[Phase 4 Export Planning](Implementation/Phase4-Export-Planning.md)**
     - Export system architecture
 
-21. **[Phase 4 Template Preview Planning](Implementation/Phase4-TemplatePreview-Planning.md)**
+23. **[Phase 4 Template Preview Planning](Implementation/Phase4-TemplatePreview-Planning.md)**
     - Live preview implementation
 
-22. **[Phase 4 Implementation Summary](Implementation/PHASE4_IMPLEMENTATION_SUMMARY.md)**
+24. **[Phase 4 Implementation Summary](Implementation/PHASE4_IMPLEMENTATION_SUMMARY.md)**
     - Completed features summary
 
-23. **[Phase 4 Completion Notes](Implementation/PHASE4_COMPLETION_NOTES.md)**
+25. **[Phase 4 Completion Notes](Implementation/PHASE4_COMPLETION_NOTES.md)**
     - Final implementation details
 
 ### Phase 5: Device Export & Multi-Device Support
 
-24. **[Phase 5 Technical Spec](Implementation/Phase5-TechnicalSpec.md)**
+26. **[Phase 5 Technical Spec](Implementation/Phase5-TechnicalSpec.md)**
     - Technical requirements
 
-25. **[Phase 5 UX Design](Implementation/Phase5-UX-Design.md)**
+27. **[Phase 5 UX Design](Implementation/Phase5-UX-Design.md)**
     - User experience design
 
-26. **[QR Sticker Designer Plan](Implementation/QR-sticker-designer-plan.md)**
+28. **[QR Sticker Designer Plan](Implementation/QR-sticker-designer-plan.md)**
     - Original designer plan
 
-27. **[Phase 5 Completion Notes](Implementation/PHASE5_COMPLETION_NOTES.md)**
+29. **[Phase 5 Completion Notes](Implementation/PHASE5_COMPLETION_NOTES.md)**
     - Phase 5 wrap-up
 
-28. **[Phase 5 MVP Implementation](Implementation/PHASE5_MVP_IMPLEMENTATION.md)**
+30. **[Phase 5 MVP Implementation](Implementation/PHASE5_MVP_IMPLEMENTATION.md)**
     - Minimum viable product
 
-29. **[Phase 5 Device Export Planning](Implementation/Phase5-DeviceExport-Planning.md)**
+31. **[Phase 5 Device Export Planning](Implementation/Phase5-DeviceExport-Planning.md)**
     - Single device export design
 
-30. **[Phase 5.3 Multi-Device Export Plan](Implementation/Phase5.3-MultiDeviceExport-Plan.md)**
+32. **[Phase 5.3 Multi-Device Export Plan](Implementation/Phase5.3-MultiDeviceExport-Plan.md)**
     - Bulk export architecture
 
-31. **[Phase 5.3 Testing Notes](Implementation/Phase5.3-TestingNotes.md)**
+33. **[Phase 5.3 Testing Notes](Implementation/Phase5.3-TestingNotes.md)**
     - Testing results and bug fixes
 
-32. **[Phase 5.3 Completion Notes](Implementation/PHASE5.3_COMPLETION_NOTES.md)**
+34. **[Phase 5.3 Completion Notes](Implementation/PHASE5.3_COMPLETION_NOTES.md)**
     - Multi-device export completion
 
-33. **[Phase 5.5 PDF Export](Implementation/PHASE5.5_PDF_EXPORT.md)**
+35. **[Phase 5.5 PDF Export](Implementation/PHASE5.5_PDF_EXPORT.md)**
     - PDF export implementation
 
-34. **[Phase 5.7 QR Migration](Implementation/PHASE5.7_QR_MIGRATION.md)**
+36. **[Phase 5.7 QR Migration](Implementation/PHASE5.7_QR_MIGRATION.md)**
     - QR code data migration
 
-35. **[Phase 5.8 Bug Fixes](Implementation/PHASE5.8_BUG_FIXES.md)**
+37. **[Phase 5.8 Bug Fixes](Implementation/PHASE5.8_BUG_FIXES.md)**
     - Bug fixes from testing
 
 ### Phase 6: Custom Images & Advanced Features
 
-36. **[Phase 6 Custom Images Planning](Implementation/PHASE6_CUSTOM_IMAGES_PLANNING.md)**
+38. **[Phase 6 Custom Images Planning](Implementation/PHASE6_CUSTOM_IMAGES_PLANNING.md)**
     - Custom image upload system
 
-37. **[Phase 6.1 Implementation Notes](Implementation/PHASE6.1_IMPLEMENTATION_NOTES.md)**
+39. **[Phase 6.1 Implementation Notes](Implementation/PHASE6.1_IMPLEMENTATION_NOTES.md)**
     - Image processing service
 
-38. **[Phase 6.2 Designer Preview Fix](Implementation/PHASE6.2_DESIGNER_PREVIEW_FIX.md)**
+40. **[Phase 6.2 Designer Preview Fix](Implementation/PHASE6.2_DESIGNER_PREVIEW_FIX.md)**
     - Designer preview improvements
 
-39. **[Phase 6 Progress Summary](Implementation/PHASE6_PROGRESS_SUMMARY.md)**
+41. **[Phase 6 Progress Summary](Implementation/PHASE6_PROGRESS_SUMMARY.md)**
     - Phase 6 completion status
 
 ### Architectural Improvements
 
-40. **[Controller Refactoring](Implementation/CONTROLLER_REFACTORING.md)** ⭐ **NEW**
+42. **[Controller Refactoring](Implementation/CONTROLLER_REFACTORING.md)** ⭐ **NEW**
     - Migration from Minimal APIs to MVC Controllers
     - 81% reduction in Program.cs size (1,025 → 195 lines)
     - Improved code organization and testability
     - Helper method extraction to services
     - Complete endpoint mapping and testing guide
 
-41. **[Controller Quick Reference](CONTROLLER_QUICK_REFERENCE.md)** ⭐ **NEW**
+43. **[Controller Quick Reference](CONTROLLER_QUICK_REFERENCE.md)** ⭐ **NEW**
     - Quick reference guide for working with controllers
     - Controller locations and routes
     - Common patterns and examples
@@ -229,19 +238,19 @@ Development history and implementation details for each phase.
 
 ## Security
 
-42. **[XSS Vulnerability Fixes](Security/SECURITY_FIX_XSS_VULNERABILITIES.md)**
+44. **[XSS Vulnerability Fixes](Security/SECURITY_FIX_XSS_VULNERABILITIES.md)**
     - Critical security fixes
     - XSS prevention measures
     - Input sanitization
 
-43. **[DoS Protection via String Length Constraints](Security/SECURITY_FIX_DOS_PROTECTION.md)**
+45. **[DoS Protection via String Length Constraints](Security/SECURITY_FIX_DOS_PROTECTION.md)**
     - String length constraint implementation
     - Defense in depth strategy
     - Database-level protection
     - Attack scenario mitigation
     - Configuration and monitoring
 
-44. **[Log Injection Protection](Security/SECURITY_FIX_LOG_INJECTION.md)**
+46. **[Log Injection Protection](Security/SECURITY_FIX_LOG_INJECTION.md)**
     - Log injection vulnerability fixes
     - LogSanitizer utility implementation
     - Input validation and sanitization
@@ -281,4 +290,4 @@ This is a learning project for educational purposes.
 
 ---
 
-**Last Updated:** 2025-10-24
+**Last Updated:** 2025-10-26

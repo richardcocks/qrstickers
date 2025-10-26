@@ -302,6 +302,35 @@ Custom Objects (fabric-extensions.js)
 Template JSON (stored in StickerTemplate.TemplateJson)
 ```
 
+### Infinite Canvas Pattern
+
+**Location**: `frontend/src/designer/` (TypeScript library)
+
+The designer uses an **infinite canvas** pattern where:
+- Canvas size = visible container (800 x 600)
+- Sticker boundary at origin (0, 0) in logical space
+- Viewport transform handles all panning
+- Grid overlay renders dynamically based on viewport
+
+**Key Components:**
+
+- **CanvasWrapper** (`CanvasWrapper.ts`) - Fabric.js abstraction layer with viewport management
+- **Designer** (`Designer.ts`) - High-level API with undo/redo, clipboard, element management
+- **Element classes** (`elements/*.ts`) - Type-safe wrappers for QR codes, text, images, rectangles
+
+**Architecture Benefits:**
+- Simple, predictable viewport math
+- Correct pan limits (not inverted)
+- Matches professional design tool patterns (Figma, Sketch)
+- Maintainable and extensible
+
+**Tools:**
+- **Select tool** - Default mode for interacting with elements
+- **Pan tool** - Drag canvas to pan viewport (H key toggle)
+- **Reset View** - Snap viewport to center on sticker boundary
+
+For detailed technical documentation on the infinite canvas implementation, see [INFINITE_CANVAS.md](./INFINITE_CANVAS.md).
+
 ### Template Matching Algorithm
 
 The `TemplateMatchingService` uses a **6-level priority cascade**:
