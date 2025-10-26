@@ -3,7 +3,7 @@
  * Simple, clean API for canvas operations
  */
 
-import { Canvas, FabricObject, Rect, version as fabricVersion } from 'fabric';
+import { Canvas, FabricObject, version as fabricVersion } from 'fabric';
 import { mmToPx, pxToMm } from '../utils/units';
 
 export interface CanvasConfig {
@@ -18,7 +18,6 @@ export interface CanvasConfig {
 
 export class CanvasWrapper {
   private fabricCanvas: Canvas;
-  private boundaryRect: Rect;
   private gridVisible: boolean = true;
   private isPanningEnabled: boolean = false;
   private gridSpacingMm: number = 2.5;
@@ -78,34 +77,7 @@ export class CanvasWrapper {
     this.fabricCanvas.selectionBorderColor = '#1976d2';
     this.fabricCanvas.selectionLineWidth = 2;
 
-    // Create boundary rectangle
-    this.boundaryRect = new Rect({
-      left: this.boundaryLeft,
-      top: this.boundaryTop,
-      width: stickerWidthPx,
-      height: stickerHeightPx,
-      fill: 'white',
-      stroke: '#999',
-      strokeWidth: 2,
-      strokeDashArray: [10, 5],
-      selectable: false,
-      evented: false,
-      excludeFromExport: true,
-      name: 'stickerBoundary',
-      lockMovementX: true,
-      lockMovementY: true,
-      lockRotation: true,
-      lockScalingX: true,
-      lockScalingY: true,
-      hasControls: false,
-      hasBorders: false,
-      hoverCursor: 'default',
-    });
-
-    this.fabricCanvas.add(this.boundaryRect);
-    this.fabricCanvas.sendObjectToBack(this.boundaryRect);
-
-    // Set up grid rendering via after:render event
+    // Set up grid and boundary rendering via after:render event
     this.setupGridRendering();
 
     // Enable mouse wheel zoom
@@ -127,12 +99,10 @@ export class CanvasWrapper {
   }
 
   /**
-   * Get all objects on canvas (excluding boundary)
+   * Get all objects on canvas
    */
   getObjects(): FabricObject[] {
-    return this.fabricCanvas
-      .getObjects()
-      .filter((obj) => (obj as any).name !== 'stickerBoundary');
+    return this.fabricCanvas.getObjects();
   }
 
   /**
@@ -163,18 +133,14 @@ export class CanvasWrapper {
    */
   bringToFront(fabricObject: FabricObject): void {
     this.fabricCanvas.bringObjectToFront(fabricObject);
-    // Ensure boundary stays at back
-    this.fabricCanvas.sendObjectToBack(this.boundaryRect);
     this.fabricCanvas.requestRenderAll();
   }
 
   /**
-   * Send object to back (bottom layer, but above boundary)
+   * Send object to back (bottom layer)
    */
   sendToBack(fabricObject: FabricObject): void {
     this.fabricCanvas.sendObjectToBack(fabricObject);
-    // Ensure boundary stays at back
-    this.fabricCanvas.sendObjectToBack(this.boundaryRect);
     this.fabricCanvas.requestRenderAll();
   }
 
@@ -191,23 +157,14 @@ export class CanvasWrapper {
    */
   sendBackward(fabricObject: FabricObject): void {
     this.fabricCanvas.sendObjectBackwards(fabricObject);
-    // Ensure object doesn't go behind boundary
-    const boundaryIndex = this.fabricCanvas.getObjects().indexOf(this.boundaryRect);
-    const objectIndex = this.fabricCanvas.getObjects().indexOf(fabricObject);
-    if (objectIndex <= boundaryIndex) {
-      this.fabricCanvas.bringObjectForward(fabricObject);
-    }
     this.fabricCanvas.requestRenderAll();
   }
 
   /**
-   * Clear all objects (except boundary)
+   * Clear all objects
    */
   clear(): void {
-    const boundary = this.boundaryRect;
     this.fabricCanvas.clear();
-    this.fabricCanvas.add(boundary);
-    this.fabricCanvas.sendObjectToBack(boundary);
   }
 
   /**
@@ -330,11 +287,14 @@ export class CanvasWrapper {
   }
 
   /**
-   * Set up grid rendering via canvas overlay
-   * Grid is drawn on canvas context after Fabric.js renders
+   * Set up grid and boundary rendering via canvas overlay
+   * Both are drawn on canvas context after Fabric.js renders
    */
   private setupGridRendering(): void {
-    (this.fabricCanvas as any).on('after:render', () => this.renderGrid());
+    (this.fabricCanvas as any).on('after:render', () => {
+      this.renderBoundary();
+      this.renderGrid();
+    });
   }
 
   /**
@@ -394,6 +354,74 @@ export class CanvasWrapper {
     }
 
     ctx.globalAlpha = 1;
+  }
+
+  /**
+   * Render sticker boundary overlay (canvas overlay, non-interactive)
+   * Drawn on canvas context after Fabric.js renders, automatically respects zoom/pan
+   */
+  private renderBoundary(): void {
+    const ctx = this.fabricCanvas.getContext('2d');
+    if (!ctx) return;
+
+    // Get viewport transform (pan and zoom)
+    const vpt = this.fabricCanvas.viewportTransform;
+    if (!vpt) return;
+
+    const zoom = vpt[0]; // Scale factor
+    const panX = vpt[4]; // Pan X offset
+    const panY = vpt[5]; // Pan Y offset
+
+    const canvasWidth = this.fabricCanvas.width || 800;
+    const canvasHeight = this.fabricCanvas.height || 600;
+
+    ctx.save();
+
+    // Draw white background for sticker area (transformed to screen coords)
+    const screenLeft = this.boundaryLeft * zoom + panX;
+    const screenTop = this.boundaryTop * zoom + panY;
+    const screenWidth = this.stickerWidthPx * zoom;
+    const screenHeight = this.stickerHeightPx * zoom;
+
+    ctx.fillStyle = 'white';
+    ctx.fillRect(screenLeft, screenTop, screenWidth, screenHeight);
+
+    // Draw boundary lines extending full canvas dimensions
+    ctx.strokeStyle = '#cccccc';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([10, 5]);
+
+    // Calculate boundary edge positions in screen coordinates
+    const leftEdge = screenLeft;
+    const rightEdge = screenLeft + screenWidth;
+    const topEdge = screenTop;
+    const bottomEdge = screenTop + screenHeight;
+
+    // Vertical line at left edge (full canvas height)
+    ctx.beginPath();
+    ctx.moveTo(leftEdge, 0);
+    ctx.lineTo(leftEdge, canvasHeight);
+    ctx.stroke();
+
+    // Vertical line at right edge (full canvas height)
+    ctx.beginPath();
+    ctx.moveTo(rightEdge, 0);
+    ctx.lineTo(rightEdge, canvasHeight);
+    ctx.stroke();
+
+    // Horizontal line at top edge (full canvas width)
+    ctx.beginPath();
+    ctx.moveTo(0, topEdge);
+    ctx.lineTo(canvasWidth, topEdge);
+    ctx.stroke();
+
+    // Horizontal line at bottom edge (full canvas width)
+    ctx.beginPath();
+    ctx.moveTo(0, bottomEdge);
+    ctx.lineTo(canvasWidth, bottomEdge);
+    ctx.stroke();
+
+    ctx.restore();
   }
 
   /**
