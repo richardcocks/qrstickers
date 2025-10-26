@@ -15,10 +15,12 @@ import {
 import type { ElementData } from './elements';
 
 export type ElementType = 'qr' | 'text' | 'image' | 'rect';
+export type ToolMode = 'select' | 'pan';
 
 export interface DesignerConfig extends CanvasConfig {
   onSelectionChange?: (element: BaseElement | null) => void;
   onElementsChange?: () => void;
+  onToolChange?: (tool: ToolMode) => void;
 }
 
 export class Designer {
@@ -26,6 +28,7 @@ export class Designer {
   private elements: BaseElement[] = [];
   private selectedElement: BaseElement | null = null;
   private config: DesignerConfig;
+  private toolMode: ToolMode = 'select';
 
   // Undo/redo history - track states with an index
   private history: string[] = [];
@@ -366,6 +369,54 @@ export class Designer {
   }
 
   /**
+   * Toggle grid visibility
+   * @returns true if grid is now visible, false if hidden
+   */
+  toggleGrid(): boolean {
+    if (this.canvas.isGridVisible()) {
+      this.canvas.hideGrid();
+      return false;
+    } else {
+      this.canvas.showGrid();
+      return true;
+    }
+  }
+
+  /**
+   * Set the current tool mode (select or pan)
+   */
+  setTool(tool: ToolMode): void {
+    if (this.toolMode === tool) return;
+
+    this.toolMode = tool;
+
+    if (tool === 'pan') {
+      this.canvas.enablePanning();
+    } else {
+      this.canvas.disablePanning();
+    }
+
+    // Notify tool change
+    if (this.config.onToolChange) {
+      this.config.onToolChange(tool);
+    }
+  }
+
+  /**
+   * Get the current tool mode
+   */
+  getTool(): ToolMode {
+    return this.toolMode;
+  }
+
+  /**
+   * Reset view to center on sticker boundary
+   */
+  resetView(): void {
+    this.canvas.resetView();
+  }
+
+  /**
    * Get elements sorted by their canvas z-index (layer order)
    */
   private getElementsInCanvasOrder(): BaseElement[] {
@@ -430,6 +481,12 @@ export class Designer {
       else if (e.key === 'Escape') {
         e.preventDefault();
         this.deselectAll();
+      }
+      // Toggle tool: 'h' key for Hand/Pan tool
+      else if (e.key === 'h' || e.key === 'H') {
+        e.preventDefault();
+        const newTool = this.toolMode === 'select' ? 'pan' : 'select';
+        this.setTool(newTool);
       }
     });
   }

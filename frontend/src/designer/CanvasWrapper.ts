@@ -19,11 +19,22 @@ export interface CanvasConfig {
 export class CanvasWrapper {
   private fabricCanvas: Canvas;
   private boundaryRect: Rect;
+  private gridVisible: boolean = true;
+  private isPanningEnabled: boolean = false;
+  private gridSpacingMm: number = 2.5;
+  private lastPanX = 0;
+  private lastPanY = 0;
+  private isPanning = false;
+  private debug: boolean = true; // Set to false to disable debug logging
 
   public readonly widthMm: number;
   public readonly heightMm: number;
   public readonly boundaryLeft: number;
   public readonly boundaryTop: number;
+  public readonly canvasWidth: number;
+  public readonly canvasHeight: number;
+  public readonly stickerWidthPx: number;
+  public readonly stickerHeightPx: number;
 
   constructor(config: CanvasConfig) {
     this.widthMm = config.widthMm;
@@ -32,18 +43,23 @@ export class CanvasWrapper {
     // Calculate dimensions
     const stickerWidthPx = mmToPx(config.widthMm);
     const stickerHeightPx = mmToPx(config.heightMm);
-    const marginTop = config.marginTop ?? 100;
-    const marginLeft = config.marginLeft ?? 100;
-    const marginBottom = config.marginBottom ?? 500;
-    const marginRight = config.marginRight ?? 500;
 
-    const canvasWidth = stickerWidthPx + marginLeft + marginRight;
-    const canvasHeight = stickerHeightPx + marginTop + marginBottom;
+    this.stickerWidthPx = stickerWidthPx;
+    this.stickerHeightPx = stickerHeightPx;
 
-    this.boundaryLeft = marginLeft;
-    this.boundaryTop = marginTop;
+    // For infinite canvas, canvas size matches visible container
+    // Get container element to determine canvas dimensions
+    const containerEl = document.getElementById(config.containerId)?.parentElement;
+    const canvasWidth = containerEl?.clientWidth || 800;
+    const canvasHeight = containerEl?.clientHeight || 600;
 
-    // Create Fabric canvas
+    // Place sticker boundary at origin for simpler viewport math
+    this.boundaryLeft = 0;
+    this.boundaryTop = 0;
+    this.canvasWidth = canvasWidth;
+    this.canvasHeight = canvasHeight;
+
+    // Create Fabric canvas matching container size
     this.fabricCanvas = new Canvas(config.containerId, {
       width: canvasWidth,
       height: canvasHeight,
@@ -59,8 +75,8 @@ export class CanvasWrapper {
 
     // Create boundary rectangle
     this.boundaryRect = new Rect({
-      left: marginLeft,
-      top: marginTop,
+      left: this.boundaryLeft,
+      top: this.boundaryTop,
       width: stickerWidthPx,
       height: stickerHeightPx,
       fill: 'white',
@@ -75,6 +91,9 @@ export class CanvasWrapper {
 
     this.fabricCanvas.add(this.boundaryRect);
     this.fabricCanvas.sendObjectToBack(this.boundaryRect);
+
+    // Set up grid rendering via after:render event
+    this.setupGridRendering();
   }
 
   /**
@@ -95,7 +114,9 @@ export class CanvasWrapper {
    * Get all objects on canvas (excluding boundary)
    */
   getObjects(): FabricObject[] {
-    return this.fabricCanvas.getObjects().filter((obj) => (obj as any).name !== 'stickerBoundary');
+    return this.fabricCanvas
+      .getObjects()
+      .filter((obj) => (obj as any).name !== 'stickerBoundary');
   }
 
   /**
@@ -230,6 +251,29 @@ export class CanvasWrapper {
     (this.fabricCanvas as any).off(eventName, handler);
   }
 
+  /**
+   * Check if grid is visible
+   */
+  isGridVisible(): boolean {
+    return this.gridVisible;
+  }
+
+  /**
+   * Show grid dots
+   */
+  showGrid(): void {
+    this.gridVisible = true;
+    this.fabricCanvas.requestRenderAll();
+  }
+
+  /**
+   * Hide grid dots
+   */
+  hideGrid(): void {
+    this.gridVisible = false;
+    this.fabricCanvas.requestRenderAll();
+  }
+
   // Private helpers
 
   private generateId(): string {
@@ -267,5 +311,271 @@ export class CanvasWrapper {
     }
 
     return props;
+  }
+
+  /**
+   * Set up grid rendering via canvas overlay
+   * Grid is drawn on canvas context after Fabric.js renders
+   */
+  private setupGridRendering(): void {
+    (this.fabricCanvas as any).on('after:render', () => this.renderGrid());
+  }
+
+  /**
+   * Render grid dots on canvas overlay
+   * Uses canvas context to draw grid dynamically based on viewport
+   */
+  private renderGrid(): void {
+    if (!this.gridVisible) return;
+
+    const ctx = this.fabricCanvas.getContext('2d');
+    if (!ctx) return;
+
+    // Get viewport transform (pan and zoom)
+    const vpt = this.fabricCanvas.viewportTransform;
+    if (!vpt) return;
+
+    const zoom = vpt[0]; // Scale factor
+    const panX = vpt[4];
+    const panY = vpt[5];
+
+    const canvasWidth = this.fabricCanvas.width || 800;
+    const canvasHeight = this.fabricCanvas.height || 600;
+
+    // Calculate visible area in canvas coordinates
+    const visibleLeft = -panX / zoom;
+    const visibleTop = -panY / zoom;
+    const visibleWidth = canvasWidth / zoom;
+    const visibleHeight = canvasHeight / zoom;
+
+    // Grid spacing in pixels
+    const gridSpacingPx = mmToPx(this.gridSpacingMm);
+
+    // Calculate starting position (aligned to grid)
+    const startX = Math.floor(visibleLeft / gridSpacingPx) * gridSpacingPx;
+    const startY = Math.floor(visibleTop / gridSpacingPx) * gridSpacingPx;
+
+    // Draw grid dots
+    ctx.fillStyle = '#ddd';
+    ctx.globalAlpha = 0.8;
+
+    for (let x = startX; x <= visibleLeft + visibleWidth; x += gridSpacingPx) {
+      for (let y = startY; y <= visibleTop + visibleHeight; y += gridSpacingPx) {
+        // Transform canvas coordinates to screen coordinates for drawing
+        const screenX = (x * zoom + panX) | 0;
+        const screenY = (y * zoom + panY) | 0;
+
+        // Only draw if within visible bounds (with some buffer)
+        if (
+          screenX >= -5 &&
+          screenX <= canvasWidth + 5 &&
+          screenY >= -5 &&
+          screenY <= canvasHeight + 5
+        ) {
+          ctx.fillRect(screenX - 0.5, screenY - 0.5, 1, 1);
+        }
+      }
+    }
+
+    ctx.globalAlpha = 1;
+  }
+
+  /**
+   * Enable panning mode - disable selection, enable pan on drag
+   */
+  enablePanning(): void {
+    if (this.isPanningEnabled) return;
+    this.isPanningEnabled = true;
+
+    if (this.debug) console.log('[CanvasWrapper] panning enabled');
+
+    // Disable selection while panning
+    this.fabricCanvas.selection = false;
+    this.fabricCanvas.getObjects().forEach((obj) => {
+      (obj as any).selectable = false;
+    });
+
+    // Change cursor to grab
+    const container = this.fabricCanvas.getElement().parentElement;
+    if (container) {
+      container.style.cursor = 'grab';
+    }
+
+    // Add pan drag handlers
+    (this.fabricCanvas as any).on('mouse:down', this.handlePanStart.bind(this));
+    (this.fabricCanvas as any).on('mouse:move', this.handlePanMove.bind(this));
+    (this.fabricCanvas as any).on('mouse:up', this.handlePanEnd.bind(this));
+  }
+
+  /**
+   * Disable panning mode - re-enable selection
+   */
+  disablePanning(): void {
+    if (!this.isPanningEnabled) return;
+    this.isPanningEnabled = false;
+
+    if (this.debug) console.log('[CanvasWrapper] panning disabled');
+
+    // Remove pan drag handlers
+    (this.fabricCanvas as any).off('mouse:down', this.handlePanStart.bind(this));
+    (this.fabricCanvas as any).off('mouse:move', this.handlePanMove.bind(this));
+    (this.fabricCanvas as any).off('mouse:up', this.handlePanEnd.bind(this));
+
+    // Re-enable selection
+    this.fabricCanvas.selection = true;
+    this.fabricCanvas.getObjects().forEach((obj) => {
+      (obj as any).selectable = true;
+    });
+
+    // Restore default cursor
+    const container = this.fabricCanvas.getElement().parentElement;
+    if (container) {
+      container.style.cursor = 'default';
+    }
+  }
+
+  /**
+   * Pan by offset amount with limit enforcement
+   */
+  pan(deltaX: number, deltaY: number): void {
+    const vpt = this.fabricCanvas.viewportTransform;
+    if (!vpt) {
+      if (this.debug) console.log('[CanvasWrapper] pan: viewportTransform is null');
+      return;
+    }
+
+    if (this.debug) console.log('[CanvasWrapper] pan input:', { deltaX, deltaY });
+
+    const newPanX = vpt[4] + deltaX;
+    const newPanY = vpt[5] + deltaY;
+
+    if (this.debug) console.log('[CanvasWrapper] pan before limits:', { panX: newPanX, panY: newPanY });
+
+    // Enforce pan limits (keep boundary partially visible)
+    const limits = this.getPanLimits();
+
+    vpt[4] = Math.max(limits.minX, Math.min(limits.maxX, newPanX));
+    vpt[5] = Math.max(limits.minY, Math.min(limits.maxY, newPanY));
+
+    if (this.debug) console.log('[CanvasWrapper] pan after clamping:', { panX: vpt[4], panY: vpt[5], limits });
+
+    this.fabricCanvas.requestRenderAll();
+  }
+
+  /**
+   * Reset view to center on sticker boundary
+   */
+  resetView(): void {
+    const vpt = this.fabricCanvas.viewportTransform;
+    if (!vpt) {
+      if (this.debug) console.log('[CanvasWrapper] resetView: viewportTransform is null');
+      return;
+    }
+
+    // Get actual visible container size
+    const container = this.fabricCanvas.getElement().parentElement;
+    const rect = container?.getBoundingClientRect();
+    const containerWidth = rect?.width || 800;
+    const containerHeight = rect?.height || 600;
+
+    if (this.debug) console.log('[CanvasWrapper] resetView:', {
+      containerSize: { width: containerWidth, height: containerHeight },
+      boundaryPos: { left: this.boundaryLeft, top: this.boundaryTop },
+      stickerSize: { width: this.stickerWidthPx, height: this.stickerHeightPx },
+      viewportTransformBefore: vpt.slice()
+    });
+
+    // Center the boundary (at 0,0) in the viewport
+    // Pan = (containerSize - stickerSize) / 2
+    vpt[4] = (containerWidth - this.stickerWidthPx) / 2;
+    vpt[5] = (containerHeight - this.stickerHeightPx) / 2;
+
+    if (this.debug) console.log('[CanvasWrapper] resetView calculated:', {
+      viewportTransform: vpt.slice(),
+      panX: vpt[4],
+      panY: vpt[5]
+    });
+
+    this.fabricCanvas.requestRenderAll();
+  }
+
+  /**
+   * Calculate pan limits to keep sticker boundary partially visible
+   */
+  private getPanLimits(): { minX: number; maxX: number; minY: number; maxY: number } {
+    // Get actual visible container size
+    const container = this.fabricCanvas.getElement().parentElement;
+    const rect = container?.getBoundingClientRect();
+    const containerWidth = rect?.width || 800;
+    const containerHeight = rect?.height || 600;
+
+    // Minimum visible amount of boundary (10% must be visible)
+    const minVisibleAmount = 0.1;
+
+    // With boundary at (0,0), calculate limits to keep it partially visible
+    // Maximum pan right: boundary left edge stays within right side of screen
+    const maxX = containerWidth - this.stickerWidthPx * minVisibleAmount;
+
+    // Maximum pan left: boundary right edge stays within left side of screen
+    const minX = containerWidth * minVisibleAmount - this.stickerWidthPx;
+
+    // Same logic for Y axis
+    const maxY = containerHeight - this.stickerHeightPx * minVisibleAmount;
+    const minY = containerHeight * minVisibleAmount - this.stickerHeightPx;
+
+    if (this.debug) console.log('[CanvasWrapper] getPanLimits:', {
+      containerSize: { width: containerWidth, height: containerHeight },
+      boundaryRect: { left: 0, top: 0, right: this.stickerWidthPx, bottom: this.stickerHeightPx },
+      limits: { minX, maxX, minY, maxY }
+    });
+
+    return { minX, maxX, minY, maxY };
+  }
+
+  /**
+   * Pan drag handlers - private methods for mouse events
+   */
+  private handlePanStart(e: any): void {
+    if (!this.isPanningEnabled) return;
+
+    this.isPanning = true;
+    this.lastPanX = e.pointer.x;
+    this.lastPanY = e.pointer.y;
+
+    if (this.debug) console.log('[CanvasWrapper] pan start:', { x: this.lastPanX, y: this.lastPanY });
+
+    // Change cursor to grabbing
+    const container = this.fabricCanvas.getElement().parentElement;
+    if (container) {
+      container.style.cursor = 'grabbing';
+    }
+  }
+
+  private handlePanMove(e: any): void {
+    if (!this.isPanning || !this.isPanningEnabled) return;
+
+    const deltaX = e.pointer.x - this.lastPanX;
+    const deltaY = e.pointer.y - this.lastPanY;
+
+    if (this.debug) console.log('[CanvasWrapper] pan move:', { pointerX: e.pointer.x, pointerY: e.pointer.y, deltaX, deltaY });
+
+    this.pan(deltaX, deltaY);
+
+    this.lastPanX = e.pointer.x;
+    this.lastPanY = e.pointer.y;
+  }
+
+  private handlePanEnd(): void {
+    if (!this.isPanning) return;
+
+    this.isPanning = false;
+
+    if (this.debug) console.log('[CanvasWrapper] pan end');
+
+    // Change cursor back to grab
+    const container = this.fabricCanvas.getElement().parentElement;
+    if (container) {
+      container.style.cursor = 'grab';
+    }
   }
 }

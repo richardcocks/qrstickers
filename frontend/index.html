@@ -106,6 +106,15 @@
             background: #c62828;
         }
 
+        button.active {
+            background: #1976d2;
+            border: 2px solid #0d47a1;
+        }
+
+        button.active:hover {
+            background: #1565c0;
+        }
+
         .button-group {
             display: flex;
             gap: 8px;
@@ -125,9 +134,10 @@
             background: white;
             border: 2px solid #e0e0e0;
             border-radius: 4px;
-            min-height: 600px;
+            width: 100%;
+            height: 600px;
             position: relative;
-            overflow: auto;
+            overflow: hidden;
         }
 
         #designCanvas {
@@ -215,6 +225,14 @@
         <div class="layout">
             <!-- Left Panel: Toolbar -->
             <aside class="panel">
+                <h2>Tools</h2>
+                <div class="button-group">
+                    <button id="tool-select" class="active" onclick="setTool('select')">↖ Select</button>
+                    <button id="tool-pan" onclick="setTool('pan')">✋ Pan</button>
+                </div>
+
+                <div class="divider"></div>
+
                 <h2>Add Elements</h2>
                 <div class="toolbar">
                     <button onclick="addElement('qr')">➕ QR Code</button>
@@ -229,6 +247,8 @@
                 <div class="toolbar">
                     <button class="danger" onclick="removeSelected()">🗑️ Delete Selected</button>
                     <button class="secondary" onclick="clearCanvas()">Clear All</button>
+                    <button class="secondary" onclick="toggleGrid()">⊞ Toggle Grid</button>
+                    <button class="secondary" onclick="resetView()">⊙ Reset View</button>
                 </div>
 
                 <div class="divider"></div>
@@ -421,10 +441,17 @@
                     marginRight: 200,
                     onSelectionChange: handleSelectionChange,
                     onElementsChange: handleElementsChange,
+                    onToolChange: handleToolChange,
                 });
 
                 window.designer = designer; // Expose for console debugging
                 setupPropertyListeners();
+
+                // Initialize viewport after container has proper dimensions
+                setTimeout(() => {
+                    designer.getCanvas().resetView();
+                }, 50);
+
                 showStatus('Designer initialized successfully!', 'success');
                 updateJSON();
             } catch (error) {
@@ -492,6 +519,23 @@
         window.sendBackward = () => {
             designer.sendBackward();
             showStatus('Moved backward', 'success');
+        };
+
+        // Toggle grid
+        window.toggleGrid = () => {
+            const isVisible = designer.toggleGrid();
+            showStatus(`Grid ${isVisible ? 'shown' : 'hidden'}`, 'success');
+        };
+
+        // Set tool mode
+        window.setTool = (tool) => {
+            designer.setTool(tool);
+        };
+
+        // Reset view to center on sticker
+        window.resetView = () => {
+            designer.resetView();
+            showStatus('View reset', 'success');
         };
 
         // Save template
@@ -659,6 +703,23 @@
         // Handle elements change
         function handleElementsChange() {
             updateJSON();
+        }
+
+        // Handle tool change
+        function handleToolChange(tool) {
+            // Update button visual state
+            const selectBtn = document.getElementById('tool-select');
+            const panBtn = document.getElementById('tool-pan');
+
+            if (tool === 'select') {
+                selectBtn.classList.add('active');
+                panBtn.classList.remove('active');
+                showStatus('Select tool active', 'success');
+            } else {
+                selectBtn.classList.remove('active');
+                panBtn.classList.add('active');
+                showStatus('Pan tool active', 'success');
+            }
         }
 
         // Update JSON display
