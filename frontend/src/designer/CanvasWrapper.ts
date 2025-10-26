@@ -377,21 +377,18 @@ export class CanvasWrapper {
 
     ctx.save();
 
-    // Draw white background for sticker area (transformed to screen coords)
+    // Calculate boundary positions in screen coordinates (transformed by viewport)
     const screenLeft = this.boundaryLeft * zoom + panX;
     const screenTop = this.boundaryTop * zoom + panY;
     const screenWidth = this.stickerWidthPx * zoom;
     const screenHeight = this.stickerHeightPx * zoom;
-
-    ctx.fillStyle = 'white';
-    ctx.fillRect(screenLeft, screenTop, screenWidth, screenHeight);
 
     // Draw boundary lines extending full canvas dimensions
     ctx.strokeStyle = '#cccccc';
     ctx.lineWidth = 2;
     ctx.setLineDash([10, 5]);
 
-    // Calculate boundary edge positions in screen coordinates
+    // Calculate boundary edge positions
     const leftEdge = screenLeft;
     const rightEdge = screenLeft + screenWidth;
     const topEdge = screenTop;
