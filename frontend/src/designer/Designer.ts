@@ -303,6 +303,66 @@ export class Designer {
   }
 
   /**
+   * Bring selected element to front
+   */
+  bringToFront(): void {
+    if (!this.selectedElement) return;
+
+    const fabricObj = this.selectedElement.getFabricObject(
+      this.canvas.boundaryLeft,
+      this.canvas.boundaryTop
+    );
+    this.canvas.bringToFront(fabricObj);
+
+    this.saveState();
+  }
+
+  /**
+   * Send selected element to back
+   */
+  sendToBack(): void {
+    if (!this.selectedElement) return;
+
+    const fabricObj = this.selectedElement.getFabricObject(
+      this.canvas.boundaryLeft,
+      this.canvas.boundaryTop
+    );
+    this.canvas.sendToBack(fabricObj);
+
+    this.saveState();
+  }
+
+  /**
+   * Bring selected element forward one layer
+   */
+  bringForward(): void {
+    if (!this.selectedElement) return;
+
+    const fabricObj = this.selectedElement.getFabricObject(
+      this.canvas.boundaryLeft,
+      this.canvas.boundaryTop
+    );
+    this.canvas.bringForward(fabricObj);
+
+    this.saveState();
+  }
+
+  /**
+   * Send selected element backward one layer
+   */
+  sendBackward(): void {
+    if (!this.selectedElement) return;
+
+    const fabricObj = this.selectedElement.getFabricObject(
+      this.canvas.boundaryLeft,
+      this.canvas.boundaryTop
+    );
+    this.canvas.sendBackward(fabricObj);
+
+    this.saveState();
+  }
+
+  /**
    * Enable keyboard shortcuts
    */
   private enableKeyboardShortcuts(): void {

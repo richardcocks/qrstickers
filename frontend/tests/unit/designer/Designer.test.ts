@@ -11,10 +11,18 @@ vi.mock('fabric', () => {
   const MockCanvas = function (this: any, _id: string, _options: any) {
     this._eventHandlers = {};
     this._activeObject = null;
+    this._objects = [];
 
-    this.add = vi.fn();
-    this.remove = vi.fn();
-    this.getObjects = vi.fn(() => []);
+    this.add = vi.fn((obj: any) => {
+      this._objects.push(obj);
+    });
+    this.remove = vi.fn((obj: any) => {
+      const index = this._objects.indexOf(obj);
+      if (index > -1) {
+        this._objects.splice(index, 1);
+      }
+    });
+    this.getObjects = vi.fn(() => this._objects);
     this.getActiveObject = vi.fn(() => this._activeObject);
     this.setActiveObject = vi.fn((obj: any) => {
       this._activeObject = obj;
@@ -35,7 +43,9 @@ vi.mock('fabric', () => {
       }
     });
     this.requestRenderAll = vi.fn();
-    this.clear = vi.fn();
+    this.clear = vi.fn(() => {
+      this._objects = [];
+    });
     this.on = vi.fn((event: string, handler: any) => {
       if (!this._eventHandlers[event]) {
         this._eventHandlers[event] = [];
@@ -43,7 +53,34 @@ vi.mock('fabric', () => {
       this._eventHandlers[event].push(handler);
     });
     this.off = vi.fn();
-    this.sendObjectToBack = vi.fn();
+    this.sendObjectToBack = vi.fn((obj: any) => {
+      const index = this._objects.indexOf(obj);
+      if (index > -1) {
+        this._objects.splice(index, 1);
+        this._objects.unshift(obj); // Move to beginning
+      }
+    });
+    this.bringObjectToFront = vi.fn((obj: any) => {
+      const index = this._objects.indexOf(obj);
+      if (index > -1) {
+        this._objects.splice(index, 1);
+        this._objects.push(obj); // Move to end
+      }
+    });
+    this.bringObjectForward = vi.fn((obj: any) => {
+      const index = this._objects.indexOf(obj);
+      if (index > -1 && index < this._objects.length - 1) {
+        this._objects.splice(index, 1);
+        this._objects.splice(index + 1, 0, obj); // Move forward one position
+      }
+    });
+    this.sendObjectBackwards = vi.fn((obj: any) => {
+      const index = this._objects.indexOf(obj);
+      if (index > 0) {
+        this._objects.splice(index, 1);
+        this._objects.splice(index - 1, 0, obj); // Move backward one position
+      }
+    });
     return this;
   };
 
@@ -685,6 +722,119 @@ describe('Designer', () => {
       d.deselectAll();
 
       expect(onSelectionChange).toHaveBeenCalledWith(null);
+    });
+  });
+
+  describe('Layer Ordering', () => {
+    it('should have layer ordering methods', () => {
+      expect(typeof designer.bringToFront).toBe('function');
+      expect(typeof designer.sendToBack).toBe('function');
+      expect(typeof designer.bringForward).toBe('function');
+      expect(typeof designer.sendBackward).toBe('function');
+    });
+
+    it('should not throw when no element selected', () => {
+      expect(() => designer.bringToFront()).not.toThrow();
+      expect(() => designer.sendToBack()).not.toThrow();
+      expect(() => designer.bringForward()).not.toThrow();
+      expect(() => designer.sendBackward()).not.toThrow();
+    });
+
+    it('should bring element to front', () => {
+      const elem1 = designer.addElement('qr', { x: 10, y: 10 });
+      const elem2 = designer.addElement('text', { x: 20, y: 20 });
+
+      // Select first element (should be behind second)
+      const canvas = designer.getCanvas();
+      const fabricObj1 = elem1.getFabricObject(canvas.boundaryLeft, canvas.boundaryTop);
+      canvas.setActiveObject(fabricObj1);
+
+      designer.bringToFront();
+
+      // Verify it's now in front (last in array)
+      const objects = canvas.getObjects();
+      expect(objects[objects.length - 1]).toBe(fabricObj1);
+    });
+
+    it('should send element to back', () => {
+      const elem1 = designer.addElement('qr', { x: 10, y: 10 });
+      const elem2 = designer.addElement('text', { x: 20, y: 20 });
+
+      // Select second element (currently in front)
+      const canvas = designer.getCanvas();
+      const fabricObj2 = elem2.getFabricObject(canvas.boundaryLeft, canvas.boundaryTop);
+      canvas.setActiveObject(fabricObj2);
+
+      designer.sendToBack();
+
+      // Verify it's now at back (but after boundary)
+      const objects = canvas.getObjects();
+      const boundaryIndex = objects.findIndex((o: any) => o.name === 'stickerBoundary');
+      const elem2Index = objects.indexOf(fabricObj2);
+      expect(elem2Index).toBeGreaterThan(boundaryIndex);
+    });
+
+    it('should save state after reordering for undo/redo', () => {
+      const elem1 = designer.addElement('qr', { x: 10, y: 10 });
+      const elem2 = designer.addElement('text', { x: 20, y: 20 });
+
+      // Select first element
+      const canvas = designer.getCanvas();
+      const fabricObj1 = elem1.getFabricObject(canvas.boundaryLeft, canvas.boundaryTop);
+      canvas.setActiveObject(fabricObj1);
+
+      designer.bringToFront();
+
+      // Verify element moved to front
+      const objects = canvas.getObjects();
+      const frontPosition = objects.indexOf(fabricObj1);
+
+      // Now undo - element should go back to original position
+      designer.undo();
+
+      const objectsAfterUndo = canvas.getObjects();
+      const positionAfterUndo = objectsAfterUndo.indexOf(fabricObj1);
+
+      // Position should have changed (undo worked, meaning state was saved)
+      expect(positionAfterUndo).not.toBe(frontPosition);
+    });
+
+    it('should bring element forward one layer', () => {
+      const elem1 = designer.addElement('qr', { x: 10, y: 10 });
+      const elem2 = designer.addElement('text', { x: 20, y: 20 });
+      const elem3 = designer.addElement('rect', { x: 30, y: 30 });
+
+      // Select first element (bottom of stack)
+      const canvas = designer.getCanvas();
+      const fabricObj1 = elem1.getFabricObject(canvas.boundaryLeft, canvas.boundaryTop);
+      canvas.setActiveObject(fabricObj1);
+
+      const objects = canvas.getObjects();
+      const initialIndex = objects.indexOf(fabricObj1);
+
+      designer.bringForward();
+
+      const newIndex = canvas.getObjects().indexOf(fabricObj1);
+      expect(newIndex).toBeGreaterThan(initialIndex);
+    });
+
+    it('should send element backward one layer', () => {
+      const elem1 = designer.addElement('qr', { x: 10, y: 10 });
+      const elem2 = designer.addElement('text', { x: 20, y: 20 });
+      const elem3 = designer.addElement('rect', { x: 30, y: 30 });
+
+      // Select third element (top of stack)
+      const canvas = designer.getCanvas();
+      const fabricObj3 = elem3.getFabricObject(canvas.boundaryLeft, canvas.boundaryTop);
+      canvas.setActiveObject(fabricObj3);
+
+      const objects = canvas.getObjects();
+      const initialIndex = objects.indexOf(fabricObj3);
+
+      designer.sendBackward();
+
+      const newIndex = canvas.getObjects().indexOf(fabricObj3);
+      expect(newIndex).toBeLessThan(initialIndex);
     });
   });
 });

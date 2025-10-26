@@ -3,7 +3,7 @@
  * Simple, clean API for canvas operations
  */
 
-import * as fabric from 'fabric';
+import { Canvas, FabricObject, Rect, version as fabricVersion } from 'fabric';
 import { mmToPx, pxToMm } from '../utils/units';
 
 export interface CanvasConfig {
@@ -17,8 +17,8 @@ export interface CanvasConfig {
 }
 
 export class CanvasWrapper {
-  private fabricCanvas: any; // Use 'any' to avoid Fabric.js type complexity
-  private boundaryRect: any;
+  private fabricCanvas: Canvas;
+  private boundaryRect: Rect;
 
   public readonly widthMm: number;
   public readonly heightMm: number;
@@ -44,7 +44,7 @@ export class CanvasWrapper {
     this.boundaryTop = marginTop;
 
     // Create Fabric canvas
-    this.fabricCanvas = new fabric.Canvas(config.containerId, {
+    this.fabricCanvas = new Canvas(config.containerId, {
       width: canvasWidth,
       height: canvasHeight,
       backgroundColor: 'transparent',
@@ -58,7 +58,7 @@ export class CanvasWrapper {
     this.fabricCanvas.selectionLineWidth = 2;
 
     // Create boundary rectangle
-    this.boundaryRect = new fabric.Rect({
+    this.boundaryRect = new Rect({
       left: marginLeft,
       top: marginTop,
       width: stickerWidthPx,
@@ -80,35 +80,35 @@ export class CanvasWrapper {
   /**
    * Add a Fabric object to the canvas
    */
-  add(fabricObject: any): void {
+  add(fabricObject: FabricObject): void {
     this.fabricCanvas.add(fabricObject);
   }
 
   /**
    * Remove a Fabric object from the canvas
    */
-  remove(fabricObject: any): void {
+  remove(fabricObject: FabricObject): void {
     this.fabricCanvas.remove(fabricObject);
   }
 
   /**
    * Get all objects on canvas (excluding boundary)
    */
-  getObjects(): any[] {
-    return this.fabricCanvas.getObjects().filter((obj: any) => obj.name !== 'stickerBoundary');
+  getObjects(): FabricObject[] {
+    return this.fabricCanvas.getObjects().filter((obj) => (obj as any).name !== 'stickerBoundary');
   }
 
   /**
    * Get currently selected object
    */
-  getActiveObject(): any {
+  getActiveObject(): FabricObject | undefined {
     return this.fabricCanvas.getActiveObject();
   }
 
   /**
    * Set active object
    */
-  setActiveObject(obj: any): void {
+  setActiveObject(obj: FabricObject): void {
     this.fabricCanvas.setActiveObject(obj);
     this.fabricCanvas.requestRenderAll();
   }
@@ -118,6 +118,48 @@ export class CanvasWrapper {
    */
   discardActiveObject(): void {
     this.fabricCanvas.discardActiveObject();
+    this.fabricCanvas.requestRenderAll();
+  }
+
+  /**
+   * Bring object to front (top layer)
+   */
+  bringToFront(fabricObject: FabricObject): void {
+    this.fabricCanvas.bringObjectToFront(fabricObject);
+    // Ensure boundary stays at back
+    this.fabricCanvas.sendObjectToBack(this.boundaryRect);
+    this.fabricCanvas.requestRenderAll();
+  }
+
+  /**
+   * Send object to back (bottom layer, but above boundary)
+   */
+  sendToBack(fabricObject: FabricObject): void {
+    this.fabricCanvas.sendObjectToBack(fabricObject);
+    // Ensure boundary stays at back
+    this.fabricCanvas.sendObjectToBack(this.boundaryRect);
+    this.fabricCanvas.requestRenderAll();
+  }
+
+  /**
+   * Bring object forward one layer
+   */
+  bringForward(fabricObject: FabricObject): void {
+    this.fabricCanvas.bringObjectForward(fabricObject);
+    this.fabricCanvas.requestRenderAll();
+  }
+
+  /**
+   * Send object backward one layer
+   */
+  sendBackward(fabricObject: FabricObject): void {
+    this.fabricCanvas.sendObjectBackwards(fabricObject);
+    // Ensure object doesn't go behind boundary
+    const boundaryIndex = this.fabricCanvas.getObjects().indexOf(this.boundaryRect);
+    const objectIndex = this.fabricCanvas.getObjects().indexOf(fabricObject);
+    if (objectIndex <= boundaryIndex) {
+      this.fabricCanvas.bringObjectForward(fabricObject);
+    }
     this.fabricCanvas.requestRenderAll();
   }
 
@@ -156,7 +198,7 @@ export class CanvasWrapper {
 
     return {
       version: '1.0',
-      fabricVersion: fabric.version,
+      fabricVersion: fabricVersion,
       pageSize: {
         width: this.widthMm,
         height: this.heightMm,
@@ -177,15 +219,15 @@ export class CanvasWrapper {
   /**
    * Register event handler
    */
-  on(eventName: string, handler: (e: any) => void): void {
-    this.fabricCanvas.on(eventName, handler);
+  on(eventName: string, handler: (e: unknown) => void): void {
+    (this.fabricCanvas as any).on(eventName, handler);
   }
 
   /**
    * Unregister event handler
    */
-  off(eventName: string, handler?: (e: any) => void): void {
-    this.fabricCanvas.off(eventName, handler);
+  off(eventName: string, handler?: (e: unknown) => void): void {
+    (this.fabricCanvas as any).off(eventName, handler);
   }
 
   // Private helpers

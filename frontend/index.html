@@ -241,6 +241,18 @@
 
                 <div class="divider"></div>
 
+                <h2>Layer Order</h2>
+                <div class="button-group">
+                    <button class="secondary" onclick="bringToFront()">⬆️ To Front</button>
+                    <button class="secondary" onclick="sendToBack()">⬇️ To Back</button>
+                </div>
+                <div class="button-group">
+                    <button class="secondary" onclick="bringForward()">↑ Forward</button>
+                    <button class="secondary" onclick="sendBackward()">↓ Backward</button>
+                </div>
+
+                <div class="divider"></div>
+
                 <h2>Template</h2>
                 <div class="toolbar">
                     <button onclick="saveTemplate()">💾 Save JSON</button>
@@ -459,6 +471,27 @@
         window.redo = () => {
             designer.redo();
             showStatus('Redo', 'success');
+        };
+
+        // Layer ordering
+        window.bringToFront = () => {
+            designer.bringToFront();
+            showStatus('Brought to front', 'success');
+        };
+
+        window.sendToBack = () => {
+            designer.sendToBack();
+            showStatus('Sent to back', 'success');
+        };
+
+        window.bringForward = () => {
+            designer.bringForward();
+            showStatus('Moved forward', 'success');
+        };
+
+        window.sendBackward = () => {
+            designer.sendBackward();
+            showStatus('Moved backward', 'success');
         };
 
         // Save template
