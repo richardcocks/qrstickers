@@ -1,5 +1,10 @@
 /**
  * Text Element
+ *
+ * Note: fontSize is stored in POINTS (pt) internally
+ * Fabric.js uses canvas units, so we convert:
+ * - To Fabric: multiply by 2.0 (144 DPI / 72 pt/inch)
+ * - From Fabric: divide by 2.0
  */
 
 import * as fabric from 'fabric';
@@ -45,7 +50,7 @@ export class TextElement extends BaseElement {
       left: leftPx,
       top: topPx,
       fontFamily: this.fontFamily,
-      fontSize: this.fontSize,
+      fontSize: this.fontSize * 2.0, // Convert points to canvas units (144 DPI / 72 pt/inch = 2.0)
       fill: this.fill,
       fontWeight: this.fontWeight,
     });
@@ -64,7 +69,7 @@ export class TextElement extends BaseElement {
     if (this.fabricObject) {
       this.text = this.fabricObject.text;
       this.fontFamily = this.fabricObject.fontFamily;
-      this.fontSize = this.fabricObject.fontSize;
+      this.fontSize = this.fabricObject.fontSize / 2.0; // Convert canvas units back to points
       this.fontWeight = this.fabricObject.fontWeight;
       this.fill = this.fabricObject.fill;
       this.dataBinding = (this.fabricObject as any).dataSource;
