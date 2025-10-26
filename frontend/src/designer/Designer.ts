@@ -180,7 +180,7 @@ export class Designer {
         height: this.canvas.heightMm,
         unit: 'mm',
       },
-      objects: this.elements.map((el) => el.toJSON()),
+      objects: this.getElementsInCanvasOrder().map((el) => el.toJSON()),
     };
     return JSON.stringify(data, null, 2);
   }
@@ -360,6 +360,23 @@ export class Designer {
     this.canvas.sendBackward(fabricObj);
 
     this.saveState();
+  }
+
+  /**
+   * Get elements sorted by their canvas z-index (layer order)
+   */
+  private getElementsInCanvasOrder(): BaseElement[] {
+    const canvasObjects = this.canvas.getObjects();
+    const elementsInOrder: BaseElement[] = [];
+
+    for (const fabricObj of canvasObjects) {
+      const element = this.findElementByFabricObject(fabricObj);
+      if (element) {
+        elementsInOrder.push(element);
+      }
+    }
+
+    return elementsInOrder;
   }
 
   /**

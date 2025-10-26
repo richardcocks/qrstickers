@@ -86,6 +86,8 @@ vi.mock('fabric', () => {
 
   const MockRect = function (this: any, _options: any) {
     this.set = vi.fn();
+    this.id = _options?.id;
+    this.name = _options?.name;
     this.width = _options?.width || 100;
     this.height = _options?.height || 100;
     this.left = _options?.left || 0;
@@ -99,6 +101,7 @@ vi.mock('fabric', () => {
 
   const MockGroup = function (this: any, _objects: any[], _options: any) {
     this.set = vi.fn();
+    this.id = _options?.id;
     // Calculate group dimensions from children or use default
     let calculatedWidth = 100;
     let calculatedHeight = 100;
@@ -124,6 +127,7 @@ vi.mock('fabric', () => {
 
   const MockIText = function (this: any, _text: string, _options: any) {
     this.set = vi.fn();
+    this.id = _options?.id;
     this.text = _text;
     this.fontFamily = _options?.fontFamily || 'Arial';
     this.fontSize = _options?.fontSize || 16;
@@ -835,6 +839,45 @@ describe('Designer', () => {
 
       const newIndex = canvas.getObjects().indexOf(fabricObj3);
       expect(newIndex).toBeLessThan(initialIndex);
+    });
+
+    it('should preserve layer order when saving and loading template', () => {
+      // Add 3 elements (they'll be in order: elem1, elem2, elem3 from bottom to top)
+      const elem1 = designer.addElement('qr', { x: 10, y: 10 });
+      const elem2 = designer.addElement('text', { x: 20, y: 20 });
+      const elem3 = designer.addElement('rect', { x: 30, y: 30 });
+
+      // Store original IDs for comparison
+      const id1 = elem1.id;
+      const id2 = elem2.id;
+      const id3 = elem3.id;
+
+      // Reorder: move elem1 to front
+      const canvas = designer.getCanvas();
+      const fabricObj1 = elem1.getFabricObject(canvas.boundaryLeft, canvas.boundaryTop);
+      canvas.setActiveObject(fabricObj1);
+      designer.bringToFront();
+
+      // New order should be: elem2, elem3, elem1 (bottom to top)
+      const objectsBeforeSave = canvas.getObjects();
+      expect(objectsBeforeSave).toHaveLength(3);
+      expect((objectsBeforeSave[0] as any).id).toBe(id2);
+      expect((objectsBeforeSave[1] as any).id).toBe(id3);
+      expect((objectsBeforeSave[2] as any).id).toBe(id1);
+
+      // Save template
+      const json = designer.saveTemplate();
+
+      // Clear and reload
+      designer.clear();
+      designer.loadTemplate(json);
+
+      // Verify order is preserved after reload
+      const objectsAfterLoad = designer.getCanvas().getObjects();
+      expect(objectsAfterLoad).toHaveLength(3);
+      expect((objectsAfterLoad[0] as any).id).toBe(id2);
+      expect((objectsAfterLoad[1] as any).id).toBe(id3);
+      expect((objectsAfterLoad[2] as any).id).toBe(id1);
     });
   });
 });
