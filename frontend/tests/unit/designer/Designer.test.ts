@@ -110,10 +110,18 @@ vi.mock('fabric', () => {
     });
     this.getContext = vi.fn(() => ({
       fillStyle: '#000000',
+      strokeStyle: '#000000',
+      lineWidth: 1,
       globalAlpha: 1,
       fillRect: vi.fn(),
+      strokeRect: vi.fn(),
       save: vi.fn(),
       restore: vi.fn(),
+      setLineDash: vi.fn(),
+      beginPath: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      stroke: vi.fn(),
     }));
     this.enablePanning = vi.fn();
     this.disablePanning = vi.fn();

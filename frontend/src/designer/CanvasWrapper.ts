@@ -19,6 +19,7 @@ export interface CanvasConfig {
 export class CanvasWrapper {
   private fabricCanvas: Canvas;
   private gridVisible: boolean = true;
+  private snapToGridEnabled: boolean = false;
   private isPanningEnabled: boolean = false;
   private gridSpacingMm: number = 2.5;
   private lastPanX = 0;
@@ -79,6 +80,9 @@ export class CanvasWrapper {
 
     // Set up grid and boundary rendering via after:render event
     this.setupGridRendering();
+
+    // Enable snap to grid on object movement
+    this.setupSnapToGrid();
 
     // Enable mouse wheel zoom
     this.enableMouseWheelZoom();
@@ -247,6 +251,27 @@ export class CanvasWrapper {
     this.fabricCanvas.requestRenderAll();
   }
 
+  /**
+   * Enable snap to grid
+   */
+  enableSnapToGrid(): void {
+    this.snapToGridEnabled = true;
+  }
+
+  /**
+   * Disable snap to grid
+   */
+  disableSnapToGrid(): void {
+    this.snapToGridEnabled = false;
+  }
+
+  /**
+   * Check if snap to grid is enabled
+   */
+  isSnapToGridEnabled(): boolean {
+    return this.snapToGridEnabled;
+  }
+
   // Private helpers
 
   private generateId(): string {
@@ -298,6 +323,31 @@ export class CanvasWrapper {
   }
 
   /**
+   * Set up snap to grid behavior
+   * Snaps object positions to grid during movement
+   */
+  private setupSnapToGrid(): void {
+    (this.fabricCanvas as any).on('object:moving', (e: any) => {
+      if (!this.snapToGridEnabled) return;
+
+      const obj = e.target;
+      if (!obj) return;
+
+      // Grid spacing in pixels
+      const gridSpacingPx = mmToPx(this.gridSpacingMm);
+
+      // Snap object position to nearest grid point
+      obj.set({
+        left: Math.round(obj.left / gridSpacingPx) * gridSpacingPx,
+        top: Math.round(obj.top / gridSpacingPx) * gridSpacingPx,
+      });
+
+      // Update coordinates to maintain alignment
+      obj.setCoords();
+    });
+  }
+
+  /**
    * Render grid dots on canvas overlay
    * Uses canvas context to draw grid dynamically based on viewport
    */
@@ -332,7 +382,7 @@ export class CanvasWrapper {
     const startY = Math.floor(visibleTop / gridSpacingPx) * gridSpacingPx;
 
     // Draw grid dots
-    ctx.fillStyle = '#ddd';
+    ctx.fillStyle = '#bbb';
     ctx.globalAlpha = 0.8;
 
     for (let x = startX; x <= visibleLeft + visibleWidth; x += gridSpacingPx) {

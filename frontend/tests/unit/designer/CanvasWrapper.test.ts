@@ -25,15 +25,22 @@ vi.mock('fabric', () => {
     // Viewport transform: [scaleX, 0, 0, scaleY, translateX, translateY]
     this.viewportTransform = [1, 0, 0, 1, 0, 0];
 
-    // Mock 2D context for grid rendering
+    // Mock 2D context for grid and boundary rendering
     const mockContext = {
       canvas: this,
       fillStyle: '#000000',
+      strokeStyle: '#000000',
+      lineWidth: 1,
       globalAlpha: 1,
       fillRect: vi.fn(),
+      strokeRect: vi.fn(),
       save: vi.fn(),
       restore: vi.fn(),
-      // Add more context methods as needed
+      setLineDash: vi.fn(),
+      beginPath: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      stroke: vi.fn(),
     };
     this._context = mockContext;
 

@@ -383,6 +383,27 @@ export class Designer {
   }
 
   /**
+   * Toggle snap to grid
+   * @returns true if snap is now enabled, false if disabled
+   */
+  toggleSnapToGrid(): boolean {
+    if (this.canvas.isSnapToGridEnabled()) {
+      this.canvas.disableSnapToGrid();
+      return false;
+    } else {
+      this.canvas.enableSnapToGrid();
+      return true;
+    }
+  }
+
+  /**
+   * Check if snap to grid is enabled
+   */
+  isSnapToGridEnabled(): boolean {
+    return this.canvas.isSnapToGridEnabled();
+  }
+
+  /**
    * Set the current tool mode (select or pan)
    */
   setTool(tool: ToolMode): void {
