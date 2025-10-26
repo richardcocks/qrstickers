@@ -629,6 +629,20 @@ describe('Designer', () => {
 
       expect(designer.getElements()).toHaveLength(elementsBefore);
     });
+
+    it('should preserve selection when updating properties', () => {
+      const elem = designer.addElement('text', { x: 10, y: 10 });
+
+      // Element should be selected after creation
+      expect(designer.getSelectedElement()?.id).toBe(elem.id);
+
+      // Update properties
+      designer.updateElement(elem.id, { text: 'Updated Text', fontSize: 20 });
+
+      // Element should still be selected
+      expect(designer.getSelectedElement()).not.toBeNull();
+      expect(designer.getSelectedElement()?.id).toBe(elem.id);
+    });
   });
 
   describe('Clipboard Operations', () => {

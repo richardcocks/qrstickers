@@ -125,6 +125,9 @@ export class Designer {
     const element = this.elements.find((el) => el.id === elementId);
     if (!element) return;
 
+    // Save whether this element is currently selected BEFORE removing
+    const wasSelected = this.selectedElement?.id === elementId;
+
     // Remove old fabric object
     const oldFabricObj = element.getFabricObject(this.canvas.boundaryLeft, this.canvas.boundaryTop);
     this.canvas.remove(oldFabricObj);
@@ -138,7 +141,7 @@ export class Designer {
     this.canvas.add(newFabricObj);
 
     // Maintain selection if this was the selected element
-    if (this.selectedElement?.id === elementId) {
+    if (wasSelected) {
       this.canvas.setActiveObject(newFabricObj);
     }
 
