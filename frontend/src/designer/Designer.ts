@@ -27,16 +27,18 @@ export class Designer {
   private selectedElement: BaseElement | null = null;
   private config: DesignerConfig;
 
-  // Undo/redo stacks
-  private undoStack: string[] = [];
-  private redoStack: string[] = [];
-  private maxUndoSteps = 50;
+  // Undo/redo history - track states with an index
+  private history: string[] = [];
+  private historyIndex = -1;
+  private maxHistorySteps = 50;
   private isRestoring = false;
 
   constructor(config: DesignerConfig) {
     this.config = config;
     this.canvas = new CanvasWrapper(config);
     this.initializeEventListeners();
+    // Save initial empty state so first undo has something to restore to
+    this.saveState();
   }
 
   /**
@@ -113,14 +115,22 @@ export class Designer {
   }
 
   /**
-   * Clear all elements
+   * Clear all elements and reset undo/redo history
    */
   clear(): void {
+    this.clearElements();
+    this.history = [];
+    this.historyIndex = -1;
+  }
+
+  /**
+   * Clear all elements without affecting undo/redo history
+   * (Private method used internally by loadTemplate)
+   */
+  private clearElements(): void {
     this.elements = [];
     this.selectedElement = null;
     this.canvas.clear();
-    this.undoStack = [];
-    this.redoStack = [];
     this.notifySelectionChange();
     this.notifyElementsChange();
   }
@@ -147,7 +157,7 @@ export class Designer {
   loadTemplate(json: string): void {
     try {
       const data = JSON.parse(json);
-      this.clear();
+      this.clearElements();
 
       if (data.objects && Array.isArray(data.objects)) {
         data.objects.forEach((objData: ElementData) => {
@@ -176,14 +186,12 @@ export class Designer {
    * Undo last action
    */
   undo(): void {
-    if (this.undoStack.length === 0) return;
-
-    const currentState = this.captureState();
-    this.redoStack.push(currentState);
-
-    const prevState = this.undoStack.pop();
-    if (prevState) {
-      this.restoreState(prevState);
+    if (this.historyIndex > 0) {
+      this.historyIndex--;
+      const state = this.history[this.historyIndex];
+      if (state) {
+        this.restoreState(state);
+      }
     }
   }
 
@@ -191,14 +199,12 @@ export class Designer {
    * Redo last undone action
    */
   redo(): void {
-    if (this.redoStack.length === 0) return;
-
-    const currentState = this.captureState();
-    this.undoStack.push(currentState);
-
-    const nextState = this.redoStack.pop();
-    if (nextState) {
-      this.restoreState(nextState);
+    if (this.historyIndex < this.history.length - 1) {
+      this.historyIndex++;
+      const state = this.history[this.historyIndex];
+      if (state) {
+        this.restoreState(state);
+      }
     }
   }
 
@@ -271,15 +277,21 @@ export class Designer {
     if (this.isRestoring) return;
 
     const state = this.captureState();
-    this.undoStack.push(state);
 
-    // Limit stack size
-    if (this.undoStack.length > this.maxUndoSteps) {
-      this.undoStack.shift();
+    // If we're in the middle of the history (after an undo), remove everything after current index
+    if (this.historyIndex < this.history.length - 1) {
+      this.history = this.history.slice(0, this.historyIndex + 1);
     }
 
-    // Clear redo stack on new action
-    this.redoStack = [];
+    // Add new state
+    this.history.push(state);
+    this.historyIndex = this.history.length - 1;
+
+    // Limit history size
+    if (this.history.length > this.maxHistorySteps) {
+      this.history.shift();
+      this.historyIndex--;
+    }
   }
 
   private captureState(): string {

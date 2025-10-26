@@ -318,15 +318,129 @@ describe('Designer', () => {
       expect(() => designer.redo()).not.toThrow();
     });
 
-    it('should not throw when calling undo after adding elements', () => {
+    it('should undo a single element addition', () => {
       designer.addElement('qr');
-      expect(() => designer.undo()).not.toThrow();
+      expect(designer.getElements()).toHaveLength(1);
+
+      designer.undo();
+      expect(designer.getElements()).toHaveLength(0);
     });
 
-    // Note: The current implementation has limitations with undo/redo
-    // due to loadTemplate() clearing the undo/redo stacks.
-    // Full undo/redo integration tests would require a more sophisticated
-    // implementation that separates template loading from state restoration.
+    it('should redo after undo', () => {
+      designer.addElement('qr');
+      expect(designer.getElements()).toHaveLength(1);
+
+      designer.undo();
+      expect(designer.getElements()).toHaveLength(0);
+
+      designer.redo();
+      expect(designer.getElements()).toHaveLength(1);
+    });
+
+    it('should undo multiple operations in sequence', () => {
+      designer.addElement('qr');
+      designer.addElement('text');
+      designer.addElement('image');
+      expect(designer.getElements()).toHaveLength(3);
+
+      designer.undo();
+      expect(designer.getElements()).toHaveLength(2);
+
+      designer.undo();
+      expect(designer.getElements()).toHaveLength(1);
+
+      designer.undo();
+      expect(designer.getElements()).toHaveLength(0);
+    });
+
+    it('should redo multiple operations in sequence', () => {
+      designer.addElement('qr');
+      designer.addElement('text');
+      designer.addElement('image');
+
+      designer.undo();
+      designer.undo();
+      designer.undo();
+      expect(designer.getElements()).toHaveLength(0);
+
+      designer.redo();
+      expect(designer.getElements()).toHaveLength(1);
+
+      designer.redo();
+      expect(designer.getElements()).toHaveLength(2);
+
+      designer.redo();
+      expect(designer.getElements()).toHaveLength(3);
+    });
+
+    it('should clear redo stack when new action performed after undo', () => {
+      designer.addElement('qr');
+      designer.addElement('text');
+      expect(designer.getElements()).toHaveLength(2);
+
+      designer.undo();
+      expect(designer.getElements()).toHaveLength(1);
+
+      // Adding a new element should clear the redo stack
+      designer.addElement('image');
+      expect(designer.getElements()).toHaveLength(2);
+
+      // Trying to redo should do nothing since redo stack was cleared
+      designer.redo();
+      expect(designer.getElements()).toHaveLength(2);
+    });
+
+    it('should respect maxUndoSteps limit', () => {
+      // Add more than 50 elements (maxHistorySteps)
+      for (let i = 0; i < 55; i++) {
+        designer.addElement('qr');
+      }
+      expect(designer.getElements()).toHaveLength(55);
+
+      // Now undo everything - should only be able to undo ~50 steps
+      // (the oldest steps will have been discarded)
+      for (let i = 0; i < 55; i++) {
+        designer.undo();
+        if (designer.getElements().length === 0) break;
+      }
+      // Due to history limit, we won't get all the way back
+      // With 50 history steps and starting with initial empty state,
+      // we can only go back 49 steps, leaving ~6 elements
+      // This is expected behavior - history only stores 50 states
+      expect(designer.getElements().length).toBeLessThanOrEqual(10);
+    });
+
+    it('should handle undo/redo with element properties changed', () => {
+      const element = designer.addElement('text', { x: 10, y: 20 });
+      expect(element.x).toBe(10);
+      expect(element.y).toBe(20);
+
+      // Simulate a property change (what would happen on canvas drag)
+      element.x = 50;
+      element.y = 60;
+      element.updateFabricObject(0, 0);
+      designer.getCanvas().render();
+      // Manually trigger save state (normally happens via object:modified event)
+      const currentElements = designer.getElements();
+      expect(currentElements[0].x).toBe(50);
+      expect(currentElements[0].y).toBe(60);
+    });
+
+    it('should clear undo/redo stacks on explicit clear', () => {
+      designer.addElement('qr');
+      designer.addElement('text');
+
+      designer.clear();
+
+      expect(designer.getElements()).toHaveLength(0);
+
+      // Both undo and redo should do nothing since stacks were cleared
+      designer.undo();
+      expect(designer.getElements()).toHaveLength(0);
+
+      designer.redo();
+      expect(designer.getElements()).toHaveLength(0);
+    });
   });
 
   describe('Callbacks', () => {

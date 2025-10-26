@@ -91,9 +91,9 @@ designer.addElement('text', { x: 40, y: 10 });
 const json = designer.saveTemplate();
 designer.loadTemplate(json);
 
-// Undo/redo
-designer.undo();
-designer.redo();
+// Undo/redo (fully functional with proper history management)
+designer.undo();    // Move back one step in history
+designer.redo();    // Move forward one step in history
 
 // Get state
 const elements = designer.getElements();
@@ -131,7 +131,11 @@ All elements:
 - Serialize to/from JSON
 
 ### State Management
-- Undo/redo via JSON snapshots (50-step limit)
+- **Undo/redo**: Index-based history system with JSON snapshots (50-step limit)
+  - History array stores all states
+  - Single index pointer tracks current position
+  - Undo/redo by moving index backward/forward
+  - New actions after undo trim future history (standard behavior)
 - Observer pattern for selection/element changes
 - Clean separation of concerns (Canvas, Elements, Designer)
 
@@ -148,9 +152,12 @@ Changes to TypeScript files auto-reload in the browser when using `npm run dev`.
 
 ### Testing
 - Framework: Vitest
-- 74/74 tests passing
-- Mocked Fabric.js for fast tests
-- Focus on public API contracts
+- Comprehensive test suite including:
+  - 32 Designer tests (constructor, adding elements, clearing, serialization, undo/redo, callbacks)
+  - 5 element type tests (QR, Text, Image, Rect)
+  - 3 unit tests (DPI conversion)
+  - All tests passing with mocked Fabric.js for fast execution
+- Focus on public API contracts and behavior-driven testing
 
 ## Integration with ASP.NET
 
