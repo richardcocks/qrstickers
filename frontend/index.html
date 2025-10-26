@@ -253,6 +253,19 @@
 
                 <div class="divider"></div>
 
+                <h2>Zoom</h2>
+                <div class="toolbar">
+                    <div class="button-group">
+                        <button class="secondary" onclick="zoomIn()">➕ In</button>
+                        <button class="secondary" onclick="zoomOut()">➖ Out</button>
+                    </div>
+                    <button class="secondary" onclick="zoomToFit()">⊡ Fit</button>
+                    <button class="secondary" onclick="zoomReset()">100%</button>
+                    <div id="zoomDisplay" style="text-align: center; padding: 8px; background: #fff; border-radius: 4px; font-weight: 600; color: #1976d2;">100%</div>
+                </div>
+
+                <div class="divider"></div>
+
                 <h2>History</h2>
                 <div class="button-group">
                     <button class="secondary" onclick="undo()">↶ Undo</button>
@@ -450,7 +463,13 @@
                 // Initialize viewport after container has proper dimensions
                 setTimeout(() => {
                     designer.getCanvas().resetView();
+                    updateZoomDisplay();
                 }, 50);
+
+                // Update zoom display on mouse wheel zoom (periodically check)
+                setInterval(() => {
+                    updateZoomDisplay();
+                }, 100);
 
                 showStatus('Designer initialized successfully!', 'success');
                 updateJSON();
@@ -535,8 +554,44 @@
         // Reset view to center on sticker
         window.resetView = () => {
             designer.resetView();
+            updateZoomDisplay();
             showStatus('View reset', 'success');
         };
+
+        // Zoom controls
+        window.zoomIn = () => {
+            designer.getCanvas().zoomIn();
+            updateZoomDisplay();
+            showStatus('Zoomed in', 'success');
+        };
+
+        window.zoomOut = () => {
+            designer.getCanvas().zoomOut();
+            updateZoomDisplay();
+            showStatus('Zoomed out', 'success');
+        };
+
+        window.zoomToFit = () => {
+            designer.getCanvas().zoomToFit();
+            updateZoomDisplay();
+            showStatus('Zoomed to fit', 'success');
+        };
+
+        window.zoomReset = () => {
+            designer.resetView();
+            updateZoomDisplay();
+            showStatus('Zoom reset to 100%', 'success');
+        };
+
+        // Update zoom display
+        function updateZoomDisplay() {
+            const zoom = designer.getCanvas().getZoom();
+            const zoomPercent = Math.round(zoom * 100);
+            const displayEl = document.getElementById('zoomDisplay');
+            if (displayEl) {
+                displayEl.textContent = `${zoomPercent}%`;
+            }
+        }
 
         // Save template
         window.saveTemplate = () => {

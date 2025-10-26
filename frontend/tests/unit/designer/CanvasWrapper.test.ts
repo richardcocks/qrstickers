@@ -538,4 +538,186 @@ describe('CanvasWrapper', () => {
       expect(mockCanvas.off).toHaveBeenCalled();
     });
   });
+
+  describe('Zoom Functionality', () => {
+    it('should initialize with zoom level 1.0', () => {
+      expect(wrapper.getZoom()).toBe(1);
+    });
+
+    it('should set zoom level within limits', () => {
+      wrapper.setZoom(2.0);
+      expect(wrapper.getZoom()).toBe(2.0);
+
+      const mockCanvas = (wrapper as any).fabricCanvas;
+      expect(mockCanvas.viewportTransform[0]).toBe(2.0); // scaleX
+      expect(mockCanvas.viewportTransform[3]).toBe(2.0); // scaleY
+    });
+
+    it('should clamp zoom to MIN_ZOOM (0.1)', () => {
+      wrapper.setZoom(0.05);
+      expect(wrapper.getZoom()).toBe(0.1);
+    });
+
+    it('should clamp zoom to MAX_ZOOM (5.0)', () => {
+      wrapper.setZoom(10.0);
+      expect(wrapper.getZoom()).toBe(5.0);
+    });
+
+    it('should zoom in by factor 1.2', () => {
+      wrapper.setZoom(1.0);
+      wrapper.zoomIn();
+      expect(wrapper.getZoom()).toBeCloseTo(1.2, 2);
+    });
+
+    it('should zoom out by factor 1.2', () => {
+      wrapper.setZoom(1.2);
+      wrapper.zoomOut();
+      expect(wrapper.getZoom()).toBeCloseTo(1.0, 2);
+    });
+
+    it('should zoom in with custom factor', () => {
+      wrapper.setZoom(1.0);
+      wrapper.zoomIn(1.5);
+      expect(wrapper.getZoom()).toBeCloseTo(1.5, 2);
+    });
+
+    it('should zoom out with custom factor', () => {
+      wrapper.setZoom(2.0);
+      wrapper.zoomOut(2.0);
+      expect(wrapper.getZoom()).toBeCloseTo(1.0, 2);
+    });
+
+    it('should zoom centered on viewport center when no center provided', () => {
+      const mockCanvas = (wrapper as any).fabricCanvas;
+      const vptBefore = mockCanvas.viewportTransform.slice();
+
+      wrapper.setZoom(2.0);
+
+      const vptAfter = mockCanvas.viewportTransform;
+      // Pan should have adjusted to keep center fixed
+      expect(vptAfter[4]).not.toBe(vptBefore[4]); // panX changed
+      expect(vptAfter[5]).not.toBe(vptBefore[5]); // panY changed
+    });
+
+    it('should zoom centered on specific point', () => {
+      const mockCanvas = (wrapper as any).fabricCanvas;
+
+      // Center view first
+      wrapper.resetView();
+      const vptBefore = mockCanvas.viewportTransform.slice();
+
+      // Zoom centered on top-left corner (0, 0)
+      wrapper.setZoom(2.0, 0, 0);
+
+      const vptAfter = mockCanvas.viewportTransform;
+      expect(vptAfter[0]).toBe(2.0); // zoom applied
+
+      // Pan should have adjusted to keep (0,0) fixed
+      // At zoom 1: screenPoint = logicalPoint * 1 + pan
+      // At zoom 2: screenPoint = logicalPoint * 2 + newPan
+      // For point (0,0) to stay at screen (0,0):
+      // 0 = 0 * 2 + newPan => newPan should be adjusted
+      expect(vptAfter[4]).not.toBe(vptBefore[4]);
+    });
+
+    it('should enforce pan limits after zooming', () => {
+      // Zoom in significantly
+      wrapper.setZoom(3.0);
+
+      const mockCanvas = (wrapper as any).fabricCanvas;
+      const vpt = mockCanvas.viewportTransform;
+
+      // Pan values should be within calculated limits
+      const limits = (wrapper as any).getPanLimits();
+      expect(vpt[4]).toBeGreaterThanOrEqual(limits.minX);
+      expect(vpt[4]).toBeLessThanOrEqual(limits.maxX);
+      expect(vpt[5]).toBeGreaterThanOrEqual(limits.minY);
+      expect(vpt[5]).toBeLessThanOrEqual(limits.maxY);
+    });
+
+    it('should calculate zoomToFit correctly', () => {
+      wrapper.zoomToFit();
+
+      const zoom = wrapper.getZoom();
+
+      // With 90% padding:
+      // zoomX = (800 * 0.9) / stickerWidthPx ≈ 1.27 (for 100mm ≈ 567px)
+      // zoomY = (600 * 0.9) / stickerHeightPx ≈ 1.91 (for 50mm ≈ 283px)
+      // Should use min(zoomX, zoomY) ≈ 1.27
+      expect(zoom).toBeGreaterThan(1.0);
+      expect(zoom).toBeLessThan(2.0);
+    });
+
+    it('should reset zoom to 1.0 when calling resetView', () => {
+      wrapper.setZoom(2.5);
+      expect(wrapper.getZoom()).toBe(2.5);
+
+      wrapper.resetView();
+      expect(wrapper.getZoom()).toBe(1.0);
+
+      const mockCanvas = (wrapper as any).fabricCanvas;
+      expect(mockCanvas.viewportTransform[0]).toBe(1.0); // scaleX
+      expect(mockCanvas.viewportTransform[3]).toBe(1.0); // scaleY
+    });
+
+    it('should request render after zoom change', () => {
+      const mockCanvas = (wrapper as any).fabricCanvas;
+      mockCanvas.requestRenderAll.mockClear();
+
+      wrapper.setZoom(1.5);
+
+      expect(mockCanvas.requestRenderAll).toHaveBeenCalled();
+    });
+  });
+
+  describe('Pan Limits with Zoom', () => {
+    it('should calculate pan limits accounting for zoom level', () => {
+      wrapper.setZoom(2.0);
+
+      const limits = (wrapper as any).getPanLimits();
+
+      // At 2x zoom, sticker appears 2x larger
+      // So limits should be different than at 1x zoom
+      const scaledWidth = wrapper.stickerWidthPx * 2.0;
+      const scaledHeight = wrapper.stickerHeightPx * 2.0;
+
+      const expectedMaxX = 800 - scaledWidth * 0.1;
+      const expectedMinX = 800 * 0.1 - scaledWidth;
+
+      expect(limits.maxX).toBeCloseTo(expectedMaxX, 1);
+      expect(limits.minX).toBeCloseTo(expectedMinX, 1);
+    });
+
+    it('should allow more panning when zoomed in', () => {
+      // Get limits at zoom 1.0
+      wrapper.setZoom(1.0);
+      const limits1x = (wrapper as any).getPanLimits();
+
+      // Get limits at zoom 2.0
+      wrapper.setZoom(2.0);
+      const limits2x = (wrapper as any).getPanLimits();
+
+      // At 2x zoom, sticker is larger, so we can pan more
+      const range1x = limits1x.maxX - limits1x.minX;
+      const range2x = limits2x.maxX - limits2x.minX;
+
+      expect(range2x).toBeGreaterThan(range1x);
+    });
+
+    it('should restrict panning when zoomed out', () => {
+      // Get limits at zoom 1.0
+      wrapper.setZoom(1.0);
+      const limits1x = (wrapper as any).getPanLimits();
+
+      // Get limits at zoom 0.5
+      wrapper.setZoom(0.5);
+      const limits05x = (wrapper as any).getPanLimits();
+
+      // At 0.5x zoom, sticker is smaller, so less panning needed
+      const range1x = limits1x.maxX - limits1x.minX;
+      const range05x = limits05x.maxX - limits05x.minX;
+
+      expect(range05x).toBeLessThan(range1x);
+    });
+  });
 });

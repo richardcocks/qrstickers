@@ -25,7 +25,12 @@ export class CanvasWrapper {
   private lastPanX = 0;
   private lastPanY = 0;
   private isPanning = false;
+  private currentZoom: number = 1;
   private debug: boolean = true; // Set to false to disable debug logging
+
+  // Zoom limits
+  private readonly MIN_ZOOM = 0.1;
+  private readonly MAX_ZOOM = 5.0;
 
   public readonly widthMm: number;
   public readonly heightMm: number;
@@ -94,6 +99,9 @@ export class CanvasWrapper {
 
     // Set up grid rendering via after:render event
     this.setupGridRendering();
+
+    // Enable mouse wheel zoom
+    this.enableMouseWheelZoom();
   }
 
   /**
@@ -463,7 +471,7 @@ export class CanvasWrapper {
   }
 
   /**
-   * Reset view to center on sticker boundary
+   * Reset view to center on sticker boundary at 1:1 zoom
    */
   resetView(): void {
     const vpt = this.fabricCanvas.viewportTransform;
@@ -482,8 +490,14 @@ export class CanvasWrapper {
       containerSize: { width: containerWidth, height: containerHeight },
       boundaryPos: { left: this.boundaryLeft, top: this.boundaryTop },
       stickerSize: { width: this.stickerWidthPx, height: this.stickerHeightPx },
-      viewportTransformBefore: vpt.slice()
+      viewportTransformBefore: vpt.slice(),
+      zoomBefore: this.currentZoom
     });
+
+    // Reset zoom to 1:1
+    vpt[0] = 1; // scaleX
+    vpt[3] = 1; // scaleY
+    this.currentZoom = 1;
 
     // Center the boundary (at 0,0) in the viewport
     // Pan = (containerSize - stickerSize) / 2
@@ -492,6 +506,7 @@ export class CanvasWrapper {
 
     if (this.debug) console.log('[CanvasWrapper] resetView calculated:', {
       viewportTransform: vpt.slice(),
+      zoom: this.currentZoom,
       panX: vpt[4],
       panY: vpt[5]
     });
@@ -501,6 +516,7 @@ export class CanvasWrapper {
 
   /**
    * Calculate pan limits to keep sticker boundary partially visible
+   * Accounts for current zoom level
    */
   private getPanLimits(): { minX: number; maxX: number; minY: number; maxY: number } {
     // Get actual visible container size
@@ -512,20 +528,26 @@ export class CanvasWrapper {
     // Minimum visible amount of boundary (10% must be visible)
     const minVisibleAmount = 0.1;
 
+    // Account for zoom: sticker appears larger/smaller at different zoom levels
+    const scaledStickerWidth = this.stickerWidthPx * this.currentZoom;
+    const scaledStickerHeight = this.stickerHeightPx * this.currentZoom;
+
     // With boundary at (0,0), calculate limits to keep it partially visible
     // Maximum pan right: boundary left edge stays within right side of screen
-    const maxX = containerWidth - this.stickerWidthPx * minVisibleAmount;
+    const maxX = containerWidth - scaledStickerWidth * minVisibleAmount;
 
     // Maximum pan left: boundary right edge stays within left side of screen
-    const minX = containerWidth * minVisibleAmount - this.stickerWidthPx;
+    const minX = containerWidth * minVisibleAmount - scaledStickerWidth;
 
     // Same logic for Y axis
-    const maxY = containerHeight - this.stickerHeightPx * minVisibleAmount;
-    const minY = containerHeight * minVisibleAmount - this.stickerHeightPx;
+    const maxY = containerHeight - scaledStickerHeight * minVisibleAmount;
+    const minY = containerHeight * minVisibleAmount - scaledStickerHeight;
 
     if (this.debug) console.log('[CanvasWrapper] getPanLimits:', {
       containerSize: { width: containerWidth, height: containerHeight },
-      boundaryRect: { left: 0, top: 0, right: this.stickerWidthPx, bottom: this.stickerHeightPx },
+      zoom: this.currentZoom,
+      stickerSize: { width: this.stickerWidthPx, height: this.stickerHeightPx },
+      scaledSize: { width: scaledStickerWidth, height: scaledStickerHeight },
       limits: { minX, maxX, minY, maxY }
     });
 
@@ -577,5 +599,181 @@ export class CanvasWrapper {
     if (container) {
       container.style.cursor = 'grab';
     }
+  }
+
+  /**
+   * Set zoom level, optionally centered on a specific screen point
+   * @param scale - New zoom level (clamped to MIN_ZOOM - MAX_ZOOM)
+   * @param centerX - Optional screen X coordinate to zoom towards (defaults to viewport center)
+   * @param centerY - Optional screen Y coordinate to zoom towards (defaults to viewport center)
+   */
+  setZoom(scale: number, centerX?: number, centerY?: number): void {
+    const vpt = this.fabricCanvas.viewportTransform;
+    if (!vpt) {
+      if (this.debug) console.log('[CanvasWrapper] setZoom: viewportTransform is null');
+      return;
+    }
+
+    // Clamp scale to limits
+    const newZoom = Math.max(this.MIN_ZOOM, Math.min(this.MAX_ZOOM, scale));
+    const oldZoom = this.currentZoom;
+
+    if (this.debug) console.log('[CanvasWrapper] setZoom input:', {
+      requestedScale: scale,
+      clampedScale: newZoom,
+      oldZoom,
+      centerX,
+      centerY
+    });
+
+    // If no center point provided, use viewport center
+    if (centerX === undefined || centerY === undefined) {
+      const container = this.fabricCanvas.getElement().parentElement;
+      const rect = container?.getBoundingClientRect();
+      const containerWidth = rect?.width || 800;
+      const containerHeight = rect?.height || 600;
+      centerX = containerWidth / 2;
+      centerY = containerHeight / 2;
+    }
+
+    // Calculate pan adjustment to keep center point fixed
+    // newPan = oldPan + (centerPoint - oldPan) * (1 - newZoom/oldZoom)
+    const zoomRatio = newZoom / oldZoom;
+    const deltaX = (centerX - vpt[4]) * (1 - zoomRatio);
+    const deltaY = (centerY - vpt[5]) * (1 - zoomRatio);
+
+    // Update viewport transform
+    vpt[0] = newZoom; // scaleX
+    vpt[3] = newZoom; // scaleY
+    vpt[4] += deltaX; // panX
+    vpt[5] += deltaY; // panY
+
+    // Enforce pan limits at new zoom level
+    const limits = this.getPanLimits();
+    vpt[4] = Math.max(limits.minX, Math.min(limits.maxX, vpt[4]));
+    vpt[5] = Math.max(limits.minY, Math.min(limits.maxY, vpt[5]));
+
+    this.currentZoom = newZoom;
+
+    if (this.debug) console.log('[CanvasWrapper] setZoom result:', {
+      zoom: newZoom,
+      viewportTransform: vpt.slice(),
+      panX: vpt[4],
+      panY: vpt[5],
+      limits
+    });
+
+    this.fabricCanvas.requestRenderAll();
+  }
+
+  /**
+   * Get current zoom level
+   */
+  getZoom(): number {
+    return this.currentZoom;
+  }
+
+  /**
+   * Zoom in by a factor (default 1.2x)
+   */
+  zoomIn(factor: number = 1.2): void {
+    this.setZoom(this.currentZoom * factor);
+  }
+
+  /**
+   * Zoom out by a factor (default 1.2x)
+   */
+  zoomOut(factor: number = 1.2): void {
+    this.setZoom(this.currentZoom / factor);
+  }
+
+  /**
+   * Zoom to fit the sticker boundary in the viewport
+   */
+  zoomToFit(): void {
+    const vpt = this.fabricCanvas.viewportTransform;
+    if (!vpt) {
+      if (this.debug) console.log('[CanvasWrapper] zoomToFit: viewportTransform is null');
+      return;
+    }
+
+    const container = this.fabricCanvas.getElement().parentElement;
+    const rect = container?.getBoundingClientRect();
+    const containerWidth = rect?.width || 800;
+    const containerHeight = rect?.height || 600;
+
+    // Calculate zoom to fit with some padding (90% of available space)
+    const padding = 0.9;
+    const zoomX = (containerWidth * padding) / this.stickerWidthPx;
+    const zoomY = (containerHeight * padding) / this.stickerHeightPx;
+
+    // Use the smaller zoom to ensure entire sticker fits
+    const fitZoom = Math.min(zoomX, zoomY);
+
+    if (this.debug) console.log('[CanvasWrapper] zoomToFit:', {
+      containerSize: { width: containerWidth, height: containerHeight },
+      stickerSize: { width: this.stickerWidthPx, height: this.stickerHeightPx },
+      calculatedZoom: { x: zoomX, y: zoomY, final: fitZoom }
+    });
+
+    // Set zoom level
+    vpt[0] = fitZoom; // scaleX
+    vpt[3] = fitZoom; // scaleY
+    this.currentZoom = fitZoom;
+
+    // Center the boundary (at 0,0) in the viewport at the new zoom level
+    // Pan = (containerSize - stickerSize * zoom) / 2
+    vpt[4] = (containerWidth - this.stickerWidthPx * fitZoom) / 2;
+    vpt[5] = (containerHeight - this.stickerHeightPx * fitZoom) / 2;
+
+    if (this.debug) console.log('[CanvasWrapper] zoomToFit result:', {
+      zoom: fitZoom,
+      viewportTransform: vpt.slice(),
+      panX: vpt[4],
+      panY: vpt[5]
+    });
+
+    this.fabricCanvas.requestRenderAll();
+  }
+
+  /**
+   * Enable mouse wheel zoom (centered on cursor position)
+   */
+  private enableMouseWheelZoom(): void {
+    const canvasElement = this.fabricCanvas.getElement();
+    if (!canvasElement || typeof canvasElement.addEventListener !== 'function') return;
+
+    canvasElement.addEventListener('wheel', this.handleMouseWheel.bind(this), { passive: false });
+  }
+
+  /**
+   * Handle mouse wheel events for zooming
+   */
+  private handleMouseWheel(e: WheelEvent): void {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Get mouse position relative to canvas
+    const canvasElement = this.fabricCanvas.getElement();
+    const rect = canvasElement.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    // Calculate zoom delta (negative deltaY means zoom in)
+    const delta = e.deltaY;
+    const zoomFactor = delta > 0 ? 0.9 : 1.1; // Zoom out or in
+
+    const newZoom = this.currentZoom * zoomFactor;
+
+    if (this.debug) console.log('[CanvasWrapper] mouse wheel zoom:', {
+      deltaY: delta,
+      zoomFactor,
+      oldZoom: this.currentZoom,
+      newZoom,
+      mousePos: { x: mouseX, y: mouseY }
+    });
+
+    // Zoom centered on mouse cursor
+    this.setZoom(newZoom, mouseX, mouseY);
   }
 }

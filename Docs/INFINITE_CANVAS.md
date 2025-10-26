@@ -494,19 +494,223 @@ This logs:
 - ~70% reduction in canvas pixel buffer size
 - Lower memory footprint overall
 
+## Zoom Functionality
+
+### Overview
+
+The infinite canvas supports zooming in and out while maintaining the center point fixed. Zoom functionality integrates seamlessly with panning and grid rendering.
+
+### Zoom Implementation
+
+**File**: `frontend/src/designer/CanvasWrapper.ts`
+
+**Zoom State**:
+```typescript
+private currentZoom: number = 1;
+private readonly MIN_ZOOM = 0.1;  // 10% zoom
+private readonly MAX_ZOOM = 5.0;  // 500% zoom
+```
+
+**Viewport Transform with Zoom**:
+```typescript
+viewportTransform = [scaleX, skewX, skewY, scaleY, panX, panY]
+//                     [0]    [1]    [2]    [3]    [4]    [5]
+
+// With zoom 2.0 (200%):
+viewportTransform = [2.0, 0, 0, 2.0, panX, panY]
+```
+
+### Zoom Methods
+
+**setZoom(scale, centerX?, centerY?)**:
+- Sets zoom level (clamped to MIN_ZOOM - MAX_ZOOM)
+- Optionally zooms centered on a specific screen point
+- Defaults to zooming on viewport center if no point provided
+- Adjusts pan values to keep the center point fixed
+
+**Math for Zoom-to-Point** (lines 622-632):
+```typescript
+// Keep screen point fixed while zooming
+const zoomRatio = newZoom / oldZoom;
+const deltaX = (centerX - vpt[4]) * (1 - zoomRatio);
+const deltaY = (centerY - vpt[5]) * (1 - zoomRatio);
+
+vpt[0] = newZoom; // scaleX
+vpt[3] = newZoom; // scaleY
+vpt[4] += deltaX; // adjust panX to keep point fixed
+vpt[5] += deltaY; // adjust panY to keep point fixed
+```
+
+**getZoom()**: Returns current zoom level
+
+**zoomIn(factor = 1.2)**: Zooms in by multiplying current zoom by factor
+
+**zoomOut(factor = 1.2)**: Zooms out by dividing current zoom by factor
+
+**zoomToFit()**: Calculates optimal zoom to fit sticker boundary in viewport with 90% padding
+
+### Mouse Wheel Zoom
+
+Zoom is triggered by scrolling the mouse wheel over the canvas. The zoom is centered on the cursor position, creating an intuitive zooming experience.
+
+**File**: `frontend/src/designer/CanvasWrapper.ts:719-744`
+
+```typescript
+private handleMouseWheel(e: WheelEvent): void {
+  e.preventDefault();
+
+  // Get mouse position relative to canvas
+  const rect = canvasElement.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left;
+  const mouseY = e.clientY - rect.top;
+
+  // Calculate zoom factor (negative deltaY = zoom in)
+  const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+  const newZoom = this.currentZoom * zoomFactor;
+
+  // Zoom centered on cursor
+  this.setZoom(newZoom, mouseX, mouseY);
+}
+```
+
+### Pan Limits with Zoom
+
+Pan limits are dynamically calculated based on the current zoom level to ensure the boundary remains partially visible.
+
+**File**: `frontend/src/designer/CanvasWrapper.ts:514-548`
+
+```typescript
+// Account for zoom: sticker appears larger/smaller at different zoom levels
+const scaledStickerWidth = this.stickerWidthPx * this.currentZoom;
+const scaledStickerHeight = this.stickerHeightPx * this.currentZoom;
+
+// Calculate limits based on scaled dimensions
+const maxX = containerWidth - scaledStickerWidth * minVisibleAmount;
+const minX = containerWidth * minVisibleAmount - scaledStickerWidth;
+```
+
+**Example Pan Limits at Different Zooms**:
+
+With container 800x600 and sticker 567x283:
+
+```typescript
+// At zoom 1.0:
+minX = -487, maxX = 743 (range: 1230)
+
+// At zoom 2.0:
+minX = -1054, maxX = 687 (range: 1741) - more panning allowed
+
+// At zoom 0.5:
+minX = -204, maxX = 772 (range: 976) - less panning needed
+```
+
+### Reset View with Zoom
+
+The `resetView()` method resets both zoom to 1:1 and centers the boundary:
+
+```typescript
+resetView(): void {
+  vpt[0] = 1; // reset scaleX
+  vpt[3] = 1; // reset scaleY
+  this.currentZoom = 1;
+
+  // Center boundary at 1:1 zoom
+  vpt[4] = (containerWidth - stickerWidthPx) / 2;
+  vpt[5] = (containerHeight - stickerHeightPx) / 2;
+}
+```
+
+### Grid Rendering with Zoom
+
+The grid rendering already accounts for zoom (no changes needed):
+
+**File**: `frontend/src/designer/CanvasWrapper.ts:338-380`
+
+```typescript
+const zoom = vpt[0]; // Get current zoom from transform
+
+// Calculate visible area accounting for zoom
+const visibleLeft = -panX / zoom;
+const visibleTop = -panY / zoom;
+const visibleWidth = canvasWidth / zoom;
+const visibleHeight = canvasHeight / zoom;
+
+// Transform grid dots to screen coordinates
+const screenX = (x * zoom + panX) | 0;
+const screenY = (y * zoom + panY) | 0;
+```
+
+This ensures grid dots remain aligned to the logical grid at all zoom levels.
+
+### UI Controls
+
+**File**: `frontend/index.html:256-265`
+
+```html
+<h2>Zoom</h2>
+<div class="toolbar">
+    <div class="button-group">
+        <button onclick="zoomIn()">➕ In</button>
+        <button onclick="zoomOut()">➖ Out</button>
+    </div>
+    <button onclick="zoomToFit()">⊡ Fit</button>
+    <button onclick="zoomReset()">100%</button>
+    <div id="zoomDisplay">100%</div>
+</div>
+```
+
+**JavaScript Handlers**:
+- `zoomIn()`: Zoom in by 1.2x
+- `zoomOut()`: Zoom out by 1.2x
+- `zoomToFit()`: Fit sticker to viewport
+- `zoomReset()`: Reset to 1:1 zoom centered
+- `updateZoomDisplay()`: Updates zoom percentage display
+
+### Testing
+
+**File**: `frontend/tests/unit/designer/CanvasWrapper.test.ts`
+
+Comprehensive zoom tests include:
+- Zoom level clamping (MIN_ZOOM, MAX_ZOOM)
+- Zoom in/out with default and custom factors
+- Zoom centered on viewport center vs specific point
+- Pan limit enforcement at different zoom levels
+- zoomToFit() calculation
+- resetView() zoom reset
+- Pan limit ranges at different zoom levels
+
+**Running tests**:
+```bash
+cd frontend && npm run test
+```
+
+### Debug Logging
+
+Enable zoom logging by setting `debug = true` in CanvasWrapper:
+
+**Example output**:
+```
+[CanvasWrapper] setZoom input: { requestedScale: 2, clampedScale: 2, oldZoom: 1, centerX: 400, centerY: 300 }
+[CanvasWrapper] setZoom result: { zoom: 2, panX: -116.5, panY: -141.5, limits: {...} }
+[CanvasWrapper] getPanLimits: { zoom: 2, scaledSize: { width: 1134, height: 567 }, limits: {...} }
+```
+
 ## Future Enhancements
 
 Potential improvements to the infinite canvas:
 
-1. **Zoom support**: Modify `vpt[0]` and `vpt[3]` for scaling
+1. ~~**Zoom support**~~: ✅ Implemented with mouse wheel and UI controls
 2. **Minimap**: Show overview of full logical space
 3. **Snap to grid**: Align objects to grid lines
 4. **Rulers**: Display measurement guides
 5. **Multiple artboards**: Support multiple sticker templates in one canvas
 6. **Performance viewport**: Cull objects outside visible area
+7. **Keyboard shortcuts**: Ctrl+Plus/Minus for zoom, Ctrl+0 for reset
+8. **Touch gestures**: Pinch-to-zoom on touch devices
 
 ## References
 
 - [Fabric.js Viewport Documentation](http://fabricjs.com/fabric-intro-part-5)
 - [2D Transform Matrix](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Tutorial/Transformations)
 - [Infinite Canvas Pattern](https://www.figma.com/blog/how-figmas-multiplayer-technology-works/)
+- [Zoom and Pan Interactions](https://www.nan.fyi/svg-paths)
