@@ -33,10 +33,14 @@ export class Designer {
   private maxHistorySteps = 50;
   private isRestoring = false;
 
+  // Clipboard for copy/paste
+  private clipboard: ElementData | null = null;
+
   constructor(config: DesignerConfig) {
     this.config = config;
     this.canvas = new CanvasWrapper(config);
     this.initializeEventListeners();
+    this.enableKeyboardShortcuts();
     // Save initial empty state so first undo has something to restore to
     this.saveState();
   }
@@ -112,6 +116,36 @@ export class Designer {
    */
   getElements(): BaseElement[] {
     return [...this.elements];
+  }
+
+  /**
+   * Update a specific element's properties
+   */
+  updateElement(elementId: string, properties: Partial<ElementData>): void {
+    const element = this.elements.find((el) => el.id === elementId);
+    if (!element) return;
+
+    // Remove old fabric object
+    const oldFabricObj = element.getFabricObject(this.canvas.boundaryLeft, this.canvas.boundaryTop);
+    this.canvas.remove(oldFabricObj);
+
+    // Update element properties
+    Object.assign(element, properties);
+
+    // Clear cached fabric object and create new one with updated properties
+    (element as any).fabricObject = null;
+    const newFabricObj = element.getFabricObject(this.canvas.boundaryLeft, this.canvas.boundaryTop);
+    this.canvas.add(newFabricObj);
+
+    // Maintain selection if this was the selected element
+    if (this.selectedElement?.id === elementId) {
+      this.canvas.setActiveObject(newFabricObj);
+    }
+
+    this.canvas.render();
+
+    this.saveState();
+    this.notifyElementsChange();
   }
 
   /**
@@ -206,6 +240,118 @@ export class Designer {
         this.restoreState(state);
       }
     }
+  }
+
+  /**
+   * Copy selected element to clipboard
+   */
+  copy(): boolean {
+    if (!this.selectedElement) return false;
+    this.clipboard = this.selectedElement.toJSON();
+    return true;
+  }
+
+  /**
+   * Paste element from clipboard
+   */
+  paste(): BaseElement | null {
+    if (!this.clipboard) return null;
+
+    // Create offset position for pasted element
+    const offsetX = 5; // 5mm offset
+    const offsetY = 5;
+    const pastedData = {
+      ...this.clipboard,
+      id: `${this.clipboard.type}-${Date.now()}`, // New unique ID
+      x: this.clipboard.x + offsetX,
+      y: this.clipboard.y + offsetY,
+    };
+
+    const element = this.createElementFromJSON(pastedData);
+    if (!element) return null;
+
+    this.elements.push(element);
+    const fabricObj = element.getFabricObject(this.canvas.boundaryLeft, this.canvas.boundaryTop);
+    this.canvas.add(fabricObj);
+    this.canvas.setActiveObject(fabricObj);
+    this.canvas.render();
+
+    this.saveState();
+    this.notifyElementsChange();
+
+    return element;
+  }
+
+  /**
+   * Duplicate the selected element
+   */
+  duplicate(): BaseElement | null {
+    if (this.copy()) {
+      return this.paste();
+    }
+    return null;
+  }
+
+  /**
+   * Deselect all elements
+   */
+  deselectAll(): void {
+    this.canvas.discardActiveObject();
+    this.selectedElement = null;
+    this.canvas.render();
+    this.notifySelectionChange();
+  }
+
+  /**
+   * Enable keyboard shortcuts
+   */
+  private enableKeyboardShortcuts(): void {
+    document.addEventListener('keydown', (e: KeyboardEvent) => {
+      // Don't trigger shortcuts when typing in input fields
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+        return;
+      }
+
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const ctrlOrCmd = isMac ? e.metaKey : e.ctrlKey;
+
+      // Delete
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        this.removeSelected();
+      }
+      // Undo: Ctrl/Cmd+Z
+      else if (ctrlOrCmd && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        this.undo();
+      }
+      // Redo: Ctrl/Cmd+Y or Ctrl/Cmd+Shift+Z
+      else if (ctrlOrCmd && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+        e.preventDefault();
+        this.redo();
+      }
+      // Copy: Ctrl/Cmd+C
+      else if (ctrlOrCmd && e.key === 'c') {
+        e.preventDefault();
+        this.copy();
+      }
+      // Paste: Ctrl/Cmd+V
+      else if (ctrlOrCmd && e.key === 'v') {
+        e.preventDefault();
+        this.paste();
+      }
+      // Duplicate: Ctrl/Cmd+D
+      else if (ctrlOrCmd && e.key === 'd') {
+        e.preventDefault();
+        this.duplicate();
+      }
+      // Escape: Deselect
+      else if (e.key === 'Escape') {
+        e.preventDefault();
+        this.deselectAll();
+      }
+    });
   }
 
   /**

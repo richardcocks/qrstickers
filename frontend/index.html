@@ -262,6 +262,7 @@
                 <div id="selectedInfo">No element selected</div>
 
                 <div id="properties" style="display: none;">
+                    <!-- Common Properties -->
                     <div class="property-group">
                         <label>X Position (mm)</label>
                         <input type="number" id="prop-x" step="0.1">
@@ -278,11 +279,105 @@
                         <label>Height (mm)</label>
                         <input type="number" id="prop-height" step="0.1">
                     </div>
-                    <div class="property-group">
-                        <label>Data Binding</label>
-                        <input type="text" id="prop-binding" placeholder="e.g., device.Serial">
+
+                    <!-- QR Code Properties -->
+                    <div id="qr-properties" style="display: none;">
+                        <div class="divider"></div>
+                        <h3 style="font-size: 14px; margin: 10px 0;">QR Code</h3>
+                        <div class="property-group">
+                            <label>Data Binding</label>
+                            <input type="text" id="prop-qr-binding" placeholder="e.g., device.Serial">
+                        </div>
+                        <div class="property-group">
+                            <label>Error Correction</label>
+                            <select id="prop-qr-ecc">
+                                <option value="L">Low (7%)</option>
+                                <option value="M">Medium (15%)</option>
+                                <option value="Q">Quartile (25%)</option>
+                                <option value="H">High (30%)</option>
+                            </select>
+                        </div>
+                        <div class="property-group">
+                            <label>Quiet Zone (mm)</label>
+                            <input type="number" id="prop-qr-quiet" step="0.5" min="0">
+                        </div>
                     </div>
-                    <button onclick="updateProperties()">Apply Changes</button>
+
+                    <!-- Text Properties -->
+                    <div id="text-properties" style="display: none;">
+                        <div class="divider"></div>
+                        <h3 style="font-size: 14px; margin: 10px 0;">Text</h3>
+                        <div class="property-group">
+                            <label>Text Content</label>
+                            <input type="text" id="prop-text-content">
+                        </div>
+                        <div class="property-group">
+                            <label>Data Binding</label>
+                            <input type="text" id="prop-text-binding" placeholder="e.g., device.Name">
+                        </div>
+                        <div class="property-group">
+                            <label>Font Family</label>
+                            <select id="prop-text-font">
+                                <option value="Arial">Arial</option>
+                                <option value="Helvetica">Helvetica</option>
+                                <option value="Times New Roman">Times New Roman</option>
+                                <option value="Courier New">Courier New</option>
+                                <option value="Georgia">Georgia</option>
+                                <option value="Verdana">Verdana</option>
+                            </select>
+                        </div>
+                        <div class="property-group">
+                            <label>Font Size (px)</label>
+                            <input type="number" id="prop-text-size" min="8" max="72">
+                        </div>
+                        <div class="property-group">
+                            <label>Font Weight</label>
+                            <select id="prop-text-weight">
+                                <option value="normal">Normal</option>
+                                <option value="bold">Bold</option>
+                            </select>
+                        </div>
+                        <div class="property-group">
+                            <label>Color</label>
+                            <input type="color" id="prop-text-color">
+                        </div>
+                    </div>
+
+                    <!-- Image Properties -->
+                    <div id="image-properties" style="display: none;">
+                        <div class="divider"></div>
+                        <h3 style="font-size: 14px; margin: 10px 0;">Image</h3>
+                        <div class="property-group">
+                            <label>Data Binding</label>
+                            <input type="text" id="prop-image-binding" placeholder="e.g., connection.CompanyLogoUrl">
+                        </div>
+                        <div class="property-group">
+                            <label>Aspect Ratio</label>
+                            <select id="prop-image-aspect">
+                                <option value="contain">Contain</option>
+                                <option value="cover">Cover</option>
+                                <option value="stretch">Stretch</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Rectangle Properties -->
+                    <div id="rect-properties" style="display: none;">
+                        <div class="divider"></div>
+                        <h3 style="font-size: 14px; margin: 10px 0;">Rectangle</h3>
+                        <div class="property-group">
+                            <label>Fill Color</label>
+                            <input type="color" id="prop-rect-fill">
+                        </div>
+                        <div class="property-group">
+                            <label>Stroke Color</label>
+                            <input type="color" id="prop-rect-stroke">
+                        </div>
+                        <div class="property-group">
+                            <label>Stroke Width (px)</label>
+                            <input type="number" id="prop-rect-stroke-width" min="0" max="10">
+                        </div>
+                    </div>
                 </div>
 
                 <div class="divider"></div>
@@ -317,6 +412,7 @@
                 });
 
                 window.designer = designer; // Expose for console debugging
+                setupPropertyListeners();
                 showStatus('Designer initialized successfully!', 'success');
                 updateJSON();
             } catch (error) {
@@ -414,28 +510,73 @@
             });
         };
 
-        // Update properties
-        window.updateProperties = () => {
+        // Update element property helper
+        function updateElementProperty(property, value) {
             const element = designer.getSelectedElement();
             if (!element) return;
 
-            element.x = parseFloat(document.getElementById('prop-x').value);
-            element.y = parseFloat(document.getElementById('prop-y').value);
-            element.width = parseFloat(document.getElementById('prop-width').value);
-            element.height = parseFloat(document.getElementById('prop-height').value);
-            element.dataBinding = document.getElementById('prop-binding').value;
+            designer.updateElement(element.id, { [property]: value });
+        }
 
-            element.updateFabricObject(designer.getCanvas().boundaryLeft, designer.getCanvas().boundaryTop);
-            designer.getCanvas().render();
+        // Setup property input listeners
+        function setupPropertyListeners() {
+            // Common properties
+            document.getElementById('prop-x').addEventListener('input', (e) =>
+                updateElementProperty('x', parseFloat(e.target.value)));
+            document.getElementById('prop-y').addEventListener('input', (e) =>
+                updateElementProperty('y', parseFloat(e.target.value)));
+            document.getElementById('prop-width').addEventListener('input', (e) =>
+                updateElementProperty('width', parseFloat(e.target.value)));
+            document.getElementById('prop-height').addEventListener('input', (e) =>
+                updateElementProperty('height', parseFloat(e.target.value)));
 
-            showStatus('Properties updated', 'success');
-            updateJSON();
-        };
+            // QR properties
+            document.getElementById('prop-qr-binding').addEventListener('input', (e) =>
+                updateElementProperty('dataBinding', e.target.value));
+            document.getElementById('prop-qr-ecc').addEventListener('change', (e) =>
+                updateElementProperty('eccLevel', e.target.value));
+            document.getElementById('prop-qr-quiet').addEventListener('input', (e) =>
+                updateElementProperty('quietZone', parseFloat(e.target.value)));
+
+            // Text properties
+            document.getElementById('prop-text-content').addEventListener('input', (e) =>
+                updateElementProperty('text', e.target.value));
+            document.getElementById('prop-text-binding').addEventListener('input', (e) =>
+                updateElementProperty('dataBinding', e.target.value));
+            document.getElementById('prop-text-font').addEventListener('change', (e) =>
+                updateElementProperty('fontFamily', e.target.value));
+            document.getElementById('prop-text-size').addEventListener('input', (e) =>
+                updateElementProperty('fontSize', parseInt(e.target.value)));
+            document.getElementById('prop-text-weight').addEventListener('change', (e) =>
+                updateElementProperty('fontWeight', e.target.value));
+            document.getElementById('prop-text-color').addEventListener('input', (e) =>
+                updateElementProperty('fill', e.target.value));
+
+            // Image properties
+            document.getElementById('prop-image-binding').addEventListener('input', (e) =>
+                updateElementProperty('dataBinding', e.target.value));
+            document.getElementById('prop-image-aspect').addEventListener('change', (e) =>
+                updateElementProperty('aspectRatio', e.target.value));
+
+            // Rectangle properties
+            document.getElementById('prop-rect-fill').addEventListener('input', (e) =>
+                updateElementProperty('fill', e.target.value));
+            document.getElementById('prop-rect-stroke').addEventListener('input', (e) =>
+                updateElementProperty('stroke', e.target.value));
+            document.getElementById('prop-rect-stroke-width').addEventListener('input', (e) =>
+                updateElementProperty('strokeWidth', parseInt(e.target.value)));
+        }
 
         // Handle selection change
         function handleSelectionChange(element) {
             const info = document.getElementById('selectedInfo');
             const props = document.getElementById('properties');
+
+            // Hide all type-specific panels
+            document.getElementById('qr-properties').style.display = 'none';
+            document.getElementById('text-properties').style.display = 'none';
+            document.getElementById('image-properties').style.display = 'none';
+            document.getElementById('rect-properties').style.display = 'none';
 
             if (element) {
                 info.innerHTML = `
@@ -446,11 +587,36 @@
                 `;
                 props.style.display = 'block';
 
+                // Set common properties
                 document.getElementById('prop-x').value = element.x.toFixed(1);
                 document.getElementById('prop-y').value = element.y.toFixed(1);
                 document.getElementById('prop-width').value = element.width.toFixed(1);
                 document.getElementById('prop-height').value = element.height.toFixed(1);
-                document.getElementById('prop-binding').value = element.dataBinding || '';
+
+                // Show and populate type-specific properties
+                if (element.type === 'qrcode') {
+                    document.getElementById('qr-properties').style.display = 'block';
+                    document.getElementById('prop-qr-binding').value = element.dataBinding || '';
+                    document.getElementById('prop-qr-ecc').value = element.eccLevel || 'Q';
+                    document.getElementById('prop-qr-quiet').value = element.quietZone || 2;
+                } else if (element.type === 'text') {
+                    document.getElementById('text-properties').style.display = 'block';
+                    document.getElementById('prop-text-content').value = element.text || '';
+                    document.getElementById('prop-text-binding').value = element.dataBinding || '';
+                    document.getElementById('prop-text-font').value = element.fontFamily || 'Arial';
+                    document.getElementById('prop-text-size').value = element.fontSize || 16;
+                    document.getElementById('prop-text-weight').value = element.fontWeight || 'normal';
+                    document.getElementById('prop-text-color').value = element.fill || '#000000';
+                } else if (element.type === 'image') {
+                    document.getElementById('image-properties').style.display = 'block';
+                    document.getElementById('prop-image-binding').value = element.dataBinding || '';
+                    document.getElementById('prop-image-aspect').value = element.aspectRatio || 'contain';
+                } else if (element.type === 'rect') {
+                    document.getElementById('rect-properties').style.display = 'block';
+                    document.getElementById('prop-rect-fill').value = element.fill || '#ffffff';
+                    document.getElementById('prop-rect-stroke').value = element.stroke || '#000000';
+                    document.getElementById('prop-rect-stroke-width').value = element.strokeWidth || 2;
+                }
             } else {
                 info.textContent = 'No element selected';
                 props.style.display = 'none';

@@ -9,15 +9,39 @@ import { Designer } from '../../../src/designer/Designer';
 // Mock Fabric.js with proper constructor functions
 vi.mock('fabric', () => {
   const MockCanvas = function (this: any, _id: string, _options: any) {
+    this._eventHandlers = {};
+    this._activeObject = null;
+
     this.add = vi.fn();
     this.remove = vi.fn();
     this.getObjects = vi.fn(() => []);
-    this.getActiveObject = vi.fn();
-    this.setActiveObject = vi.fn();
-    this.discardActiveObject = vi.fn();
+    this.getActiveObject = vi.fn(() => this._activeObject);
+    this.setActiveObject = vi.fn((obj: any) => {
+      this._activeObject = obj;
+      // Fire selection:created event
+      if (this._eventHandlers['selection:created']) {
+        this._eventHandlers['selection:created'].forEach((handler: any) => {
+          handler({ selected: [obj] });
+        });
+      }
+    });
+    this.discardActiveObject = vi.fn(() => {
+      this._activeObject = null;
+      // Fire selection:cleared event
+      if (this._eventHandlers['selection:cleared']) {
+        this._eventHandlers['selection:cleared'].forEach((handler: any) => {
+          handler();
+        });
+      }
+    });
     this.requestRenderAll = vi.fn();
     this.clear = vi.fn();
-    this.on = vi.fn();
+    this.on = vi.fn((event: string, handler: any) => {
+      if (!this._eventHandlers[event]) {
+        this._eventHandlers[event] = [];
+      }
+      this._eventHandlers[event].push(handler);
+    });
     this.off = vi.fn();
     this.sendObjectToBack = vi.fn();
     return this;
@@ -38,8 +62,20 @@ vi.mock('fabric', () => {
 
   const MockGroup = function (this: any, _objects: any[], _options: any) {
     this.set = vi.fn();
-    this.width = _options?.width || 100;
-    this.height = _options?.height || 100;
+    // Calculate group dimensions from children or use default
+    let calculatedWidth = 100;
+    let calculatedHeight = 100;
+    if (_objects && _objects.length > 0) {
+      // Find the bounding box of all objects
+      const maxRight = Math.max(..._objects.map((obj: any) =>
+        (obj.left || 0) + (obj.width || 0)));
+      const maxBottom = Math.max(..._objects.map((obj: any) =>
+        (obj.top || 0) + (obj.height || 0)));
+      calculatedWidth = maxRight;
+      calculatedHeight = maxBottom;
+    }
+    this.width = _options?.width || calculatedWidth;
+    this.height = _options?.height || calculatedHeight;
     this.left = _options?.left || 0;
     this.top = _options?.top || 0;
     this.scaleX = 1;
@@ -52,6 +88,10 @@ vi.mock('fabric', () => {
   const MockIText = function (this: any, _text: string, _options: any) {
     this.set = vi.fn();
     this.text = _text;
+    this.fontFamily = _options?.fontFamily || 'Arial';
+    this.fontSize = _options?.fontSize || 16;
+    this.fontWeight = _options?.fontWeight || 'normal';
+    this.fill = _options?.fill || '#000000';
     this.width = _options?.width || 100;
     this.height = _options?.height || 50;
     this.left = _options?.left || 0;
@@ -490,6 +530,161 @@ describe('Designer', () => {
       d.undo();
 
       expect(onElementsChange).toHaveBeenCalled();
+    });
+  });
+
+  describe('Update Element', () => {
+    it('should update element properties', () => {
+      const element = designer.addElement('text', { x: 10, y: 20 });
+      expect(element.text).toBe('Text');
+
+      designer.updateElement(element.id, { text: 'Updated Text' });
+
+      const updatedElement = designer.getElements()[0];
+      expect(updatedElement.text).toBe('Updated Text');
+    });
+
+    it('should update multiple properties at once', () => {
+      const element = designer.addElement('qr', { x: 10, y: 20 });
+
+      designer.updateElement(element.id, {
+        x: 50,
+        y: 60,
+        width: 30,
+        height: 30,
+        dataBinding: 'device.MAC',
+      });
+
+      const updated = designer.getElements()[0];
+      expect(updated.x).toBe(50);
+      expect(updated.y).toBe(60);
+      expect(updated.width).toBe(30);
+      expect(updated.height).toBe(30);
+      expect(updated.dataBinding).toBe('device.MAC');
+    });
+
+    it('should trigger onElementsChange when updating', () => {
+      const onElementsChange = vi.fn();
+      const d = new Designer({
+        containerId: 'test-canvas',
+        widthMm: 100,
+        heightMm: 50,
+        onElementsChange,
+      });
+
+      const element = d.addElement('text');
+      onElementsChange.mockClear();
+
+      d.updateElement(element.id, { text: 'New Text' });
+
+      expect(onElementsChange).toHaveBeenCalled();
+    });
+
+    it('should not update non-existent element', () => {
+      designer.addElement('qr');
+      const elementsBefore = designer.getElements().length;
+
+      designer.updateElement('non-existent-id', { x: 100 });
+
+      expect(designer.getElements()).toHaveLength(elementsBefore);
+    });
+  });
+
+  describe('Clipboard Operations', () => {
+    it('should copy selected element', () => {
+      const element = designer.addElement('qr', { x: 10, y: 20 });
+
+      const result = designer.copy();
+
+      expect(result).toBe(true);
+    });
+
+    it('should return false when copying with no selection', () => {
+      const result = designer.copy();
+
+      expect(result).toBe(false);
+    });
+
+    it('should paste copied element with offset', () => {
+      const element = designer.addElement('qr', { x: 10, y: 20 });
+      designer.copy();
+
+      const pasted = designer.paste();
+
+      expect(pasted).toBeDefined();
+      expect(pasted?.type).toBe('qrcode');
+      expect(pasted?.x).toBe(15); // 10 + 5mm offset
+      expect(pasted?.y).toBe(25); // 20 + 5mm offset
+      expect(designer.getElements()).toHaveLength(2);
+    });
+
+    it('should return null when pasting with empty clipboard', () => {
+      const result = designer.paste();
+
+      expect(result).toBeNull();
+    });
+
+    it('should duplicate selected element', () => {
+      const element = designer.addElement('text', { x: 30, y: 40 });
+
+      const duplicated = designer.duplicate();
+
+      expect(duplicated).toBeDefined();
+      expect(duplicated?.type).toBe('text');
+      expect(duplicated?.x).toBeCloseTo(35, 1); // 30 + 5mm offset
+      expect(duplicated?.y).toBeCloseTo(45, 1); // 40 + 5mm offset
+      expect(designer.getElements()).toHaveLength(2);
+    });
+
+    it('should return null when duplicating with no selection', () => {
+      const result = designer.duplicate();
+
+      expect(result).toBeNull();
+    });
+
+    it('should paste preserve element properties', () => {
+      const element = designer.addElement('text', { x: 10, y: 20 });
+      designer.updateElement(element.id, {
+        text: 'Custom Text',
+        fontSize: 24,
+        fill: '#ff0000',
+      });
+      designer.copy();
+
+      const pasted = designer.paste();
+
+      expect(pasted?.text).toBe('Custom Text');
+      expect(pasted?.fontSize).toBe(24);
+      expect(pasted?.fill).toBe('#ff0000');
+    });
+  });
+
+  describe('Selection Management', () => {
+    it('should deselect all elements', () => {
+      designer.addElement('qr');
+      const element = designer.getSelectedElement();
+      expect(element).not.toBeNull();
+
+      designer.deselectAll();
+
+      expect(designer.getSelectedElement()).toBeNull();
+    });
+
+    it('should trigger onSelectionChange when deselecting', () => {
+      const onSelectionChange = vi.fn();
+      const d = new Designer({
+        containerId: 'test-canvas',
+        widthMm: 100,
+        heightMm: 50,
+        onSelectionChange,
+      });
+
+      d.addElement('qr');
+      onSelectionChange.mockClear();
+
+      d.deselectAll();
+
+      expect(onSelectionChange).toHaveBeenCalledWith(null);
     });
   });
 });
