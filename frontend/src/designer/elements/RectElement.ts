@@ -26,22 +26,35 @@ export class RectElement extends BaseElement {
   }
 
   createFabricObject(boundaryLeft: number, boundaryTop: number): any {
-    const widthPx = this.mmToPx(this.width);
-    const heightPx = this.mmToPx(this.height);
+    // Use constant base size to prevent size compounding bug
+    const BASE_WIDTH_MM = 50;
+    const BASE_HEIGHT_MM = 30;
+    const baseWidthPx = this.mmToPx(BASE_WIDTH_MM);
+    const baseHeightPx = this.mmToPx(BASE_HEIGHT_MM);
+
+    // Calculate scale to achieve desired size
+    const scaleX = this.width / BASE_WIDTH_MM;
+    const scaleY = this.height / BASE_HEIGHT_MM;
+
     const leftPx = this.mmToPx(this.x) + boundaryLeft;
     const topPx = this.mmToPx(this.y) + boundaryTop;
 
     const rect = new fabric.Rect({
       left: leftPx,
       top: topPx,
-      width: widthPx,
-      height: heightPx,
+      width: baseWidthPx,
+      height: baseHeightPx,
+      scaleX: scaleX,
+      scaleY: scaleY,
       fill: this.fill,
       stroke: this.stroke,
       strokeWidth: this.strokeWidth,
     });
 
     (rect as any).customType = 'rect';
+    // Store base size to prevent compounding when recreating
+    (rect as any).baseWidth = baseWidthPx;
+    (rect as any).baseHeight = baseHeightPx;
 
     return rect;
   }

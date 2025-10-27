@@ -5,13 +5,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { TextElement } from '../../../../src/designer/elements/TextElement';
 
-// Mock Fabric.js
-vi.mock('fabric', () => ({
-  IText: vi.fn(() => ({
-    set: vi.fn(),
-  })),
-}));
-
 describe('TextElement', () => {
   describe('Constructor', () => {
     it('should create TextElement with default values', () => {

@@ -860,4 +860,12 @@ export class CanvasWrapper {
     // Zoom centered on mouse cursor
     this.setZoom(newZoom, mouseX, mouseY);
   }
+
+  /**
+   * Destroy the canvas and clean up resources
+   * Should be called before removing the canvas element from the DOM
+   */
+  destroy(): void {
+    this.fabricCanvas.dispose();
+  }
 }

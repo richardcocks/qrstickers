@@ -24,21 +24,28 @@ export class QRElement extends BaseElement {
   }
 
   createFabricObject(boundaryLeft: number, boundaryTop: number): any {
-    const sizePx = this.mmToPx(this.width);
+    // Use constant base size to prevent size compounding bug
+    const BASE_SIZE_MM = 25;
+    const baseSizePx = this.mmToPx(BASE_SIZE_MM);
+
+    // Calculate scale to achieve desired size
+    const scaleX = this.width / BASE_SIZE_MM;
+    const scaleY = this.height / BASE_SIZE_MM;
+
     const leftPx = this.mmToPx(this.x) + boundaryLeft;
     const topPx = this.mmToPx(this.y) + boundaryTop;
 
-    // Create QR code visual placeholder
+    // Create QR code visual placeholder at base size
     const background = new fabric.Rect({
-      width: sizePx,
-      height: sizePx,
+      width: baseSizePx,
+      height: baseSizePx,
       fill: 'white',
       stroke: '#333',
       strokeWidth: 2,
     });
 
-    // Create simple QR-like pattern
-    const patternSize = sizePx / 5;
+    // Create simple QR-like pattern at base size
+    const patternSize = baseSizePx / 5;
     const patterns = [
       // Top-left corner
       new fabric.Rect({
@@ -74,9 +81,9 @@ export class QRElement extends BaseElement {
       }),
       // QR label
       new fabric.Text('QR', {
-        left: sizePx / 2,
-        top: sizePx / 2,
-        fontSize: sizePx / 4,
+        left: baseSizePx / 2,
+        top: baseSizePx / 2,
+        fontSize: baseSizePx / 4,
         fill: '#666',
         originX: 'center',
         originY: 'center',
@@ -87,6 +94,8 @@ export class QRElement extends BaseElement {
     const group = new fabric.Group([background, ...patterns], {
       left: leftPx,
       top: topPx,
+      scaleX: scaleX,
+      scaleY: scaleY,
       selectable: true,
     });
 
@@ -95,6 +104,9 @@ export class QRElement extends BaseElement {
     (group as any).eccLevel = this.eccLevel;
     (group as any).quietZone = this.quietZone;
     (group as any).customType = 'qrcode';
+    // Store base size to prevent compounding when recreating
+    (group as any).baseWidth = baseSizePx;
+    (group as any).baseHeight = baseSizePx;
 
     return group;
   }

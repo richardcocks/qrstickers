@@ -5,13 +5,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { RectElement } from '../../../../src/designer/elements/RectElement';
 
-// Mock Fabric.js
-vi.mock('fabric', () => ({
-  Rect: vi.fn(() => ({
-    set: vi.fn(),
-  })),
-}));
-
 describe('RectElement', () => {
   describe('Constructor', () => {
     it('should create RectElement with default values', () => {

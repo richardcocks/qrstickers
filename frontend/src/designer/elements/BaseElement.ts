@@ -63,8 +63,13 @@ export abstract class BaseElement {
     const obj = this.fabricObject;
     this.x = this.pxToMm((obj.left ?? 0) - boundaryLeft);
     this.y = this.pxToMm((obj.top ?? 0) - boundaryTop);
-    this.width = this.pxToMm(obj.getScaledWidth());
-    this.height = this.pxToMm(obj.getScaledHeight());
+
+    // Use stored base dimensions to prevent size compounding
+    // Fabric.js auto-calculates Group dimensions which differ from intended base
+    const baseWidth = obj.baseWidth ?? obj.width;
+    const baseHeight = obj.baseHeight ?? obj.height;
+    this.width = this.pxToMm(baseWidth * (obj.scaleX ?? 1));
+    this.height = this.pxToMm(baseHeight * (obj.scaleY ?? 1));
   }
 
   /**
@@ -74,11 +79,16 @@ export abstract class BaseElement {
   updateFabricObject(boundaryLeft: number, boundaryTop: number): void {
     if (!this.fabricObject) return;
 
+    // Use stored base dimensions to prevent size compounding
+    // Fabric.js auto-calculates Group dimensions which differ slightly from intended base
+    const baseWidth = this.fabricObject.baseWidth ?? this.fabricObject.width;
+    const baseHeight = this.fabricObject.baseHeight ?? this.fabricObject.height;
+
     this.fabricObject.set({
       left: this.mmToPx(this.x) + boundaryLeft,
       top: this.mmToPx(this.y) + boundaryTop,
-      scaleX: this.mmToPx(this.width) / this.fabricObject.width,
-      scaleY: this.mmToPx(this.height) / this.fabricObject.height,
+      scaleX: this.mmToPx(this.width) / baseWidth,
+      scaleY: this.mmToPx(this.height) / baseHeight,
     });
   }
 

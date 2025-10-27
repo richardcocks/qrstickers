@@ -5,19 +5,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { QRElement } from '../../../../src/designer/elements/QRElement';
 
-// Mock Fabric.js
-vi.mock('fabric', () => ({
-  Rect: vi.fn(() => ({
-    set: vi.fn(),
-  })),
-  Group: vi.fn(() => ({
-    set: vi.fn(),
-  })),
-  Text: vi.fn(() => ({
-    set: vi.fn(),
-  })),
-}));
-
 describe('QRElement', () => {
   describe('Constructor', () => {
     it('should create QRElement with default values', () => {

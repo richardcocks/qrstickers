@@ -5,19 +5,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { ImageElement } from '../../../../src/designer/elements/ImageElement';
 
-// Mock Fabric.js
-vi.mock('fabric', () => ({
-  Rect: vi.fn(() => ({
-    set: vi.fn(),
-  })),
-  Group: vi.fn(() => ({
-    set: vi.fn(),
-  })),
-  Text: vi.fn(() => ({
-    set: vi.fn(),
-  })),
-}));
-
 describe('ImageElement', () => {
   describe('Constructor', () => {
     it('should create ImageElement with default values', () => {

@@ -30,16 +30,24 @@ export class ImageElement extends BaseElement {
   }
 
   createFabricObject(boundaryLeft: number, boundaryTop: number): any {
-    const widthPx = this.mmToPx(this.width);
-    const heightPx = this.mmToPx(this.height);
+    // Use constant base size to prevent size compounding bug
+    const BASE_WIDTH_MM = 30;
+    const BASE_HEIGHT_MM = 30;
+    const baseWidthPx = this.mmToPx(BASE_WIDTH_MM);
+    const baseHeightPx = this.mmToPx(BASE_HEIGHT_MM);
+
+    // Calculate scale to achieve desired size
+    const scaleX = this.width / BASE_WIDTH_MM;
+    const scaleY = this.height / BASE_HEIGHT_MM;
+
     const leftPx = this.mmToPx(this.x) + boundaryLeft;
     const topPx = this.mmToPx(this.y) + boundaryTop;
 
     const rect = new fabric.Rect({
       left: 0,
       top: 0,
-      width: widthPx,
-      height: heightPx,
+      width: baseWidthPx,
+      height: baseHeightPx,
       fill: '#f0f0f0',
       stroke: '#999',
       strokeWidth: 2,
@@ -47,8 +55,8 @@ export class ImageElement extends BaseElement {
     });
 
     const text = new fabric.Text('IMAGE', {
-      left: widthPx / 2,
-      top: heightPx / 2,
+      left: baseWidthPx / 2,
+      top: baseHeightPx / 2,
       fontSize: 14,
       fill: '#999',
       originX: 'center',
@@ -58,6 +66,8 @@ export class ImageElement extends BaseElement {
     const group = new fabric.Group([rect, text], {
       left: leftPx,
       top: topPx,
+      scaleX: scaleX,
+      scaleY: scaleY,
       selectable: true,
     });
 
@@ -68,6 +78,9 @@ export class ImageElement extends BaseElement {
     (group as any).customImageId = this.customImageId;
     (group as any).customImageName = this.customImageName;
     (group as any).customType = 'image';
+    // Store base size to prevent compounding when recreating
+    (group as any).baseWidth = baseWidthPx;
+    (group as any).baseHeight = baseHeightPx;
 
     return group;
   }

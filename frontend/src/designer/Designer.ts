@@ -622,4 +622,12 @@ export class Designer {
       this.config.onElementsChange();
     }
   }
+
+  /**
+   * Destroy the designer and clean up resources
+   * Should be called before removing the canvas element from the DOM
+   */
+  destroy(): void {
+    this.canvas.destroy();
+  }
 }
