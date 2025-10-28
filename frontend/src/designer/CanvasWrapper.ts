@@ -591,20 +591,10 @@ export class CanvasWrapper {
     const newWidth = rect.width;
     const newHeight = rect.height;
 
-    console.log('[CanvasWrapper] resize check:', {
-      containerClass: container.className,
-      oldSize: { width: this.canvasWidth, height: this.canvasHeight },
-      newSize: { width: newWidth, height: newHeight },
-      changed: newWidth !== this.canvasWidth || newHeight !== this.canvasHeight
-    });
-
     // Skip if dimensions haven't changed
     if (newWidth === this.canvasWidth && newHeight === this.canvasHeight) {
-      console.log('[CanvasWrapper] resize: dimensions unchanged');
       return;
     }
-
-    console.log('[CanvasWrapper] resize: applying new dimensions');
 
     // Update Fabric canvas dimensions
     this.fabricCanvas.setDimensions({
@@ -618,8 +608,6 @@ export class CanvasWrapper {
 
     // Recalculate viewport to maintain proper positioning
     this.resetView();
-
-    console.log('[CanvasWrapper] resize complete');
   }
 
   /**

@@ -91,14 +91,14 @@ public class DesignerModel : PageModel
                 else
                 {
                     _logger.LogWarning("Designer entry not found in Vite manifest");
-                    DesignerBundlePath = "assets/designer-CFYx8CpJ.js"; // Fallback to current hash
+                    DesignerBundlePath = "assets/designer-BpCILmFg.js"; // Fallback to current hash
                 }
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to load Vite manifest");
-            DesignerBundlePath = "assets/designer-CFYx8CpJ.js"; // Fallback to current hash
+            DesignerBundlePath = "assets/designer-BpCILmFg.js"; // Fallback to current hash
         }
 
         // Load user's connections for dropdown
