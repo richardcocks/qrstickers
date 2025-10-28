@@ -541,4 +541,176 @@ describe('CanvasWrapper', () => {
       expect(range05x).toBeLessThan(range1x);
     });
   });
+
+  describe('Resize Functionality', () => {
+    it('should update canvas dimensions when container size changes', () => {
+      // Get initial dimensions
+      const initialWidth = wrapper.canvasWidth;
+      const initialHeight = wrapper.canvasHeight;
+
+      expect(initialWidth).toBe(800);
+      expect(initialHeight).toBe(600);
+
+      // Mock container with new dimensions
+      const mockContainer = document.createElement('div');
+      mockContainer.style.width = '1200px';
+      mockContainer.style.height = '900px';
+
+      // Mock getBoundingClientRect to return new dimensions
+      const canvas = (wrapper as any).fabricCanvas;
+      const originalGetBoundingClientRect = HTMLElement.prototype.getBoundingClientRect;
+      HTMLElement.prototype.getBoundingClientRect = vi.fn(() => ({
+        width: 1200,
+        height: 900,
+        top: 0,
+        left: 0,
+        bottom: 900,
+        right: 1200,
+        x: 0,
+        y: 0,
+        toJSON: () => ({})
+      }));
+
+      // Call resize
+      wrapper.resize();
+
+      // Verify dimensions updated
+      expect(wrapper.canvasWidth).toBe(1200);
+      expect(wrapper.canvasHeight).toBe(900);
+
+      // Cleanup
+      HTMLElement.prototype.getBoundingClientRect = originalGetBoundingClientRect;
+    });
+
+    it('should call Fabric setDimensions with new size', () => {
+      const canvas = (wrapper as any).fabricCanvas;
+      const setDimensionsSpy = vi.spyOn(canvas, 'setDimensions');
+
+      // Mock getBoundingClientRect
+      const originalGetBoundingClientRect = HTMLElement.prototype.getBoundingClientRect;
+      HTMLElement.prototype.getBoundingClientRect = vi.fn(() => ({
+        width: 1920,
+        height: 1080,
+        top: 0,
+        left: 0,
+        bottom: 1080,
+        right: 1920,
+        x: 0,
+        y: 0,
+        toJSON: () => ({})
+      }));
+
+      // Call resize
+      wrapper.resize();
+
+      // Verify setDimensions was called with correct arguments
+      expect(setDimensionsSpy).toHaveBeenCalledWith({
+        width: 1920,
+        height: 1080
+      });
+
+      // Cleanup
+      HTMLElement.prototype.getBoundingClientRect = originalGetBoundingClientRect;
+    });
+
+    it('should call resetView after resizing', () => {
+      const resetViewSpy = vi.spyOn(wrapper, 'resetView');
+
+      // Mock getBoundingClientRect
+      const originalGetBoundingClientRect = HTMLElement.prototype.getBoundingClientRect;
+      HTMLElement.prototype.getBoundingClientRect = vi.fn(() => ({
+        width: 1024,
+        height: 768,
+        top: 0,
+        left: 0,
+        bottom: 768,
+        right: 1024,
+        x: 0,
+        y: 0,
+        toJSON: () => ({})
+      }));
+
+      // Call resize
+      wrapper.resize();
+
+      // Verify resetView was called
+      expect(resetViewSpy).toHaveBeenCalled();
+
+      // Cleanup
+      HTMLElement.prototype.getBoundingClientRect = originalGetBoundingClientRect;
+    });
+
+    it('should skip resize if dimensions are unchanged', () => {
+      const canvas = (wrapper as any).fabricCanvas;
+      const setDimensionsSpy = vi.spyOn(canvas, 'setDimensions');
+      const resetViewSpy = vi.spyOn(wrapper, 'resetView');
+
+      // Mock getBoundingClientRect to return current dimensions
+      const originalGetBoundingClientRect = HTMLElement.prototype.getBoundingClientRect;
+      HTMLElement.prototype.getBoundingClientRect = vi.fn(() => ({
+        width: wrapper.canvasWidth,
+        height: wrapper.canvasHeight,
+        top: 0,
+        left: 0,
+        bottom: wrapper.canvasHeight,
+        right: wrapper.canvasWidth,
+        x: 0,
+        y: 0,
+        toJSON: () => ({})
+      }));
+
+      // Call resize
+      wrapper.resize();
+
+      // Verify setDimensions and resetView were NOT called
+      expect(setDimensionsSpy).not.toHaveBeenCalled();
+      expect(resetViewSpy).not.toHaveBeenCalled();
+
+      // Cleanup
+      HTMLElement.prototype.getBoundingClientRect = originalGetBoundingClientRect;
+    });
+
+    it('should handle missing container gracefully', () => {
+      // Mock getElement to return element with no parent
+      const canvas = (wrapper as any).fabricCanvas;
+      const mockElement = document.createElement('canvas');
+      vi.spyOn(canvas, 'getElement').mockReturnValue(mockElement);
+
+      // Call resize - should not throw
+      expect(() => wrapper.resize()).not.toThrow();
+    });
+
+    it('should maintain viewport after fullscreen resize', () => {
+      // Set initial zoom and pan
+      wrapper.setZoom(1.5);
+      const initialZoom = wrapper.getZoom();
+
+      // Mock fullscreen dimensions
+      const originalGetBoundingClientRect = HTMLElement.prototype.getBoundingClientRect;
+      HTMLElement.prototype.getBoundingClientRect = vi.fn(() => ({
+        width: 1920,
+        height: 1080,
+        top: 0,
+        left: 0,
+        bottom: 1080,
+        right: 1920,
+        x: 0,
+        y: 0,
+        toJSON: () => ({})
+      }));
+
+      // Resize
+      wrapper.resize();
+
+      // Verify canvas was resized
+      expect(wrapper.canvasWidth).toBe(1920);
+      expect(wrapper.canvasHeight).toBe(1080);
+
+      // resetView is called, which resets zoom to 1.0
+      expect(wrapper.getZoom()).toBe(1.0);
+
+      // Cleanup
+      HTMLElement.prototype.getBoundingClientRect = originalGetBoundingClientRect;
+    });
+  });
 });

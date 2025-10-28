@@ -3,8 +3,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using QRStickers.Models;
 using QRStickers.Services;
 using System.Security.Claims;
+using System.Text.Json;
 
 namespace QRStickers.Pages.Templates;
 
@@ -14,12 +16,18 @@ public class DesignerModel : PageModel
     private readonly QRStickersDbContext _db;
     private readonly ILogger<DesignerModel> _logger;
     private readonly IOptions<DesignerSettings> _designerSettings;
+    private readonly IWebHostEnvironment _webHostEnvironment;
 
-    public DesignerModel(QRStickersDbContext db, ILogger<DesignerModel> logger, IOptions<DesignerSettings> designerSettings)
+    public DesignerModel(
+        QRStickersDbContext db,
+        ILogger<DesignerModel> logger,
+        IOptions<DesignerSettings> designerSettings,
+        IWebHostEnvironment webHostEnvironment)
     {
         _db = db;
         _logger = logger;
         _designerSettings = designerSettings;
+        _webHostEnvironment = webHostEnvironment;
     }
 
     [BindProperty]
@@ -37,6 +45,9 @@ public class DesignerModel : PageModel
     public int MarginBottom => _designerSettings.Value.DefaultMargins.Bottom;
     public int MarginRight => _designerSettings.Value.DefaultMargins.Right;
 
+    // Vite bundle path (resolved from manifest.json)
+    public string DesignerBundlePath { get; set; } = string.Empty;
+
     /// <summary>
     /// Load existing template for editing, or create new template
     /// </summary>
@@ -46,6 +57,48 @@ public class DesignerModel : PageModel
         if (userId == null)
         {
             return Unauthorized();
+        }
+
+        // Load Vite manifest to get designer bundle path
+        try
+        {
+            var manifestPath = Path.Combine(_webHostEnvironment.WebRootPath, "dist", ".vite", "manifest.json");
+
+            _logger.LogInformation("Loading Vite manifest from: {ManifestPath}", manifestPath);
+
+            if (!System.IO.File.Exists(manifestPath))
+            {
+                _logger.LogWarning("Vite manifest not found at {ManifestPath}, using fallback", manifestPath);
+                DesignerBundlePath = "assets/designer-Bx9c5oHc.js"; // Fallback to current hash
+            }
+            else
+            {
+                var manifestJson = await System.IO.File.ReadAllTextAsync(manifestPath);
+
+                // Use case-insensitive deserialization (Vite manifest uses lowercase property names)
+                var options = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                };
+
+                var manifest = JsonSerializer.Deserialize<Dictionary<string, ViteManifestEntry>>(manifestJson, options);
+
+                if (manifest != null && manifest.TryGetValue("src/pages/designer/designer.entry.ts", out var entry))
+                {
+                    DesignerBundlePath = entry.File;
+                    _logger.LogInformation("Designer bundle resolved to: {BundlePath}", DesignerBundlePath);
+                }
+                else
+                {
+                    _logger.LogWarning("Designer entry not found in Vite manifest");
+                    DesignerBundlePath = "assets/designer-CFYx8CpJ.js"; // Fallback to current hash
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load Vite manifest");
+            DesignerBundlePath = "assets/designer-CFYx8CpJ.js"; // Fallback to current hash
         }
 
         // Load user's connections for dropdown

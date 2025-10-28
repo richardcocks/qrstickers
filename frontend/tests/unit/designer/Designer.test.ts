@@ -799,6 +799,126 @@ describe('Designer', () => {
     });
   });
 
+  describe('Resize Canvas', () => {
+    it('should have resize method', () => {
+      expect(typeof designer.resize).toBe('function');
+    });
+
+    it('should delegate to canvas resize', () => {
+      const canvas = designer.getCanvas();
+      const resizeSpy = vi.spyOn(canvas, 'resize');
+
+      designer.resize();
+
+      expect(resizeSpy).toHaveBeenCalled();
+      resizeSpy.mockRestore();
+    });
+
+    it('should not throw when called', () => {
+      expect(() => designer.resize()).not.toThrow();
+    });
+
+    it('should update canvas dimensions when container resizes', () => {
+      const canvas = designer.getCanvas();
+      const initialWidth = canvas.canvasWidth;
+      const initialHeight = canvas.canvasHeight;
+
+      // Mock getBoundingClientRect to simulate container resize
+      const originalGetBoundingClientRect = HTMLElement.prototype.getBoundingClientRect;
+      HTMLElement.prototype.getBoundingClientRect = vi.fn(() => ({
+        width: 1600,
+        height: 1200,
+        top: 0,
+        left: 0,
+        bottom: 1200,
+        right: 1600,
+        x: 0,
+        y: 0,
+        toJSON: () => ({})
+      }));
+
+      // Call resize
+      designer.resize();
+
+      // Verify dimensions updated
+      expect(canvas.canvasWidth).toBe(1600);
+      expect(canvas.canvasHeight).toBe(1200);
+      expect(canvas.canvasWidth).not.toBe(initialWidth);
+      expect(canvas.canvasHeight).not.toBe(initialHeight);
+
+      // Cleanup
+      HTMLElement.prototype.getBoundingClientRect = originalGetBoundingClientRect;
+    });
+
+    it('should maintain elements after resize', () => {
+      // Add some elements
+      const qr = designer.addElement('qr', { x: 10, y: 10 });
+      const text = designer.addElement('text', { x: 30, y: 30 });
+      const rect = designer.addElement('rect', { x: 50, y: 50 });
+
+      expect(designer.getElements()).toHaveLength(3);
+
+      // Mock container resize
+      const originalGetBoundingClientRect = HTMLElement.prototype.getBoundingClientRect;
+      HTMLElement.prototype.getBoundingClientRect = vi.fn(() => ({
+        width: 1280,
+        height: 720,
+        top: 0,
+        left: 0,
+        bottom: 720,
+        right: 1280,
+        x: 0,
+        y: 0,
+        toJSON: () => ({})
+      }));
+
+      // Resize
+      designer.resize();
+
+      // Elements should still be present
+      expect(designer.getElements()).toHaveLength(3);
+      expect(designer.getElements()).toContain(qr);
+      expect(designer.getElements()).toContain(text);
+      expect(designer.getElements()).toContain(rect);
+
+      // Cleanup
+      HTMLElement.prototype.getBoundingClientRect = originalGetBoundingClientRect;
+    });
+
+    it('should preserve selection after resize', () => {
+      const element = designer.addElement('qr', { x: 10, y: 10 });
+      const canvas = designer.getCanvas();
+      const fabricObj = element.getFabricObject(canvas.boundaryLeft, canvas.boundaryTop);
+      canvas.setActiveObject(fabricObj);
+
+      expect(designer.getSelectedElement()).toBe(element);
+
+      // Mock container resize
+      const originalGetBoundingClientRect = HTMLElement.prototype.getBoundingClientRect;
+      HTMLElement.prototype.getBoundingClientRect = vi.fn(() => ({
+        width: 1440,
+        height: 900,
+        top: 0,
+        left: 0,
+        bottom: 900,
+        right: 1440,
+        x: 0,
+        y: 0,
+        toJSON: () => ({})
+      }));
+
+      // Resize
+      designer.resize();
+
+      // Selection should be preserved after resize
+      // The canvas dimensions change, but the selected element remains selected
+      expect(designer.getSelectedElement()).toBe(element);
+
+      // Cleanup
+      HTMLElement.prototype.getBoundingClientRect = originalGetBoundingClientRect;
+    });
+  });
+
   describe('Keyboard Shortcuts - Tool Toggle', () => {
     it('should toggle tool mode on h key press', () => {
       // Note: This test may fail in test environment because getElement() returns undefined

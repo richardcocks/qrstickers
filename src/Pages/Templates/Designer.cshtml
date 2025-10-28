@@ -95,6 +95,14 @@
             </button>
             <span class="toolbar-divider"></span>
 
+            <button type="button" id="btnSelectTool" class="btn-toolbar active" title="Select Tool (V)">
+                ↖ Select
+            </button>
+            <button type="button" id="btnPanTool" class="btn-toolbar" title="Pan Tool (H)">
+                ✋ Pan
+            </button>
+            <span class="toolbar-divider"></span>
+
             <label class="toolbar-checkbox">
                 <input type="checkbox" id="chkShowGrid" checked />
                 <span>Grid</span>
@@ -174,42 +182,18 @@
                     <span class="palette-label">Rectangle</span>
                 </div>
 
-                <div class="palette-item" data-element-type="line" draggable="true">
-                    <div class="palette-icon">
-                        <svg width="40" height="40" viewBox="0 0 40 40">
-                            <line x1="6" y1="20" x2="34" y2="20" stroke="#333" stroke-width="2"/>
-                        </svg>
-                    </div>
-                    <span class="palette-label">Line</span>
-                </div>
+                <!-- Line element removed - not yet implemented in TypeScript -->
             </div>
         </div>
 
-        <!-- Center: Canvas with Rulers -->
+        <!-- Center: Canvas -->
         <div class="designer-canvas-container">
-            <div class="ruler-container">
-                <!-- Top-left corner spacer -->
-                <div class="ruler-corner"></div>
-
-                <!-- Horizontal ruler (top) -->
-                <div class="ruler-horizontal" id="rulerHorizontal">
-                    <canvas id="rulerHorizontalCanvas"></canvas>
-                </div>
-
-                <!-- Vertical ruler (left) -->
-                <div class="ruler-vertical" id="rulerVertical">
-                    <canvas id="rulerVerticalCanvas"></canvas>
-                </div>
-
-                <!-- Main canvas -->
-                <div class="canvas-wrapper" id="canvasWrapper">
-                    <canvas id="designCanvas"
-                            data-margin-top="@Model.MarginTop"
-                            data-margin-left="@Model.MarginLeft"
-                            data-margin-bottom="@Model.MarginBottom"
-                            data-margin-right="@Model.MarginRight"></canvas>
-                    <div class="canvas-resize-handle" id="canvasResizeHandle" title="Drag to resize canvas"></div>
-                </div>
+            <div class="canvas-wrapper" id="canvasWrapper">
+                <canvas id="designCanvas"
+                        data-margin-top="@Model.MarginTop"
+                        data-margin-left="@Model.MarginLeft"
+                        data-margin-bottom="@Model.MarginBottom"
+                        data-margin-right="@Model.MarginRight"></canvas>
             </div>
         </div>
 
@@ -479,23 +463,16 @@
 </form>
 
 @section Scripts {
-    <!-- Fabric.js CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/fabric@5.3.0/dist/fabric.min.js"></script>
-
-    <!-- Designer Scripts -->
-    <script src="~/js/fabric-extensions.js"></script>
-    <script src="~/js/export-preview.js"></script>
-    <script src="~/js/designer.js"></script>
-
+    <!-- Pass config to TypeScript module -->
     <script>
-        // Initialize designer with template data
-        (function() {
-            const templateData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(new {
+        // Configuration for TypeScript Designer module
+        window.designerConfig = {
+            templateData: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(new {
                 pageWidth = Model.Template.PageWidth,
                 pageHeight = Model.Template.PageHeight,
                 templateJson = Model.Template.TemplateJson
-            }, JsonSerializerOptions.Web));
-            const uploadedImages = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+            }, JsonSerializerOptions.Web)),
+            uploadedImages: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
                 Model.UploadedImages.Select(img => new {
                     id = img.Id,
                     name = img.Name,
@@ -504,13 +481,12 @@
                     heightPx = img.HeightPx
                 }),
                 JsonSerializerOptions.Web
-            ));
-            const editMode = @Model.IsEditMode.ToString().ToLower();
-            const systemTemplate = @Model.IsSystemTemplate.ToString().ToLower();
-
-            document.addEventListener('DOMContentLoaded', function() {
-                initDesigner(templateData, editMode, systemTemplate, uploadedImages);
-            });
-        })();
+            )),
+            editMode: @Model.IsEditMode.ToString().ToLower(),
+            systemTemplate: @Model.IsSystemTemplate.ToString().ToLower()
+        };
     </script>
+
+    <!-- TypeScript Designer Module (includes Fabric.js v6) -->
+    <script type="module" src="~/dist/@Model.DesignerBundlePath"></script>
 }

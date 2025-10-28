@@ -438,6 +438,14 @@ export class Designer {
   }
 
   /**
+   * Resize canvas to match current container dimensions
+   * Call this when container size changes (e.g., fullscreen, window resize)
+   */
+  resize(): void {
+    this.canvas.resize();
+  }
+
+  /**
    * Get elements sorted by their canvas z-index (layer order)
    */
   private getElementsInCanvasOrder(): BaseElement[] {
