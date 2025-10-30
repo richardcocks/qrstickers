@@ -13,8 +13,8 @@
 - [ ] Rulers (horizontal and vertical tick marks with unit labels)
 - [ ] Image handling in designer (palette display, click-to-add)
 - [ ] Fix text data sources
-- [ ] Hold right click to pan
-- [ ] Reset grab-handles when zooming / resizing page
+- [x] Hold right click to pan ✅ COMPLETED
+- [x] Reset grab-handles when zooming / resizing page ✅ COMPLETED
 - [ ] Respect snap to grid on element resize
 
 ## Testing Required
@@ -27,3 +27,11 @@
 
 ## Completed
 - [x] Delete legacy JavaScript files (`designer.js`, `fabric-extensions.js`, `export-preview.js`) ✅ DONE
+- [x] Hold right-click to pan canvas ✅ DONE
+  - Implemented right-click drag to pan (works in both select and pan modes)
+  - Context menu preserved for simple right-clicks without drag
+  - Seamless re-selection after pan completes
+- [x] Fix grab-handle alignment after zoom/pan ✅ DONE
+  - Auto-deselect and re-select objects during view changes
+  - No lag during panning (deselect on drag start, reselect on drag end)
+  - Smooth zoom with immediate re-selection

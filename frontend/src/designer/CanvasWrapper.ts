@@ -28,6 +28,9 @@ export class CanvasWrapper {
   private currentZoom: number = 1;
   private debug: boolean = true; // Set to false to disable debug logging
   private savedActiveObject: FabricObject | undefined = undefined; // Store active object during view changes
+  private isRightClickPanning = false; // Track if right-click pan is active
+  private rightClickStartX = 0; // Track initial mouse position to detect drag vs click
+  private rightClickStartY = 0;
 
   // Zoom limits
   private readonly MIN_ZOOM = 0.1;
@@ -74,6 +77,7 @@ export class CanvasWrapper {
       backgroundColor: 'transparent',
       selection: true,
       preserveObjectStacking: true,
+      fireRightClick: true,  // Enable right-click events for right-click pan feature
     });
 
     // Style selection
@@ -89,6 +93,9 @@ export class CanvasWrapper {
 
     // Enable mouse wheel zoom
     this.enableMouseWheelZoom();
+
+    // Set up global mouse event handlers for right-click panning
+    this.setupRightClickPan();
   }
 
   /**
@@ -495,10 +502,7 @@ export class CanvasWrapper {
       container.style.cursor = 'grab';
     }
 
-    // Add pan drag handlers
-    (this.fabricCanvas as any).on('mouse:down', this.handlePanStart.bind(this));
-    (this.fabricCanvas as any).on('mouse:move', this.handlePanMove.bind(this));
-    (this.fabricCanvas as any).on('mouse:up', this.handlePanEnd.bind(this));
+    // Note: Mouse handlers are already registered globally in setupRightClickPan
   }
 
   /**
@@ -510,10 +514,7 @@ export class CanvasWrapper {
 
     if (this.debug) console.log('[CanvasWrapper] panning disabled');
 
-    // Remove pan drag handlers
-    (this.fabricCanvas as any).off('mouse:down', this.handlePanStart.bind(this));
-    (this.fabricCanvas as any).off('mouse:move', this.handlePanMove.bind(this));
-    (this.fabricCanvas as any).off('mouse:up', this.handlePanEnd.bind(this));
+    // Note: Mouse handlers remain registered globally for right-click panning
 
     // Re-enable selection
     this.fabricCanvas.selection = true;
@@ -662,6 +663,33 @@ export class CanvasWrapper {
    * Pan drag handlers - private methods for mouse events
    */
   private handlePanStart(e: any): void {
+    // Check for right-click (button === 2)
+    const isRightClick = e.e && e.e.button === 2;
+
+    if (isRightClick) {
+      // Enable temporary right-click panning regardless of tool mode
+      this.isRightClickPanning = true;
+      this.isPanning = true;
+      this.lastPanX = e.pointer.x;
+      this.lastPanY = e.pointer.y;
+      this.rightClickStartX = e.pointer.x;
+      this.rightClickStartY = e.pointer.y;
+
+      // Save and deselect active object
+      this.savedActiveObject = this.fabricCanvas.getActiveObject();
+      if (this.savedActiveObject) {
+        this.discardActiveObject();
+      }
+
+      // Change cursor to grabbing
+      const container = this.fabricCanvas.getElement().parentElement;
+      if (container) {
+        container.style.cursor = 'grabbing';
+      }
+      return;
+    }
+
+    // Regular left-click pan (only when panning mode is enabled)
     if (!this.isPanningEnabled) return;
 
     this.isPanning = true;
@@ -682,7 +710,8 @@ export class CanvasWrapper {
   }
 
   private handlePanMove(e: any): void {
-    if (!this.isPanning || !this.isPanningEnabled) return;
+    // Allow panning for right-click or regular pan mode
+    if (!this.isPanning || (!this.isPanningEnabled && !this.isRightClickPanning)) return;
 
     const deltaX = e.pointer.x - this.lastPanX;
     const deltaY = e.pointer.y - this.lastPanY;
@@ -698,13 +727,32 @@ export class CanvasWrapper {
 
     this.isPanning = false;
 
+    // Handle right-click pan cleanup
+    if (this.isRightClickPanning) {
+      this.isRightClickPanning = false;
+
+      // Re-select the previously active object for seamless experience
+      if (this.savedActiveObject) {
+        this.setActiveObject(this.savedActiveObject);
+        this.savedActiveObject = undefined;
+      }
+
+      // Restore cursor to default (not grab, since we're not in pan mode)
+      const container = this.fabricCanvas.getElement().parentElement;
+      if (container) {
+        container.style.cursor = 'default';
+      }
+      return;
+    }
+
+    // Regular pan mode cleanup
     // Re-select the previously active object for seamless experience
     if (this.savedActiveObject) {
       this.setActiveObject(this.savedActiveObject);
       this.savedActiveObject = undefined;
     }
 
-    // Change cursor back to grab
+    // Change cursor back to grab (we're in pan mode)
     const container = this.fabricCanvas.getElement().parentElement;
     if (container) {
       container.style.cursor = 'grab';
@@ -846,6 +894,53 @@ export class CanvasWrapper {
     if (!container || typeof container.addEventListener !== 'function') return;
 
     container.addEventListener('wheel', this.handleMouseWheel.bind(this), { passive: false });
+  }
+
+  /**
+   * Set up right-click pan functionality
+   * Allows users to hold right-click and drag to pan regardless of tool mode
+   */
+  private setupRightClickPan(): void {
+    const canvasElement = this.fabricCanvas.getElement();
+    const container = canvasElement?.parentElement;
+    if (!container || typeof container.addEventListener !== 'function') return;
+
+    // Register global mouse event handlers for right-click panning
+    // These work independently of the pan mode toggle
+    (this.fabricCanvas as any).on('mouse:down', this.handlePanStart.bind(this));
+    (this.fabricCanvas as any).on('mouse:move', this.handlePanMove.bind(this));
+    (this.fabricCanvas as any).on('mouse:up', this.handlePanEnd.bind(this));
+
+    // Prevent context menu during drag, allow it for simple right-click
+    container.addEventListener('contextmenu', this.handleContextMenu.bind(this));
+  }
+
+  /**
+   * Handle context menu event - prevent if user dragged, allow if just clicked
+   */
+  private handleContextMenu(e: MouseEvent): void {
+    // If we have valid right-click start coordinates, check if user dragged
+    if (this.rightClickStartX !== 0 || this.rightClickStartY !== 0) {
+      // Get mouse position relative to canvas
+      const canvasElement = this.fabricCanvas.getElement();
+      const rect = canvasElement.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      const distanceX = Math.abs(mouseX - this.rightClickStartX);
+      const distanceY = Math.abs(mouseY - this.rightClickStartY);
+      const distance = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
+
+      // If user dragged more than 5 pixels, prevent context menu
+      if (distance > 5) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+
+      // Reset coordinates after checking
+      this.rightClickStartX = 0;
+      this.rightClickStartY = 0;
+    }
   }
 
   /**
