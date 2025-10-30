@@ -10,7 +10,7 @@
 
 ## Designer Features
 - [ ] Drag-and-drop from palette
-- [ ] Rulers (horizontal and vertical tick marks with unit labels)
+- [x] Rulers (horizontal and vertical tick marks with unit labels) ✅ COMPLETED
 - [ ] Image handling in designer (palette display, click-to-add)
 - [x] Fix text data sources ✅ COMPLETED
 - [x] Hold right click to pan ✅ COMPLETED

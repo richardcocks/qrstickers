@@ -527,6 +527,20 @@ export class Designer {
     return this.canvas;
   }
 
+  /**
+   * Toggle ruler visibility
+   */
+  toggleRulers(): void {
+    this.canvas.toggleRulers();
+  }
+
+  /**
+   * Check if rulers are visible
+   */
+  isRulersVisible(): boolean {
+    return this.canvas.isRulersVisible();
+  }
+
   // Private methods
 
   private initializeEventListeners(): void {

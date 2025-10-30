@@ -195,6 +195,10 @@ function wireUpToolbar(): void {
     designer.toggleSnapToGrid();
   });
 
+  document.getElementById('chkShowRulers')?.addEventListener('change', () => {
+    designer.toggleRulers();
+  });
+
   // Page size controls
   document.getElementById('pageWidth')?.addEventListener('change', (e) => {
     alert('Canvas resizing is not yet implemented. Please create a new template with the desired size.');

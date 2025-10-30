@@ -5,6 +5,7 @@
 
 import { Canvas, FabricObject, version as fabricVersion } from 'fabric';
 import { mmToPx, pxToMm } from '../utils/units';
+import { RulerRenderer } from './RulerRenderer';
 
 export interface CanvasConfig {
   containerId: string;
@@ -30,6 +31,7 @@ export class CanvasWrapper {
   private isRightClickPanning = false; // Track if right-click pan is active
   private rightClickStartX = 0; // Track initial mouse position to detect drag vs click
   private rightClickStartY = 0;
+  private rulerRenderer: RulerRenderer; // Ruler rendering system
 
   // Zoom limits
   private readonly MIN_ZOOM = 0.1;
@@ -84,6 +86,9 @@ export class CanvasWrapper {
     this.fabricCanvas.selectionBorderColor = '#1976d2';
     this.fabricCanvas.selectionLineWidth = 2;
 
+    // Initialize ruler rendering system
+    this.rulerRenderer = new RulerRenderer();
+
     // Set up grid and boundary rendering via after:render event
     this.setupGridRendering();
 
@@ -95,6 +100,9 @@ export class CanvasWrapper {
 
     // Set up global mouse event handlers for right-click panning
     this.setupRightClickPan();
+
+    // Set up ruler cursor position tracking
+    this.setupRulerCursorTracking();
   }
 
   /**
@@ -328,7 +336,24 @@ export class CanvasWrapper {
     (this.fabricCanvas as any).on('after:render', () => {
       this.renderBoundary();
       this.renderGrid();
+      this.renderRulers();
     });
+  }
+
+  /**
+   * Render rulers on canvas overlay
+   */
+  private renderRulers(): void {
+    const ctx = this.fabricCanvas.getContext();
+    if (!ctx) return;
+
+    const vpt = this.fabricCanvas.viewportTransform;
+    if (!vpt) return;
+
+    const canvasWidth = this.fabricCanvas.width || 800;
+    const canvasHeight = this.fabricCanvas.height || 600;
+
+    this.rulerRenderer.render(ctx, vpt, canvasWidth, canvasHeight);
   }
 
   /**
@@ -959,6 +984,73 @@ export class CanvasWrapper {
 
     // Zoom centered on mouse cursor
     this.setZoom(newZoom, mouseX, mouseY);
+  }
+
+  /**
+   * Set up ruler cursor position tracking
+   */
+  private setupRulerCursorTracking(): void {
+    (this.fabricCanvas as any).on('mouse:move', (e: any) => {
+      if (!e.pointer) {
+        this.rulerRenderer.updateCursorPosition(null, null);
+        return;
+      }
+
+      // Get viewport transform
+      const vpt = this.fabricCanvas.viewportTransform;
+      if (!vpt) return;
+
+      const zoom = vpt[0];
+      const panX = vpt[4];
+      const panY = vpt[5];
+
+      // Convert screen coordinates to canvas coordinates
+      const canvasX = (e.pointer.x - panX) / zoom;
+      const canvasY = (e.pointer.y - panY) / zoom;
+
+      this.rulerRenderer.updateCursorPosition(canvasX, canvasY);
+    });
+
+    // Clear cursor position when mouse leaves canvas
+    const canvasElement = this.fabricCanvas.getElement();
+    const container = canvasElement?.parentElement;
+    if (container) {
+      container.addEventListener('mouseleave', () => {
+        this.rulerRenderer.updateCursorPosition(null, null);
+        this.fabricCanvas.requestRenderAll();
+      });
+    }
+  }
+
+  /**
+   * Show rulers
+   */
+  showRulers(): void {
+    this.rulerRenderer.setVisible(true);
+    this.fabricCanvas.requestRenderAll();
+  }
+
+  /**
+   * Hide rulers
+   */
+  hideRulers(): void {
+    this.rulerRenderer.setVisible(false);
+    this.fabricCanvas.requestRenderAll();
+  }
+
+  /**
+   * Toggle ruler visibility
+   */
+  toggleRulers(): void {
+    this.rulerRenderer.toggle();
+    this.fabricCanvas.requestRenderAll();
+  }
+
+  /**
+   * Check if rulers are visible
+   */
+  isRulersVisible(): boolean {
+    return this.rulerRenderer.isVisible();
   }
 
   /**
