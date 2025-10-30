@@ -993,6 +993,7 @@ export class CanvasWrapper {
     (this.fabricCanvas as any).on('mouse:move', (e: any) => {
       if (!e.pointer) {
         this.rulerRenderer.updateCursorPosition(null, null);
+        this.fabricCanvas.requestRenderAll();
         return;
       }
 
@@ -1009,6 +1010,7 @@ export class CanvasWrapper {
       const canvasY = (e.pointer.y - panY) / zoom;
 
       this.rulerRenderer.updateCursorPosition(canvasX, canvasY);
+      this.fabricCanvas.requestRenderAll();
     });
 
     // Clear cursor position when mouse leaves canvas
