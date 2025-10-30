@@ -27,6 +27,7 @@ export class CanvasWrapper {
   private isPanning = false;
   private currentZoom: number = 1;
   private debug: boolean = true; // Set to false to disable debug logging
+  private savedActiveObject: FabricObject | undefined = undefined; // Store active object during view changes
 
   // Zoom limits
   private readonly MIN_ZOOM = 0.1;
@@ -543,6 +544,8 @@ export class CanvasWrapper {
     vpt[4] = Math.max(limits.minX, Math.min(limits.maxX, newPanX));
     vpt[5] = Math.max(limits.minY, Math.min(limits.maxY, newPanY));
 
+    // Note: Don't deselect here during continuous panning - handled in handlePanStart/End
+
     this.fabricCanvas.requestRenderAll();
   }
 
@@ -553,11 +556,19 @@ export class CanvasWrapper {
     const vpt = this.fabricCanvas.viewportTransform;
     if (!vpt) return;
 
+    // Save active object before deselecting
+    const activeObject = this.fabricCanvas.getActiveObject();
+
     // Get actual visible container size
     const container = this.fabricCanvas.getElement().parentElement;
     const rect = container?.getBoundingClientRect();
     const containerWidth = rect?.width || 800;
     const containerHeight = rect?.height || 600;
+
+    // Deselect to fix grab handle alignment during view change
+    if (activeObject) {
+      this.discardActiveObject();
+    }
 
     // Reset zoom to 1:1
     vpt[0] = 1; // scaleX
@@ -570,6 +581,11 @@ export class CanvasWrapper {
     vpt[5] = (containerHeight - this.stickerHeightPx) / 2;
 
     this.fabricCanvas.requestRenderAll();
+
+    // Re-select the object for seamless experience
+    if (activeObject) {
+      this.setActiveObject(activeObject);
+    }
   }
 
   /**
@@ -652,6 +668,12 @@ export class CanvasWrapper {
     this.lastPanX = e.pointer.x;
     this.lastPanY = e.pointer.y;
 
+    // Save and deselect active object to fix grab handle alignment during pan
+    this.savedActiveObject = this.fabricCanvas.getActiveObject();
+    if (this.savedActiveObject) {
+      this.discardActiveObject();
+    }
+
     // Change cursor to grabbing
     const container = this.fabricCanvas.getElement().parentElement;
     if (container) {
@@ -676,6 +698,12 @@ export class CanvasWrapper {
 
     this.isPanning = false;
 
+    // Re-select the previously active object for seamless experience
+    if (this.savedActiveObject) {
+      this.setActiveObject(this.savedActiveObject);
+      this.savedActiveObject = undefined;
+    }
+
     // Change cursor back to grab
     const container = this.fabricCanvas.getElement().parentElement;
     if (container) {
@@ -693,6 +721,9 @@ export class CanvasWrapper {
     const vpt = this.fabricCanvas.viewportTransform;
     if (!vpt) return;
 
+    // Save active object before deselecting
+    const activeObject = this.fabricCanvas.getActiveObject();
+
     // Clamp scale to limits
     const newZoom = Math.max(this.MIN_ZOOM, Math.min(this.MAX_ZOOM, scale));
     const oldZoom = this.currentZoom;
@@ -705,6 +736,11 @@ export class CanvasWrapper {
       const containerHeight = rect?.height || 600;
       centerX = containerWidth / 2;
       centerY = containerHeight / 2;
+    }
+
+    // Deselect to fix grab handle alignment during zoom
+    if (activeObject) {
+      this.discardActiveObject();
     }
 
     // Calculate pan adjustment to keep center point fixed
@@ -727,6 +763,11 @@ export class CanvasWrapper {
     this.currentZoom = newZoom;
 
     this.fabricCanvas.requestRenderAll();
+
+    // Re-select the object for seamless experience
+    if (activeObject) {
+      this.setActiveObject(activeObject);
+    }
   }
 
   /**
@@ -757,10 +798,18 @@ export class CanvasWrapper {
     const vpt = this.fabricCanvas.viewportTransform;
     if (!vpt) return;
 
+    // Save active object before deselecting
+    const activeObject = this.fabricCanvas.getActiveObject();
+
     const container = this.fabricCanvas.getElement().parentElement;
     const rect = container?.getBoundingClientRect();
     const containerWidth = rect?.width || 800;
     const containerHeight = rect?.height || 600;
+
+    // Deselect to fix grab handle alignment during zoom
+    if (activeObject) {
+      this.discardActiveObject();
+    }
 
     // Calculate zoom to fit with some padding (90% of available space)
     const padding = 0.9;
@@ -781,6 +830,11 @@ export class CanvasWrapper {
     vpt[5] = (containerHeight - this.stickerHeightPx * fitZoom) / 2;
 
     this.fabricCanvas.requestRenderAll();
+
+    // Re-select the object for seamless experience
+    if (activeObject) {
+      this.setActiveObject(activeObject);
+    }
   }
 
   /**
