@@ -35,3 +35,8 @@
   - Auto-deselect and re-select objects during view changes
   - No lag during panning (deselect on drag start, reselect on drag end)
   - Smooth zoom with immediate re-selection
+- [x] Fix font scaling bug in exports ✅ DONE
+  - Text was appearing at 50% size in all exports
+  - Root cause: fontSize stored in POINTS not converted to canvas pixels
+  - Added 2.0x multiplier to match designer's pt-to-px conversion
+  - Text now exports at correct size matching designer preview

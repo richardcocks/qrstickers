@@ -401,13 +401,17 @@ export async function createAndRenderPreviewCanvas(
         scaledObj.width = widthMm * MM_TO_PX_RATIO;
         scaledObj.height = heightMm * MM_TO_PX_RATIO;
 
+        // Convert fontSize from points to canvas pixels (144 DPI / 72 pt/inch = 2.0)
+        // This matches the conversion done in TextElement.ts
+        scaledObj.fontSize = (scaledObj.fontSize || 16) * 2.0;
+
         // Step 2: Apply DPI multiplier if exporting at higher resolution
         if (multiplier !== 1) {
           scaledObj.left *= multiplier;
           scaledObj.top *= multiplier;
           scaledObj.width *= multiplier;
           scaledObj.height *= multiplier;
-          scaledObj.fontSize = (scaledObj.fontSize || 16) * multiplier;
+          scaledObj.fontSize *= multiplier;  // Now scaling the already-converted canvas pixels
           scaledObj.strokeWidth = (scaledObj.strokeWidth || 1) * multiplier;
         }
 
