@@ -43,6 +43,7 @@ function initDesigner(): void {
     marginRight: parseInt(document.getElementById('designCanvas')?.dataset.marginRight || '200'),
     onSelectionChange: handleSelectionChange,
     onElementsChange: handleElementsChange,
+    onZoomChanged: updateZoomDisplay,
   });
 
   // Expose globally for debugging
@@ -251,9 +252,10 @@ function wireUpToolbar(): void {
   });
 }
 
-function updateZoomDisplay(): void {
-  const zoom = designer.getCanvas().getZoom();
-  const zoomPercent = Math.round(zoom * 100);
+function updateZoomDisplay(zoom?: number): void {
+  // Use provided zoom or fetch current zoom from canvas
+  const currentZoom = zoom ?? designer.getCanvas().getZoom();
+  const zoomPercent = Math.round(currentZoom * 100);
   const zoomEl = document.getElementById('zoomLevel');
   if (zoomEl) {
     zoomEl.textContent = `${zoomPercent}%`;

@@ -383,14 +383,14 @@ describe('CanvasWrapper', () => {
       expect(wrapper.getZoom()).toBe(5.0);
     });
 
-    it('should zoom in by factor 1.2', () => {
+    it('should zoom in by factor 1.21 (2 wheel steps)', () => {
       wrapper.setZoom(1.0);
       wrapper.zoomIn();
-      expect(wrapper.getZoom()).toBeCloseTo(1.2, 2);
+      expect(wrapper.getZoom()).toBeCloseTo(1.21, 2);
     });
 
-    it('should zoom out by factor 1.2', () => {
-      wrapper.setZoom(1.2);
+    it('should zoom out by factor 1.21 (2 wheel steps)', () => {
+      wrapper.setZoom(1.21);
       wrapper.zoomOut();
       expect(wrapper.getZoom()).toBeCloseTo(1.0, 2);
     });

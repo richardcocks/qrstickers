@@ -15,6 +15,7 @@ export interface CanvasConfig {
   marginLeft?: number;
   marginBottom?: number;
   marginRight?: number;
+  onZoomChanged?: (zoom: number) => void;
 }
 
 export class CanvasWrapper {
@@ -32,6 +33,7 @@ export class CanvasWrapper {
   private rightClickStartX = 0; // Track initial mouse position to detect drag vs click
   private rightClickStartY = 0;
   private rulerRenderer: RulerRenderer; // Ruler rendering system
+  private onZoomChanged?: (zoom: number) => void; // Callback for zoom changes
 
   // Zoom limits
   private readonly MIN_ZOOM = 0.1;
@@ -49,6 +51,7 @@ export class CanvasWrapper {
   constructor(config: CanvasConfig) {
     this.widthMm = config.widthMm;
     this.heightMm = config.heightMm;
+    this.onZoomChanged = config.onZoomChanged;
 
     // Calculate dimensions
     const stickerWidthPx = mmToPx(config.widthMm);
@@ -836,6 +839,11 @@ export class CanvasWrapper {
     if (activeObject) {
       this.setActiveObject(activeObject);
     }
+
+    // Notify zoom change callback
+    if (this.onZoomChanged) {
+      this.onZoomChanged(newZoom);
+    }
   }
 
   /**
@@ -846,16 +854,16 @@ export class CanvasWrapper {
   }
 
   /**
-   * Zoom in by a factor (default 1.2x)
+   * Zoom in by a factor (default 1.21x = 2 mouse wheel steps)
    */
-  zoomIn(factor: number = 1.2): void {
+  zoomIn(factor: number = 1.21): void {
     this.setZoom(this.currentZoom * factor);
   }
 
   /**
-   * Zoom out by a factor (default 1.2x)
+   * Zoom out by a factor (default 1.21x = 2 mouse wheel steps)
    */
-  zoomOut(factor: number = 1.2): void {
+  zoomOut(factor: number = 1.21): void {
     this.setZoom(this.currentZoom / factor);
   }
 
@@ -978,7 +986,7 @@ export class CanvasWrapper {
 
     // Calculate zoom delta (negative deltaY means zoom in)
     const delta = e.deltaY;
-    const zoomFactor = delta > 0 ? 0.9 : 1.1; // Zoom out or in
+    const zoomFactor = delta > 0 ? 1/1.1 : 1.1; // Zoom out or in (inverse operations)
 
     const newZoom = this.currentZoom * zoomFactor;
 
