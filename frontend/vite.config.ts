@@ -15,6 +15,7 @@ export default defineConfig({
       input: {
         designer: resolve(__dirname, 'src/pages/designer/designer.entry.ts'),
         devices: resolve(__dirname, 'src/pages/devices/devices.entry.ts'),
+        'export-shared': resolve(__dirname, 'src/pages/export-shared/export-shared.entry.ts'),
       }
     },
 

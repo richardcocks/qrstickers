@@ -5,6 +5,8 @@
 
 import { Designer } from '../../designer/Designer';
 import { mmToPx, pxToMm } from '../../utils/units';
+import * as ExportPreview from '../../export/ExportPreview';
+import type { TemplateJson, FabricCanvasType } from '../../export/types';
 
 console.log('✅ Designer module loaded (TypeScript implementation)');
 
@@ -128,6 +130,14 @@ function populatePropertyValues(element: any): void {
     (document.getElementById('qrDataSource') as HTMLSelectElement).value = element.dataBinding || '';
     (document.getElementById('qrSize') as HTMLInputElement).value = element.width.toFixed(1);
   } else if (element.type === 'text') {
+    const hasDataBinding = !!element.dataBinding;
+
+    // Show/hide text content input based on data binding
+    const textContentGroup = document.getElementById('textContentGroup');
+    if (textContentGroup) {
+      textContentGroup.style.display = hasDataBinding ? 'none' : 'block';
+    }
+
     (document.getElementById('textContent') as HTMLInputElement).value = element.text || '';
     (document.getElementById('textDataSource') as HTMLSelectElement).value = element.dataBinding || '';
     (document.getElementById('textFontFamily') as HTMLSelectElement).value = element.fontFamily || 'Arial';
@@ -324,6 +334,57 @@ function wireUpPropertyInspector(): void {
     updateSelectedElement({ dataBinding: (e.target as HTMLSelectElement).value });
   });
 
+  // Text data binding
+  document.getElementById('textDataSource')?.addEventListener('change', (e) => {
+    updateSelectedElement({ dataBinding: (e.target as HTMLSelectElement).value });
+
+    // Re-populate property panel to update text content visibility
+    const element = designer.getSelectedElement();
+    if (element) {
+      populatePropertyValues(element);
+    }
+  });
+
+  // Text font weight
+  document.getElementById('textFontWeight')?.addEventListener('change', (e) => {
+    updateSelectedElement({ fontWeight: (e.target as HTMLSelectElement).value });
+  });
+
+  // Text color
+  document.getElementById('textColor')?.addEventListener('input', (e) => {
+    updateSelectedElement({ fill: (e.target as HTMLInputElement).value });
+  });
+
+  // Rectangle fill color
+  document.getElementById('rectFill')?.addEventListener('input', (e) => {
+    updateSelectedElement({ fill: (e.target as HTMLInputElement).value });
+  });
+
+  // Rectangle stroke color
+  document.getElementById('rectStroke')?.addEventListener('input', (e) => {
+    updateSelectedElement({ stroke: (e.target as HTMLInputElement).value });
+  });
+
+  // Rectangle stroke width
+  document.getElementById('rectStrokeWidth')?.addEventListener('input', (e) => {
+    updateSelectedElement({ strokeWidth: parseFloat((e.target as HTMLInputElement).value) });
+  });
+
+  // Line stroke color
+  document.getElementById('lineStroke')?.addEventListener('input', (e) => {
+    updateSelectedElement({ stroke: (e.target as HTMLInputElement).value });
+  });
+
+  // Line stroke width
+  document.getElementById('lineStrokeWidth')?.addEventListener('input', (e) => {
+    updateSelectedElement({ strokeWidth: parseFloat((e.target as HTMLInputElement).value) });
+  });
+
+  // Rotation (common property)
+  document.getElementById('rotation')?.addEventListener('input', (e) => {
+    updateSelectedElement({ angle: parseFloat((e.target as HTMLInputElement).value) });
+  });
+
   // Layer ordering buttons
   document.getElementById('btnBringToFront')?.addEventListener('click', () => designer.bringToFront());
   document.getElementById('btnSendToBack')?.addEventListener('click', () => designer.sendToBack());
@@ -364,9 +425,293 @@ function saveTemplate(): void {
   (document.getElementById('saveForm') as HTMLFormElement).submit();
 }
 
+// Export state
+let isExportModalOpen: boolean = false;
+let previewCanvasInstance: FabricCanvasType | null = null;
+
 function wireUpExportButton(): void {
   document.getElementById('btnExport')?.addEventListener('click', () => {
-    alert('Export functionality coming soon!');
-    // TODO: Implement export modal
+    openExportModal();
   });
+
+  // Wire up modal controls (on load)
+  wireUpExportModalControls();
+}
+
+async function openExportModal(): Promise<void> {
+  const modal = document.getElementById('exportModal');
+  const overlay = document.getElementById('exportModalOverlay');
+
+  if (!modal || !overlay) {
+    console.error('Export modal elements not found');
+    return;
+  }
+
+  isExportModalOpen = true;
+
+  // Show modal (use flex to maintain centering from CSS)
+  modal.style.display = 'flex';
+  overlay.style.display = 'flex';
+
+  // Show loading indicator
+  showExportLoading('Generating preview...');
+
+  try {
+    // Get current template JSON from designer
+    const templateJson = designer.saveTemplate();
+    const config = (window as any).designerConfig;
+
+    // Generate placeholder map
+    const parsedTemplate: TemplateJson = JSON.parse(templateJson);
+    const placeholders = ExportPreview.generatePlaceholderMap(
+      parsedTemplate,
+      config.uploadedImages || []
+    );
+
+    // Create preview template with placeholders
+    const previewTemplate = ExportPreview.createPreviewTemplate(parsedTemplate, placeholders);
+
+    // Generate preview
+    await updateExportPreview(
+      previewTemplate,
+      config.templateData.pageWidth,
+      config.templateData.pageHeight
+    );
+
+    hideExportLoading();
+  } catch (error) {
+    console.error('Error generating export preview:', error);
+    alert('Error generating preview: ' + (error as Error).message);
+    hideExportLoading();
+    closeExportModal();
+  }
+}
+
+async function updateExportPreview(
+  templateJson: TemplateJson,
+  pageWidthMm: number,
+  pageHeightMm: number
+): Promise<void> {
+  const canvas = document.getElementById('previewCanvas') as HTMLCanvasElement;
+  if (!canvas) {
+    console.error('Preview canvas element not found');
+    return;
+  }
+
+  // Dispose previous canvas instance to avoid "already initialized" error
+  if (previewCanvasInstance) {
+    previewCanvasInstance.dispose();
+    previewCanvasInstance = null;
+  }
+
+  // Get selected export options
+  const format = (document.querySelector('input[name="exportFormat"]:checked') as HTMLInputElement)?.value || 'png';
+  const background = (document.querySelector('input[name="pngBackground"]:checked') as HTMLInputElement)?.value || 'white';
+
+  // Update PNG options visibility
+  const pngOptions = document.getElementById('pngOptions');
+  if (pngOptions) {
+    pngOptions.style.display = format === 'png' ? 'block' : 'none';
+  }
+
+  try {
+    // Create and render preview canvas (always at 96 DPI for preview)
+    previewCanvasInstance = await ExportPreview.createAndRenderPreviewCanvas(
+      canvas,
+      templateJson,
+      pageWidthMm,
+      pageHeightMm,
+      false, // Preview mode (not export)
+      { dpi: 96, background: background as 'white' | 'transparent', format: format as 'png' | 'svg' }
+    );
+
+    // Update preview container background
+    const previewContainer = document.getElementById('previewContainer');
+    if (previewContainer && background === 'transparent') {
+      previewContainer.classList.add('transparent-bg');
+    } else if (previewContainer) {
+      previewContainer.classList.remove('transparent-bg');
+    }
+  } catch (error) {
+    console.error('Error rendering preview:', error);
+    throw error;
+  }
+}
+
+function wireUpExportModalControls(): void {
+  // Format change
+  document.querySelectorAll('input[name="exportFormat"]').forEach(radio => {
+    radio.addEventListener('change', async () => {
+      if (!isExportModalOpen) return;
+
+      showExportLoading('Updating preview...');
+      try {
+        const templateJson = designer.saveTemplate();
+        const config = (window as any).designerConfig;
+        const parsedTemplate: TemplateJson = JSON.parse(templateJson);
+        const placeholders = ExportPreview.generatePlaceholderMap(
+          parsedTemplate,
+          config.uploadedImages || []
+        );
+        const previewTemplate = ExportPreview.createPreviewTemplate(parsedTemplate, placeholders);
+
+        await updateExportPreview(
+          previewTemplate,
+          config.templateData.pageWidth,
+          config.templateData.pageHeight
+        );
+        hideExportLoading();
+      } catch (error) {
+        console.error('Error updating preview:', error);
+        hideExportLoading();
+      }
+    });
+  });
+
+  // DPI change
+  document.querySelectorAll('input[name="pngDpi"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      // DPI only affects export, not preview - no need to regenerate
+    });
+  });
+
+  // Background change
+  document.querySelectorAll('input[name="pngBackground"]').forEach(radio => {
+    radio.addEventListener('change', async () => {
+      if (!isExportModalOpen) return;
+
+      showExportLoading('Updating preview...');
+      try {
+        const templateJson = designer.saveTemplate();
+        const config = (window as any).designerConfig;
+        const parsedTemplate: TemplateJson = JSON.parse(templateJson);
+        const placeholders = ExportPreview.generatePlaceholderMap(
+          parsedTemplate,
+          config.uploadedImages || []
+        );
+        const previewTemplate = ExportPreview.createPreviewTemplate(parsedTemplate, placeholders);
+
+        await updateExportPreview(
+          previewTemplate,
+          config.templateData.pageWidth,
+          config.templateData.pageHeight
+        );
+        hideExportLoading();
+      } catch (error) {
+        console.error('Error updating preview:', error);
+        hideExportLoading();
+      }
+    });
+  });
+
+  // Download button
+  document.getElementById('btnDownload')?.addEventListener('click', async () => {
+    await downloadExport();
+  });
+
+  // Cancel button
+  document.getElementById('btnCancelExport')?.addEventListener('click', () => {
+    closeExportModal();
+  });
+
+  // Close button
+  document.getElementById('btnCloseModal')?.addEventListener('click', () => {
+    closeExportModal();
+  });
+
+  // Close on overlay click
+  document.getElementById('exportModalOverlay')?.addEventListener('click', () => {
+    closeExportModal();
+  });
+}
+
+async function downloadExport(): Promise<void> {
+  showExportLoading('Generating export...');
+
+  try {
+    const templateJson = designer.saveTemplate();
+    const config = (window as any).designerConfig;
+    const format = (document.querySelector('input[name="exportFormat"]:checked') as HTMLInputElement)?.value || 'png';
+    const dpi = parseInt((document.querySelector('input[name="pngDpi"]:checked') as HTMLInputElement)?.value || '96');
+    const background = (document.querySelector('input[name="pngBackground"]:checked') as HTMLInputElement)?.value || 'white';
+
+    // Parse template
+    const parsedTemplate: TemplateJson = JSON.parse(templateJson);
+    const placeholders = ExportPreview.generatePlaceholderMap(
+      parsedTemplate,
+      config.uploadedImages || []
+    );
+    const exportTemplate = ExportPreview.createPreviewTemplate(parsedTemplate, placeholders);
+
+    // Create temporary canvas for export at full resolution
+    const tempCanvas = document.createElement('canvas');
+
+    // Render at export resolution
+    const exportCanvasInstance = await ExportPreview.createAndRenderPreviewCanvas(
+      tempCanvas,
+      exportTemplate,
+      config.templateData.pageWidth,
+      config.templateData.pageHeight,
+      true, // Export mode (full resolution)
+      { dpi: dpi as 96 | 150 | 300, background: background as 'white' | 'transparent', format: format as 'png' | 'svg' }
+    );
+
+    // Export file
+    if (format === 'png') {
+      ExportPreview.exportPNG(exportCanvasInstance, dpi, background as 'white' | 'transparent', 'template-preview.png');
+    } else {
+      ExportPreview.exportSVG(exportCanvasInstance, 'template-preview.svg');
+    }
+
+    hideExportLoading();
+    closeExportModal();
+  } catch (error) {
+    console.error('Error exporting:', error);
+    alert('Error exporting: ' + (error as Error).message);
+    hideExportLoading();
+  }
+}
+
+function closeExportModal(): void {
+  const modal = document.getElementById('exportModal');
+  const overlay = document.getElementById('exportModalOverlay');
+
+  if (modal) modal.style.display = 'none';
+  if (overlay) overlay.style.display = 'none';
+
+  // Dispose preview canvas instance
+  if (previewCanvasInstance) {
+    previewCanvasInstance.dispose();
+    previewCanvasInstance = null;
+  }
+
+  isExportModalOpen = false;
+}
+
+function showExportLoading(message: string): void {
+  const loadingEl = document.getElementById('exportLoading');
+  const loadingMessage = document.getElementById('exportLoadingMessage');
+  const downloadBtn = document.getElementById('btnDownload') as HTMLButtonElement;
+
+  if (loadingEl) {
+    loadingEl.style.display = 'flex';
+  }
+  if (loadingMessage) {
+    loadingMessage.textContent = message;
+  }
+  if (downloadBtn) {
+    downloadBtn.disabled = true;
+  }
+}
+
+function hideExportLoading(): void {
+  const loadingEl = document.getElementById('exportLoading');
+  const downloadBtn = document.getElementById('btnDownload') as HTMLButtonElement;
+
+  if (loadingEl) {
+    loadingEl.style.display = 'none';
+  }
+  if (downloadBtn) {
+    downloadBtn.disabled = false;
+  }
 }

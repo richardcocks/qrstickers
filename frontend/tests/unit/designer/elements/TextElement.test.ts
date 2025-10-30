@@ -164,5 +164,110 @@ describe('TextElement', () => {
       const element = new TextElement({});
       expect(element.dataBinding).toBeUndefined();
     });
+
+    it('should display placeholder value when dataBinding is set', () => {
+      const element = new TextElement({
+        text: 'Static Text',
+        dataBinding: 'device.serial',
+      });
+
+      const fabricObject = element.createFabricObject(0, 0);
+
+      // Should display placeholder value, not static text
+      expect(fabricObject.text).toBe('MS-1234-ABCD-5678');
+      expect(fabricObject.text).not.toBe('Static Text');
+    });
+
+    it('should display static text when dataBinding is not set', () => {
+      const element = new TextElement({
+        text: 'My Static Text',
+      });
+
+      const fabricObject = element.createFabricObject(0, 0);
+
+      // Should display static text
+      expect(fabricObject.text).toBe('My Static Text');
+    });
+
+    it('should make fabric object read-only when dataBinding is set', () => {
+      const element = new TextElement({
+        dataBinding: 'device.name',
+      });
+
+      const fabricObject = element.createFabricObject(0, 0);
+
+      // Should be read-only (not editable)
+      expect(fabricObject.editable).toBe(false);
+    });
+
+    it('should make fabric object editable when dataBinding is not set', () => {
+      const element = new TextElement({
+        text: 'Editable Text',
+      });
+
+      const fabricObject = element.createFabricObject(0, 0);
+
+      // Should be editable
+      expect(fabricObject.editable).toBe(true);
+    });
+
+    it('should use fallback format for unknown data bindings', () => {
+      const element = new TextElement({
+        dataBinding: 'custom.unknownField',
+      });
+
+      const fabricObject = element.createFabricObject(0, 0);
+
+      // Should use fallback format: [binding]
+      expect(fabricObject.text).toBe('[custom.unknownField]');
+    });
+
+    it('should preserve static text when updateFromFabricObject is called with dataBinding', () => {
+      const element = new TextElement({
+        text: 'Original Static Text',
+        dataBinding: 'device.serial',
+      });
+
+      // Create fabric object (will show placeholder)
+      const fabricObject = element.createFabricObject(0, 0);
+      (element as any).fabricObject = fabricObject;
+
+      // Simulate canvas update
+      element.updateFromFabricObject(0, 0);
+
+      // Static text should be preserved, not overwritten with placeholder
+      expect(element.text).toBe('Original Static Text');
+      expect(element.dataBinding).toBe('device.serial');
+    });
+
+    it('should update static text when updateFromFabricObject is called without dataBinding', () => {
+      const element = new TextElement({
+        text: 'Original Text',
+      });
+
+      // Create fabric object
+      const fabricObject = element.createFabricObject(0, 0);
+
+      // User edits text on canvas
+      fabricObject.text = 'Edited Text';
+      (element as any).fabricObject = fabricObject;
+
+      // Update element from canvas
+      element.updateFromFabricObject(0, 0);
+
+      // Text should be updated from fabric object
+      expect(element.text).toBe('Edited Text');
+    });
+
+    it('should store dataBinding in fabric object custom properties', () => {
+      const element = new TextElement({
+        dataBinding: 'device.model',
+      });
+
+      const fabricObject = element.createFabricObject(0, 0);
+
+      // Should store dataBinding as dataSource
+      expect((fabricObject as any).dataSource).toBe('device.model');
+    });
   });
 });

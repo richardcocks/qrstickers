@@ -163,17 +163,13 @@ else
 </p>
 
 @section Scripts {
-    <!-- Fabric.js CDN (required for canvas rendering) -->
-    <script src="https://cdn.jsdelivr.net/npm/fabric@5.3.0/dist/fabric.min.js"></script>
-
     <!-- JSZip library (required for bulk export ZIP generation) -->
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 
-    <!-- Fabric.js helper extensions (QR code, text, image placeholders) -->
-    <script src="~/js/fabric-extensions.js"></script>
+    <!-- TypeScript Export Module (includes Fabric.js v6 and all export functions) -->
+    <script type="module" src="~/dist/@Model.ExportSharedBundlePath"></script>
 
-    <!-- Export functionality -->
-    <script src="~/js/export-preview.js"></script>
+    <!-- Legacy device export scripts (use global functions from export-shared bundle) -->
     <script src="~/js/device-export.js"></script>
     <script src="~/js/multi-device-export.js"></script>
 }

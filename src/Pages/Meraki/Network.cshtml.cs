@@ -3,8 +3,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using QRStickers.Meraki;
+using QRStickers.Models;
 using QRStickers.Services;
 using System.Security.Claims;
+using System.Text.Json;
 
 namespace QRStickers.Pages.Meraki;
 
@@ -13,11 +15,16 @@ public class NetworkModel : PageModel
 {
     private readonly QRStickersDbContext _db;
     private readonly ILogger<NetworkModel> _logger;
+    private readonly IWebHostEnvironment _webHostEnvironment;
 
-    public NetworkModel(QRStickersDbContext db, ILogger<NetworkModel> logger)
+    public NetworkModel(
+        QRStickersDbContext db,
+        ILogger<NetworkModel> logger,
+        IWebHostEnvironment webHostEnvironment)
     {
         _db = db;
         _logger = logger;
+        _webHostEnvironment = webHostEnvironment;
     }
 
     public Connection? Connection { get; set; }
@@ -25,12 +32,52 @@ public class NetworkModel : PageModel
     public List<CachedDevice> Devices { get; set; } = new();
     public HashSet<string> ProductTypesPresent { get; set; } = new();
 
+    // Vite bundle path for export-shared (resolved from manifest.json)
+    public string ExportSharedBundlePath { get; set; } = string.Empty;
+
     public async Task<IActionResult> OnGetAsync(int? connectionId, string? networkId)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (userId == null)
         {
             return RedirectToPage("/Identity/Account/Login");
+        }
+
+        // Load Vite manifest to resolve bundle path
+        try
+        {
+            var webRoot = _webHostEnvironment.WebRootPath;
+            var manifestPath = Path.Combine(webRoot, "dist", ".vite", "manifest.json");
+
+            if (!System.IO.File.Exists(manifestPath))
+            {
+                _logger.LogWarning("Vite manifest not found at {ManifestPath}, using fallback", manifestPath);
+                ExportSharedBundlePath = "assets/export-shared-[hash].js"; // Fallback
+            }
+            else
+            {
+                var manifestJson = await System.IO.File.ReadAllTextAsync(manifestPath);
+                var manifest = JsonSerializer.Deserialize<Dictionary<string, ViteManifestEntry>>(
+                    manifestJson,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                );
+
+                if (manifest != null && manifest.TryGetValue("src/pages/export-shared/export-shared.entry.ts", out var entry))
+                {
+                    ExportSharedBundlePath = entry.File;
+                    _logger.LogInformation("Export-shared bundle resolved to: {BundlePath}", ExportSharedBundlePath);
+                }
+                else
+                {
+                    _logger.LogWarning("Export-shared entry not found in Vite manifest");
+                    ExportSharedBundlePath = "assets/export-shared-[hash].js"; // Fallback
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load Vite manifest");
+            ExportSharedBundlePath = "assets/export-shared-[hash].js"; // Fallback
         }
 
         // Validate parameters

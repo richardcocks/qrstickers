@@ -46,6 +46,7 @@ export class RectElement extends BaseElement {
       height: baseHeightPx,
       scaleX: scaleX,
       scaleY: scaleY,
+      angle: this.angle,
       fill: this.fill,
       stroke: this.stroke,
       strokeWidth: this.strokeWidth,

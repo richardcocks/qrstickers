@@ -9,6 +9,7 @@ export interface ElementData {
   y: number; // in MM
   width: number; // in MM
   height: number; // in MM
+  angle?: number; // in degrees
   dataBinding?: string;
   [key: string]: any;
 }
@@ -20,6 +21,7 @@ export abstract class BaseElement {
   public y: number;
   public width: number; // Size in MM
   public height: number;
+  public angle: number; // Rotation in degrees
   public dataBinding?: string;
 
   protected fabricObject: any; // Internal Fabric.js object (hidden from outside)
@@ -31,6 +33,7 @@ export abstract class BaseElement {
     this.y = data.y ?? 0;
     this.width = data.width ?? 50;
     this.height = data.height ?? 50;
+    this.angle = data.angle ?? 0;
     this.dataBinding = data.dataBinding;
   }
 
@@ -70,6 +73,7 @@ export abstract class BaseElement {
     const baseHeight = obj.baseHeight ?? obj.height;
     this.width = this.pxToMm(baseWidth * (obj.scaleX ?? 1));
     this.height = this.pxToMm(baseHeight * (obj.scaleY ?? 1));
+    this.angle = obj.angle ?? 0;
   }
 
   /**
@@ -89,6 +93,7 @@ export abstract class BaseElement {
       top: this.mmToPx(this.y) + boundaryTop,
       scaleX: this.mmToPx(this.width) / baseWidth,
       scaleY: this.mmToPx(this.height) / baseHeight,
+      angle: this.angle,
     });
   }
 
@@ -103,6 +108,7 @@ export abstract class BaseElement {
       y: this.y,
       width: this.width,
       height: this.height,
+      angle: this.angle,
       dataBinding: this.dataBinding,
     };
   }

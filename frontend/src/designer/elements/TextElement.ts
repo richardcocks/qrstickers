@@ -10,6 +10,7 @@
 import * as fabric from 'fabric';
 import { BaseElement } from './BaseElement';
 import type { ElementData } from './BaseElement';
+import { PLACEHOLDER_VALUES } from '../../export/ExportPreview';
 
 export interface TextElementData extends ElementData {
   type: 'text';
@@ -46,13 +47,22 @@ export class TextElement extends BaseElement {
     const leftPx = this.mmToPx(this.x) + boundaryLeft;
     const topPx = this.mmToPx(this.y) + boundaryTop;
 
-    const text = new fabric.IText(this.text, {
+    // Determine display text: use placeholder if data binding is set
+    let displayText = this.text;
+    if (this.dataBinding) {
+      const normalizedBinding = this.dataBinding.toLowerCase();
+      displayText = PLACEHOLDER_VALUES[normalizedBinding] || `[${this.dataBinding}]`;
+    }
+
+    const text = new fabric.IText(displayText, {
       left: leftPx,
       top: topPx,
       fontFamily: this.fontFamily,
       fontSize: this.fontSize * 2.0, // Convert points to canvas units (144 DPI / 72 pt/inch = 2.0)
       fill: this.fill,
       fontWeight: this.fontWeight,
+      angle: this.angle,
+      editable: !this.dataBinding, // Make read-only when data-bound
     });
 
     // Store custom properties
@@ -67,12 +77,17 @@ export class TextElement extends BaseElement {
   updateFromFabricObject(boundaryLeft: number, boundaryTop: number): void {
     super.updateFromFabricObject(boundaryLeft, boundaryTop);
     if (this.fabricObject) {
-      this.text = this.fabricObject.text;
+      // Only update text if NOT using data binding (to preserve static text, not placeholder)
+      const currentDataBinding = (this.fabricObject as any).dataSource;
+      if (!currentDataBinding) {
+        this.text = this.fabricObject.text;
+      }
+
       this.fontFamily = this.fabricObject.fontFamily;
       this.fontSize = this.fabricObject.fontSize / 2.0; // Convert canvas units back to points
       this.fontWeight = this.fabricObject.fontWeight;
       this.fill = this.fabricObject.fill;
-      this.dataBinding = (this.fabricObject as any).dataSource;
+      this.dataBinding = currentDataBinding;
       this.maxLength = (this.fabricObject as any).maxLength;
       this.overflow = (this.fabricObject as any).overflow ?? 'truncate';
     }

@@ -96,6 +96,7 @@ export class QRElement extends BaseElement {
       top: topPx,
       scaleX: scaleX,
       scaleY: scaleY,
+      angle: this.angle,
       selectable: true,
     });
 

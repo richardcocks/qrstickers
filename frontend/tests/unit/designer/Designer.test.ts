@@ -1307,5 +1307,113 @@ describe('Designer', () => {
       // Size should remain at initial value (within 2mm tolerance for rounding)
       expect(element.width).toBeCloseTo(initialWidth, 0);
     });
+
+    it('should update text dataBinding property', () => {
+      const element = designer.addElement('text');
+
+      designer.updateElement(element.id, { dataBinding: 'device.Name' });
+
+      expect(element.dataBinding).toBe('device.Name');
+    });
+
+    it('should update text fontWeight property', () => {
+      const element = designer.addElement('text');
+
+      designer.updateElement(element.id, { fontWeight: 'bold' });
+
+      expect(element.fontWeight).toBe('bold');
+    });
+
+    it('should update text fill color property', () => {
+      const element = designer.addElement('text');
+
+      designer.updateElement(element.id, { fill: '#ff0000' });
+
+      expect(element.fill).toBe('#ff0000');
+    });
+
+    it('should update rectangle stroke color property', () => {
+      const element = designer.addElement('rect');
+
+      designer.updateElement(element.id, { stroke: '#00ff00' });
+
+      expect(element.stroke).toBe('#00ff00');
+    });
+
+    it('should update rectangle strokeWidth property', () => {
+      const element = designer.addElement('rect');
+
+      designer.updateElement(element.id, { strokeWidth: 5 });
+
+      expect(element.strokeWidth).toBe(5);
+    });
+
+    it('should update element rotation angle property', () => {
+      const element = designer.addElement('qr');
+
+      designer.updateElement(element.id, { angle: 45 });
+
+      expect(element.angle).toBe(45);
+    });
+
+    it('should persist text properties when selecting and deselecting', () => {
+      const textElement = designer.addElement('text', { x: 10, y: 10 });
+
+      // Update properties
+      designer.updateElement(textElement.id, {
+        dataBinding: 'device.Serial',
+        fontWeight: 'bold',
+        fill: '#ff0000'
+      });
+
+      // Simulate deselection by selecting another element
+      designer.addElement('qr', { x: 50, y: 50 });
+
+      // Verify original element retained its properties
+      const elements = designer.getElements();
+      const originalElement = elements.find(e => e.id === textElement.id);
+
+      expect(originalElement?.dataBinding).toBe('device.Serial');
+      expect(originalElement?.fontWeight).toBe('bold');
+      expect(originalElement?.fill).toBe('#ff0000');
+    });
+
+    it('should persist rectangle properties when selecting and deselecting', () => {
+      const rectElement = designer.addElement('rect', { x: 10, y: 10 });
+
+      // Update properties
+      designer.updateElement(rectElement.id, {
+        fill: '#ff0000',
+        stroke: '#00ff00',
+        strokeWidth: 3
+      });
+
+      // Simulate deselection by selecting another element
+      designer.addElement('text', { x: 50, y: 50 });
+
+      // Verify original element retained its properties
+      const elements = designer.getElements();
+      const originalElement = elements.find(e => e.id === rectElement.id);
+
+      expect(originalElement?.fill).toBe('#ff0000');
+      expect(originalElement?.stroke).toBe('#00ff00');
+      expect(originalElement?.strokeWidth).toBe(3);
+    });
+
+    it('should persist rotation after selecting different element', () => {
+      const qrElement = designer.addElement('qr', { x: 10, y: 10 });
+
+      // Rotate element
+      designer.updateElement(qrElement.id, { angle: 90 });
+
+      // Simulate deselection by selecting another element
+      designer.addElement('text', { x: 50, y: 50 });
+
+      // Verify rotation persisted
+      const elements = designer.getElements();
+      const originalElement = elements.find(e => e.id === qrElement.id);
+
+      expect(originalElement?.angle).toBe(90);
+    });
   });
 });

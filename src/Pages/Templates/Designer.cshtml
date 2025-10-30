@@ -236,7 +236,7 @@
 
                 <!-- Text Properties -->
                 <div id="textProperties" class="property-panel" style="display: none;">
-                    <div class="property-group">
+                    <div class="property-group" id="textContentGroup">
                         <label>Text Content</label>
                         <input type="text" id="textContent" class="form-control" placeholder="Enter text or {{variable}}" />
                     </div>
@@ -383,6 +383,17 @@
             </div>
 
             <div class="modal-body">
+                <!-- Loading Indicator -->
+                <div id="exportLoading" style="display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.9); z-index: 1000; align-items: center; justify-content: center; flex-direction: column;">
+                    <div style="font-size: 48px; color: #007bff; margin-bottom: 15px;">⏳</div>
+                    <div id="exportLoadingMessage" style="font-size: 16px; color: #333;">Generating preview...</div>
+                </div>
+
+                <!-- Sample Device Info -->
+                <div style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 12px; margin-bottom: 20px; border-radius: 4px;">
+                    <strong>Preview Mode:</strong> This preview uses sample data. Placeholders like <code>{{device.serial}}</code> are replaced with example values.
+                </div>
+
                 <div class="export-controls">
                     <!-- Format Selection -->
                     <div class="control-group">
