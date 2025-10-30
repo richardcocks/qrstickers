@@ -26,7 +26,6 @@ export class CanvasWrapper {
   private lastPanY = 0;
   private isPanning = false;
   private currentZoom: number = 1;
-  private debug: boolean = true; // Set to false to disable debug logging
   private savedActiveObject: FabricObject | undefined = undefined; // Store active object during view changes
   private isRightClickPanning = false; // Track if right-click pan is active
   private rightClickStartX = 0; // Track initial mouse position to detect drag vs click
@@ -488,8 +487,6 @@ export class CanvasWrapper {
     if (this.isPanningEnabled) return;
     this.isPanningEnabled = true;
 
-    if (this.debug) console.log('[CanvasWrapper] panning enabled');
-
     // Disable selection while panning
     this.fabricCanvas.selection = false;
     this.fabricCanvas.getObjects().forEach((obj) => {
@@ -511,8 +508,6 @@ export class CanvasWrapper {
   disablePanning(): void {
     if (!this.isPanningEnabled) return;
     this.isPanningEnabled = false;
-
-    if (this.debug) console.log('[CanvasWrapper] panning disabled');
 
     // Note: Mouse handlers remain registered globally for right-click panning
 

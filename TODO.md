@@ -12,10 +12,10 @@
 - [ ] Drag-and-drop from palette
 - [ ] Rulers (horizontal and vertical tick marks with unit labels)
 - [ ] Image handling in designer (palette display, click-to-add)
-- [ ] Fix text data sources
+- [x] Fix text data sources ✅ COMPLETED
 - [x] Hold right click to pan ✅ COMPLETED
 - [x] Reset grab-handles when zooming / resizing page ✅ COMPLETED
-- [ ] Respect snap to grid on element resize
+- [x] Snap to grid on element resize ✅ REMOVED (too complex, position snapping works well)
 
 ## Testing Required
 - [ ] Test designer export with all formats and options (PNG 96/150/300 DPI, SVG, white/transparent backgrounds)
@@ -40,3 +40,8 @@
   - Root cause: fontSize stored in POINTS not converted to canvas pixels
   - Added 2.0x multiplier to match designer's pt-to-px conversion
   - Text now exports at correct size matching designer preview
+- [x] Snap-to-grid during resize - ATTEMPTED & REMOVED ✅ DONE
+  - Attempted anchor-aware implementation but caused severe issues
+  - Root cause: Conflicts with Fabric.js transform system, rotation, and origins
+  - Decision: Keep position snapping (works perfectly), remove resize snapping
+  - Users can resize freely, then move to snap to grid

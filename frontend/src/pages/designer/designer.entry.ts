@@ -8,8 +8,6 @@ import { mmToPx, pxToMm } from '../../utils/units';
 import * as ExportPreview from '../../export/ExportPreview';
 import type { TemplateJson, FabricCanvasType } from '../../export/types';
 
-console.log('✅ Designer module loaded (TypeScript implementation)');
-
 // Expose utilities globally for Razor page compatibility
 (window as any).mmToPx = mmToPx;
 (window as any).pxToMm = pxToMm;
@@ -25,8 +23,6 @@ if (document.readyState === 'loading') {
 }
 
 function initDesigner(): void {
-  console.log('🎨 Initializing Designer...');
-
   // Get config from window (passed from Razor page)
   const config = (window as any).designerConfig;
   if (!config) {
@@ -56,7 +52,6 @@ function initDesigner(): void {
   if (editMode && templateData.templateJson) {
     try {
       designer.loadTemplate(templateData.templateJson);
-      console.log('✅ Template loaded');
     } catch (error) {
       console.error('Failed to load template:', error);
     }
@@ -69,13 +64,10 @@ function initDesigner(): void {
   wireUpSaveButton(systemTemplate);
   wireUpExportButton();
 
-  console.log('✅ Designer initialized successfully');
-
   // Reset viewport immediately to center and fit sticker boundary
   try {
     designer.resetView();
     updateZoomDisplay();
-    console.log('✅ Viewport centered on sticker');
   } catch (error) {
     console.error('Failed to reset view:', error);
   }

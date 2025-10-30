@@ -1,8 +1,5 @@
 import { expect, beforeAll } from 'vitest';
 
-// Setup code that runs before all tests
-console.log('Test environment initialized');
-
 // Mock canvas for Fabric.js tests
 // happy-dom has incomplete canvas implementation, so we need to enhance it
 beforeAll(() => {

@@ -50,5 +50,3 @@ window.exportSVGForDevice = ExportPreview.exportSVGForDevice;
 // Helper functions (for backward compatibility with fabric-extensions.js)
 window.mmToPx = (mm: number) => mm * MM_TO_PX_RATIO;
 window.pxToMm = (px: number) => px / MM_TO_PX_RATIO;
-
-console.log('[Export Shared] TypeScript export module loaded successfully');

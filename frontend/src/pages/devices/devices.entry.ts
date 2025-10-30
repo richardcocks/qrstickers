@@ -6,24 +6,20 @@
 
 import { mmToPx, pxToMm } from '../../utils/units';
 
-console.log('✅ Devices module loaded (new implementation)');
-
 // Expose utilities globally for backwards compatibility
 (window as any).mmToPx = mmToPx;
 (window as any).pxToMm = pxToMm;
 
-export function initDevices(config?: any): void {
-  console.log('📱 Devices initializing...', config);
+export function initDevices(): void {
   // TODO: Wire up device export functionality
+  // Config will be available from window.devicesConfig when needed
 }
 
 // Auto-initialize on DOM ready
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
-    const config = (window as any).devicesConfig;
-    initDevices(config);
+    initDevices();
   });
 } else {
-  const config = (window as any).devicesConfig;
-  initDevices(config);
+  initDevices();
 }
